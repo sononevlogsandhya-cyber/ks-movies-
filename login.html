@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KS Movies — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+:root {
+  --bg: #050505;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --red: #e50914;
+  --red2: #ff2030;
+  --red-glow: rgba(229,9,20,0.35);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #ffffff;
+  --text2: #b3b3b3;
+  --text3: #555555;
+  --green: #00c853;
+  --spring: cubic-bezier(.34,1.56,.64,1);
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Cinematic blobs */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(229,9,20,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 70% at 85% 100%, rgba(229,9,20,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Grid lines */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+/* TOP BRAND */
+.top-brand {
+  margin-bottom: 40px;
+  text-align: center;
+  animation: fadeDown 0.6s var(--ease) both;
+}
+.top-brand .logo {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 3.2rem;
+  letter-spacing: 4px;
+  line-height: 1;
+}
+.logo .ks { color: var(--red); text-shadow: 0 0 30px var(--red-glow); }
+.logo .mv { color: var(--text); }
+.top-brand .tagline {
+  font-size: 0.72rem;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-top: 6px;
+}
+
+/* CARD */
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.03);
+  animation: slideUp 0.55s var(--spring) 0.1s both;
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Card inner shine */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+}
+
+.card-body { padding: 36px 32px 32px; }
+
+.step { display: none; }
+.step.active { display: block; animation: stepIn 0.35s var(--spring); }
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.step-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.step-subtitle {
+  font-size: 0.87rem;
+  color: var(--text2);
+  margin-bottom: 28px;
+  line-height: 1.5;
+}
+
+/* BADGE */
+.step-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(229,9,20,0.1);
+  border: 1px solid rgba(229,9,20,0.3);
+  color: var(--red);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 22px;
+}
+
+/* INPUTS */
+.input-group { margin-bottom: 16px; }
+.input-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 8px;
+}
+.input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.input-wrap:focus-within {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(229,9,20,0.1);
+}
+.input-prefix {
+  padding: 0 14px;
+  font-size: 0.9rem;
+  color: var(--text2);
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+.input-wrap input {
+  flex: 1;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.input-wrap input::placeholder { color: var(--text3); }
+
+/* OTP DIGITS */
+.otp-row { display: flex; gap: 8px; justify-content: center; margin: 20px 0; }
+.otp-box {
+  width: 48px; height: 56px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border2);
+  border-radius: 12px;
+  text-align: center;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+  transition: all 0.2s;
+}
+.otp-box:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(229,9,20,0.12); }
+.otp-box.filled { border-color: var(--green); }
+
+.otp-timer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 0.83rem;
+  color: var(--text3);
+}
+.resend-link {
+  color: var(--red);
+  cursor: pointer;
+  font-weight: 600;
+  display: none;
+}
+.resend-link.show { display: inline; }
+
+/* ERROR */
+.error-box {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(255,23,68,0.08);
+  border: 1px solid rgba(255,23,68,0.24);
+  color: #ff4444;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+  animation: fadeDown 0.3s ease;
+}
+.error-box.show { display: flex; }
+
+/* SUCCESS MESSAGE */
+.success-box {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  padding: 24px 0 8px;
+}
+.success-box.show { display: flex; }
+.success-icon {
+  width: 72px; height: 72px;
+  background: rgba(0,200,83,0.1);
+  border: 2px solid var(--green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  animation: popIn 0.5s var(--spring);
+}
+@keyframes popIn { from { transform: scale(0); } to { transform: scale(1); } }
+
+/* BTN */
+.btn-main {
+  width: 100%;
+  padding: 15px;
+  background: linear-gradient(135deg, var(--red), var(--red2));
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 30px var(--red-glow);
+  transition: all 0.22s;
+  letter-spacing: 0.3px;
+}
+.btn-main:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--red-glow); }
+.btn-main:active { transform: translateY(0); }
+.btn-main:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-back {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 24px;
+  transition: color 0.2s;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn-back:hover { color: var(--text); }
+
+/* TERMS */
+.terms {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text3);
+  margin-top: 16px;
+  line-height: 1.6;
+}
+.terms a { color: var(--text2); text-decoration: underline; }
+
+/* PROGRESS DOTS */
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+.dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--border2);
+  transition: all 0.3s;
+}
+.dot.active { background: var(--red); width: 20px; border-radius: 3px; }
+
+/* PHONE DISPLAY */
+.phone-display {
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+.sent-to {
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text2);
+  margin-bottom: 24px;
+}
+
+/* recaptcha */
+#recaptcha-container { margin-bottom: 16px; }
+
+/* Loading state */
+.btn-loading .btn-text { display: none; }
+.btn-loading .btn-spinner { display: inline-block; }
+.btn-spinner {
+  display: none;
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Guest link */
+.guest-link {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.83rem;
+  color: var(--text3);
+}
+.guest-link a {
+  color: var(--text2);
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+.guest-link a:hover { color: var(--red); }
+</style>
+</head>
+<body>
+
+<div class="top-brand">
+  <div class="logo">
+    <span class="ks">KS</span><span class="mv"> MOVIES</span>
+  </div>
+  <div class="tagline">Premium Streaming Platform</div>
+</div>
+
+<div class="login-card">
+  <div class="card-body">
+
+    <!-- STEP 1: Phone Entry -->
+    <div class="step active" id="step-phone">
+      <div class="step-badge">🔐 Secure Login</div>
+      <div class="step-title">Welcome Back</div>
+      <div class="step-subtitle">Enter your mobile number to receive a one-time password</div>
+
+      <div class="progress-dots">
+        <div class="dot active" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+      </div>
+
+      <div id="error-phone" class="error-box"><i class="fas fa-exclamation-circle"></i> <span id="error-phone-msg"></span></div>
+
+      <div class="input-group">
+        <label class="input-label">Mobile Number</label>
+        <div class="input-wrap">
+          <span class="input-prefix">🇮🇳 +91</span>
+          <input type="tel" id="phone-input" placeholder="Enter 10-digit number" maxlength="10" inputmode="tel" autocomplete="tel" oninput="onPhoneInput()">
+        </div>
+      </div>
+
+      <div id="recaptcha-container"></div>
+
+      <button class="btn-main" id="btn-send-otp" onclick="sendOTP()" disabled>
+        <span class="btn-text"><i class="fas fa-paper-plane"></i> Send OTP</span>
+        <span class="btn-spinner"></span>
+      </button>
+
+      <div class="terms">
+        By continuing, you agree to our <a href="privacy.html">Privacy Policy</a> &amp; Terms of Service.<br>
+        Your number is never shared with third parties.
+      </div>
+    </div>
+
+    <!-- STEP 2: OTP Verification -->
+    <div class="step" id="step-otp">
+      <button class="btn-back" onclick="goBack()"><i class="fas fa-arrow-left"></i> Change number</button>
+
+      <div class="step-badge">💬 Verify OTP</div>
+      <div class="phone-display" id="phone-display">+91 XXXXX XXXXX</div>
+      <div class="sent-to">We sent a 6-digit OTP to your number</div>
+
+      <div class="progress-dots">
+        <div class="dot" id="dot1b"></div>
+        <div class="dot active" id="dot2b"></div>
+      </div>
+
+      <div id="error-otp" class="error-box"><i class="fas fa-exclamation-circle"></i> <span id="error-otp-msg"></span></div>
+
+      <div class="otp-row">
+        <input class="otp-box" id="otp-0" type="text" maxlength="1" inputmode="numeric" oninput="otpInput(this, 0)" onkeydown="otpKeydown(this, 0)">
+        <input class="otp-box" id="otp-1" type="text" maxlength="1" inputmode="numeric" oninput="otpInput(this, 1)" onkeydown="otpKeydown(this, 1)">
+        <input class="otp-box" id="otp-2" type="text" maxlength="1" inputmode="numeric" oninput="otpInput(this, 2)" onkeydown="otpKeydown(this, 2)">
+        <input class="otp-box" id="otp-3" type="text" maxlength="1" inputmode="numeric" oninput="otpInput(this, 3)" onkeydown="otpKeydown(this, 3)">
+        <input class="otp-box" id="otp-4" type="text" maxlength="1" inputmode="numeric" oninput="otpInput(this, 4)" onkeydown="otpKeydown(this, 4)">
+        <input class="otp-box" id="otp-5" type="text" maxlength="1" inputmode="numeric" oninput="otpInput(this, 5)" onkeydown="otpKeydown(this, 5)">
+      </div>
+
+      <div class="otp-timer-row">
+        <span id="otp-timer">Expires in 5:00</span>
+        <span class="resend-link" id="resend-link" onclick="resendOTP()">Resend OTP</span>
+      </div>
+
+      <button class="btn-main" id="btn-verify" onclick="verifyOTP()" disabled>
+        <span class="btn-text"><i class="fas fa-check-circle"></i> Verify & Login</span>
+        <span class="btn-spinner"></span>
+      </button>
+    </div>
+
+    <!-- SUCCESS -->
+    <div class="success-box" id="step-success">
+      <div class="success-icon">✓</div>
+      <div style="font-size:1.3rem;font-weight:800;">Login Successful!</div>
+      <div style="font-size:0.87rem;color:var(--text2);">Taking you to KS Movies...</div>
+      <div style="width:100%;height:4px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:10px;">
+        <div id="redirect-bar" style="width:0%;height:100%;background:var(--green);transition:width 2s linear;border-radius:4px;"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="guest-link">
+  <a onclick="browseAsGuest()">Browse as Guest</a> — No login required
+</div>
+
+<script>
+// ── FIREBASE CONFIG ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBNyfzP26mSnB0qsm24zIeTM2K9sVBV1zc",
+  authDomain: "ks-movies-98e3e.firebaseapp.com",
+  databaseURL: "https://ks-movies-98e3e-default-rtdb.firebaseio.com",
+  projectId: "ks-movies-98e3e",
+  storageBucket: "ks-movies-98e3e.firebasestorage.app",
+  messagingSenderId: "392323800373",
+  appId: "1:392323800373:web:b289cf81f4c0232d66007c"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
+
+// ── STATE ────────────────────────────────────────────────────
+let confirmationResult = null;
+let otpTimerInterval   = null;
+let currentPhone       = '';
+const REDIRECT_URL     = 'user.html';
+
+// ── INIT ─────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      // Already logged in → redirect
+      handleLoginSuccess(user);
+    }
+  });
+  setupRecaptcha();
+  document.getElementById('phone-input').addEventListener('input', onPhoneInput);
+});
+
+// ── RECAPTCHA ────────────────────────────────────────────────
+function setupRecaptcha() {
+  if (window.recaptchaVerifier) return;
+  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    size: 'invisible',
+    callback: () => {}
+  });
+}
+
+// ── PHONE VALIDATION ─────────────────────────────────────────
+function onPhoneInput() {
+  const phone = document.getElementById('phone-input').value.replace(/\D/g, '');
+  document.getElementById('phone-input').value = phone;
+  document.getElementById('btn-send-otp').disabled = phone.length !== 10;
+}
+
+// ── SEND OTP ─────────────────────────────────────────────────
+async function sendOTP() {
+  const rawPhone = document.getElementById('phone-input').value.trim();
+  if (!/^[6-9]\d{9}$/.test(rawPhone)) {
+    showError('error-phone', 'error-phone-msg', 'Enter a valid 10-digit Indian mobile number');
+    return;
+  }
+
+  currentPhone = '+91' + rawPhone;
+  setLoading('btn-send-otp', true);
+  hideError('error-phone');
+
+  try {
+    const appVerifier = window.recaptchaVerifier;
+    confirmationResult = await auth.signInWithPhoneNumber(currentPhone, appVerifier);
+
+    // Show OTP step
+    document.getElementById('phone-display').textContent = '+91 ' + rawPhone.slice(0,5) + ' ' + rawPhone.slice(5);
+    showStep('step-otp');
+    startTimer();
+    setTimeout(() => document.getElementById('otp-0').focus(), 100);
+
+  } catch (err) {
+    console.error('[sendOTP]', err);
+    let msg = 'Failed to send OTP. Please try again.';
+    if (err.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again in a few minutes.';
+    if (err.code === 'auth/invalid-phone-number') msg = 'Invalid phone number format.';
+    showError('error-phone', 'error-phone-msg', msg);
+    setupRecaptcha();
+  } finally {
+    setLoading('btn-send-otp', false);
+  }
+}
+
+// ── OTP INPUT HANDLING ───────────────────────────────────────
+function otpInput(input, idx) {
+  const v = input.value.replace(/[^0-9]/g, '');
+  input.value = v;
+  if (v) {
+    input.classList.add('filled');
+    if (idx < 5) document.getElementById('otp-' + (idx + 1)).focus();
+  } else {
+    input.classList.remove('filled');
+  }
+  checkOTPComplete();
+}
+
+function otpKeydown(input, idx) {
+  if (event.key === 'Backspace' && !input.value && idx > 0) {
+    document.getElementById('otp-' + (idx - 1)).focus();
+  }
+}
+
+function checkOTPComplete() {
+  const code = getOTPCode();
+  document.getElementById('btn-verify').disabled = code.length !== 6;
+}
+
+function getOTPCode() {
+  return [0,1,2,3,4,5].map(i => document.getElementById('otp-' + i).value).join('');
+}
+
+// ── VERIFY OTP ───────────────────────────────────────────────
+async function verifyOTP() {
+  const code = getOTPCode();
+  if (code.length !== 6) return;
+
+  setLoading('btn-verify', true);
+  hideError('error-otp');
+
+  try {
+    const result = await confirmationResult.confirm(code);
+    const user = result.user;
+
+    // Save user data to Firebase DB
+    await db.ref('users/' + user.uid).update({
+      userId: user.uid,
+      phone: user.phoneNumber,
+      lastLogin: Date.now(),
+      role: (await db.ref('users/' + user.uid + '/role').once('value')).val() || 'user'
+    });
+
+    // Init wallet if new user
+    const walletSnap = await db.ref('wallets/' + user.uid).once('value');
+    if (!walletSnap.exists()) {
+      await db.ref('wallets/' + user.uid).set({
+        userId: user.uid, balance: 0, pending_balance: 0,
+        subscription_status: 'free', createdAt: Date.now()
+      });
+    }
+
+    // Save to localStorage
+    localStorage.setItem('ks_user_id', user.uid);
+    localStorage.setItem('ks_user_phone', user.phoneNumber);
+    localStorage.setItem('ks_logged_in', 'true');
+
+    handleLoginSuccess(user);
+
+  } catch (err) {
+    console.error('[verifyOTP]', err);
+    let msg = 'Invalid OTP. Please try again.';
+    if (err.code === 'auth/code-expired') msg = 'OTP expired. Please request a new one.';
+    if (err.code === 'auth/too-many-requests') msg = 'Too many attempts. Try again later.';
+    showError('error-otp', 'error-otp-msg', msg);
+  } finally {
+    setLoading('btn-verify', false);
+  }
+}
+
+// ── SUCCESS ──────────────────────────────────────────────────
+function handleLoginSuccess(user) {
+  clearInterval(otpTimerInterval);
+
+  // Hide all steps, show success
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('step-success').classList.add('show');
+
+  // Animate redirect bar
+  setTimeout(() => {
+    document.getElementById('redirect-bar').style.width = '100%';
+  }, 100);
+
+  setTimeout(() => {
+    const redirect = localStorage.getItem('ks_login_redirect') || REDIRECT_URL;
+    localStorage.removeItem('ks_login_redirect');
+    window.location.href = redirect;
+  }, 2200);
+}
+
+// ── TIMER ────────────────────────────────────────────────────
+function startTimer() {
+  clearInterval(otpTimerInterval);
+  let secs = 300;
+  const el = document.getElementById('otp-timer');
+  const resend = document.getElementById('resend-link');
+  resend.classList.remove('show');
+
+  otpTimerInterval = setInterval(() => {
+    if (secs <= 0) {
+      clearInterval(otpTimerInterval);
+      el.textContent = 'OTP expired';
+      el.style.color = 'var(--red)';
+      resend.classList.add('show');
+      return;
+    }
+    const m = Math.floor(secs / 60), s = secs % 60;
+    el.textContent = `Expires in ${m}:${s < 10 ? '0' : ''}${s}`;
+    if (secs <= 30) el.style.color = 'var(--red)';
+    secs--;
+  }, 1000);
+}
+
+async function resendOTP() {
+  // Reset OTP boxes
+  [0,1,2,3,4,5].forEach(i => {
+    const box = document.getElementById('otp-' + i);
+    box.value = '';
+    box.classList.remove('filled');
+  });
+  document.getElementById('btn-verify').disabled = true;
+  hideError('error-otp');
+
+  // Go back and re-send
+  await sendOTP();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+function showStep(stepId) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById(stepId).classList.add('active');
+}
+
+function goBack() {
+  clearInterval(otpTimerInterval);
+  showStep('step-phone');
+  [0,1,2,3,4,5].forEach(i => {
+    const box = document.getElementById('otp-' + i);
+    if (box) { box.value = ''; box.classList.remove('filled'); }
+  });
+}
+
+function showError(boxId, msgId, msg) {
+  document.getElementById(boxId).classList.add('show');
+  document.getElementById(msgId).textContent = msg;
+}
+
+function hideError(boxId) {
+  document.getElementById(boxId).classList.remove('show');
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  if (loading) btn.classList.add('btn-loading');
+  else btn.classList.remove('btn-loading');
+  btn.disabled = loading;
+}
+
+function browseAsGuest() {
+  localStorage.setItem('ks_guest_mode', 'true');
+  window.location.href = 'user.html';
+}
+</script>
+</body>
+</html>

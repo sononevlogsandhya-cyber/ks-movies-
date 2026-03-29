@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KS Live TV — Watch Live Channels</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- HLS.js for IPTV stream playback -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --red: #e50914; --red2: #ff1e2d; --redglow: rgba(229,9,20,0.35);
+            --bg: #050505; --bg2: #0f0f0f; --card: #141414;
+            --text: #fff; --text2: #b3b3b3; --muted: #555;
+            --border: rgba(255,255,255,0.08);
+            --gold: #f5c518;
+            --ease: cubic-bezier(.4,0,.2,1);
+            --spring: cubic-bezier(.34,1.56,.64,1);
+            --nav-h: 56px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+
+        /* GRAIN */
+        body::after { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); opacity: 0.03; pointer-events: none; z-index: 9999; }
+
+        ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 4px; }
+
+        /* ── TOPNAV ── */
+        #topnav {
+            position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h);
+            background: rgba(5,5,5,0.96); border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(16px); z-index: 900;
+            display: flex; align-items: center; gap: 14px; padding: 0 16px;
+        }
+        .nav-back { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: .2s; text-decoration: none; font-size: .9rem; }
+        .nav-back:hover { border-color: var(--red); color: #fff; }
+        .nav-logo { font-family: 'Bebas Neue', cursive; font-size: 1.4rem; letter-spacing: 2px; flex: 1; }
+        .nav-logo .ks { color: var(--red); }
+        .nav-logo .live-pill { background: var(--red); color: #fff; font-size: .55rem; font-family: 'DM Sans', sans-serif; font-weight: 800; letter-spacing: 1.5px; padding: 2px 7px; border-radius: 4px; vertical-align: middle; margin-left: 6px; animation: livePulse 2s infinite; }
+        @keyframes livePulse { 0%,100%{opacity:1;} 50%{opacity:.6;} }
+        .nav-plan-badge { padding: 5px 14px; border-radius: 20px; font-size: .72rem; font-weight: 800; letter-spacing: .5px; cursor: pointer; transition: .2s; }
+        .nav-plan-badge.free { background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--text2); }
+        .nav-plan-badge.premium { background: linear-gradient(135deg,#f5c518,#e6a800); color: #000; }
+        .nav-plan-badge:hover { transform: scale(1.04); }
+
+        /* ── HERO ADS ── */
+        #hero { margin-top: var(--nav-h); position: relative; height: 200px; overflow: hidden; background: #0a0a0a; }
+        @media(min-width:600px){ #hero { height: 260px; } }
+        @media(min-width:900px){ #hero { height: 320px; } }
+
+        .hero-slides { display: flex; height: 100%; transition: transform .6s var(--ease); }
+        .hero-slide {
+            min-width: 100%; height: 100%; position: relative; overflow: hidden; cursor: pointer;
+            display: flex; align-items: flex-end;
+        }
+        .hero-slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+        .hero-slide-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5,5,5,.92) 0%, rgba(5,5,5,.4) 50%, transparent 100%); }
+        .hero-slide-content { position: relative; z-index: 2; padding: 24px 5%; max-width: 500px; }
+        .hero-ad-tag { display: inline-flex; align-items: center; gap: 6px; background: var(--red); color: #fff; font-size: .65rem; font-weight: 800; letter-spacing: 1.5px; padding: 3px 10px; border-radius: 4px; margin-bottom: 8px; }
+        .hero-ad-tag i { font-size: .6rem; }
+        .hero-slide-title { font-family: 'Bebas Neue', cursive; font-size: clamp(1.4rem, 4vw, 2.4rem); letter-spacing: 1px; line-height: 1.1; color: #fff; }
+        .hero-slide-sub { font-size: .8rem; color: rgba(255,255,255,.6); margin-top: 4px; }
+        .hero-slide-cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); border-radius: 8px; padding: 7px 16px; font-size: .8rem; font-weight: 700; color: #fff; backdrop-filter: blur(6px); transition: .2s; }
+        .hero-slide-cta:hover { background: var(--red); border-color: var(--red); }
+
+        /* Hero dots */
+        .hero-dots { position: absolute; bottom: 12px; right: 5%; z-index: 10; display: flex; gap: 6px; }
+        .hero-dot { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.3); transition: all .3s; cursor: pointer; }
+        .hero-dot.active { width: 20px; background: var(--red); }
+
+        /* Hero arrows */
+        .hero-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10; width: 36px; height: 36px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.1); border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: .2s; backdrop-filter: blur(6px); }
+        .hero-arrow:hover { background: var(--red); border-color: var(--red); }
+        .hero-arrow.left { left: 12px; }
+        .hero-arrow.right { right: 12px; }
+        @media(max-width:500px) { .hero-arrow { display: none; } }
+
+        /* ── CONTROLS ── */
+        #controls { position: sticky; top: var(--nav-h); z-index: 800; background: rgba(5,5,5,.97); border-bottom: 1px solid var(--border); backdrop-filter: blur(16px); }
+
+        .search-wrap { padding: 12px 5%; }
+        .search-box { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; height: 42px; transition: .2s; }
+        .search-box:focus-within { border-color: rgba(229,9,20,.5); box-shadow: 0 0 0 3px rgba(229,9,20,.08); }
+        .search-box i { color: var(--muted); font-size: .85rem; }
+        .search-box input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: .9rem; }
+        .search-box input::placeholder { color: var(--muted); }
+        .search-box .clear-btn { color: var(--muted); cursor: pointer; font-size: .8rem; display: none; padding: 4px; }
+        .search-box .clear-btn.show { display: block; }
+
+        /* Category tabs */
+        .cats-wrap { overflow-x: auto; padding: 0 5% 12px; display: flex; gap: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .cats-wrap::-webkit-scrollbar { display: none; }
+        .cat-btn { white-space: nowrap; padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: var(--text2); font-size: .78rem; font-weight: 700; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 6px; font-family: 'DM Sans', sans-serif; }
+        .cat-btn i { font-size: .75rem; }
+        .cat-btn:hover { border-color: rgba(229,9,20,.4); color: #fff; }
+        .cat-btn.active { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 4px 16px var(--redglow); }
+
+        /* ── CHANNEL GRID ── */
+        #channels-section { padding: 20px 5% 100px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .section-title { font-family: 'Bebas Neue', cursive; font-size: 1.3rem; letter-spacing: 1px; display: flex; align-items: center; gap: 10px; }
+        .section-title .count { font-family: 'DM Sans', sans-serif; font-size: .75rem; font-weight: 700; color: var(--muted); background: var(--card); padding: 3px 9px; border-radius: 8px; }
+        .section-title .live-dot { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; animation: liveDot 1.5s infinite; }
+        @keyframes liveDot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.5;transform:scale(.8);} }
+
+        #channels-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        @media(min-width:480px){ #channels-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+        @media(min-width:700px){ #channels-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media(min-width:1000px){ #channels-grid { grid-template-columns: repeat(5, 1fr); } }
+        @media(min-width:1300px){ #channels-grid { grid-template-columns: repeat(6, 1fr); } }
+
+        .ch-card {
+            position: relative; background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; overflow: hidden; cursor: pointer;
+            transition: all .25s var(--ease); aspect-ratio: 16/9;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .ch-card:hover { border-color: rgba(229,9,20,.4); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+        .ch-card:active { transform: scale(.97); }
+
+        .ch-logo-wrap { width: 100%; height: 65%; display: flex; align-items: center; justify-content: center; padding: 10px; }
+        .ch-logo { max-width: 70%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+        .ch-logo-fallback { width: 48px; height: 48px; background: linear-gradient(135deg, var(--red), #800); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', cursive; font-size: 1.1rem; letter-spacing: 1px; color: #fff; }
+
+        .ch-footer { width: 100%; padding: 6px 10px; background: linear-gradient(0deg, rgba(0,0,0,.7) 0%, transparent 100%); position: absolute; bottom: 0; }
+        .ch-name { font-size: .7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: rgba(255,255,255,.85); }
+        .ch-cat { font-size: .58rem; color: var(--muted); font-weight: 600; margin-top: 1px; }
+
+        /* Live badge */
+        .ch-live-badge { position: absolute; top: 8px; left: 8px; background: #e50914; color: #fff; font-size: .5rem; font-weight: 800; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+        .ch-live-badge::before { content: ''; width: 4px; height: 4px; background: #fff; border-radius: 50%; animation: liveDot 1.5s infinite; }
+
+        /* Lock badge */
+        .ch-lock { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; background: rgba(245,197,24,.15); border: 1px solid rgba(245,197,24,.4); border-radius: 7px; display: flex; align-items: center; justify-content: center; color: var(--gold); font-size: .7rem; }
+        .ch-free-badge { position: absolute; top: 8px; right: 8px; background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.3); border-radius: 7px; padding: 2px 7px; font-size: .52rem; font-weight: 800; color: #4ade80; letter-spacing: .5px; }
+
+        /* Skeleton */
+        .ch-skeleton { background: var(--card); border-radius: 14px; aspect-ratio: 16/9; overflow: hidden; position: relative; }
+        .ch-skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.04) 50%, transparent 100%); animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0%{transform:translateX(-100%);} 100%{transform:translateX(100%);} }
+
+        /* Empty state */
+        .empty-state { grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--muted); }
+        .empty-state i { font-size: 2.5rem; margin-bottom: 12px; display: block; color: var(--card); }
+        .empty-state p { font-size: .9rem; }
+
+        /* ── PLAYER MODAL ── */
+        #player-modal {
+            position: fixed; inset: 0; z-index: 2000;
+            background: rgba(0,0,0,.95);
+            display: none; flex-direction: column;
+            animation: fadeIn .25s var(--ease);
+        }
+        #player-modal.open { display: flex; }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+
+        .pm-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(5,5,5,.98); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 10; }
+        .pm-close { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,.05); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .9rem; transition: .2s; flex-shrink: 0; }
+        .pm-close:hover { background: var(--red); border-color: var(--red); }
+        .pm-ch-info { flex: 1; min-width: 0; }
+        .pm-ch-name { font-size: 1rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pm-ch-cat { font-size: .72rem; color: var(--text2); margin-top: 1px; }
+        .pm-live { display: flex; align-items: center; gap: 6px; background: rgba(229,9,20,.12); border: 1px solid rgba(229,9,20,.3); border-radius: 20px; padding: 4px 12px; font-size: .72rem; font-weight: 800; color: var(--red); flex-shrink: 0; }
+        .pm-live-dot { width: 6px; height: 6px; background: var(--red); border-radius: 50%; animation: liveDot 1.5s infinite; }
+
+        /* Video wrapper */
+        .pm-video-wrap { position: relative; width: 100%; background: #000; flex-shrink: 0; }
+        .pm-video-wrap::after { content: ''; display: block; padding-bottom: 56.25%; }
+        #pm-video { position: absolute; inset: 0; width: 100%; height: 100%; background: #000; }
+
+        /* Spinner */
+        #pm-spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: none; z-index: 5; }
+        #pm-spinner.on { display: block; }
+        .spin-ring { width: 48px; height: 48px; border-radius: 50%; border: 3px solid rgba(255,255,255,.1); border-top-color: var(--red); animation: spin 0.7s linear infinite; }
+        @keyframes spin { to{transform:rotate(360deg);} }
+
+        /* Error screen */
+        #pm-error { position: absolute; inset: 0; background: rgba(0,0,0,.97); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 30px; z-index: 6; }
+        #pm-error.on { display: flex; }
+        #pm-error i { font-size: 2.2rem; color: var(--red); }
+        #pm-error h3 { font-size: 1.1rem; font-weight: 800; }
+        #pm-error p { font-size: .82rem; color: var(--text2); max-width: 280px; line-height: 1.6; }
+        .err-retry { background: var(--red); color: #fff; border: none; padding: 10px 24px; border-radius: 8px; font-size: .85rem; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: .2s; }
+        .err-retry:hover { background: var(--red2); }
+
+        /* Timer bar (paid channels) */
+        #pm-timer-bar { height: 3px; background: rgba(255,255,255,.08); position: relative; overflow: hidden; display: none; }
+        #pm-timer-bar.show { display: block; }
+        #pm-timer-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--red)); width: 100%; transform-origin: left; transition: width 1s linear; }
+        .pm-timer-text { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: .6rem; color: rgba(255,255,255,.5); white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+
+        /* Channel info below player */
+        .pm-ch-details { padding: 14px 16px; background: var(--bg2); flex-shrink: 0; }
+        .pm-ch-details-row { display: flex; align-items: center; gap: 10px; }
+        .pm-ch-logo-sm { width: 40px; height: 40px; border-radius: 10px; background: var(--card); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); }
+        .pm-ch-logo-sm img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+        .pm-ch-details-info { flex: 1; }
+        .pm-ch-details-name { font-size: .95rem; font-weight: 800; }
+        .pm-ch-details-cat { font-size: .72rem; color: var(--text2); }
+        .pm-upgrade-btn { padding: 8px 16px; background: linear-gradient(135deg,var(--gold),#e6a800); color: #000; border: none; border-radius: 8px; font-size: .78rem; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; transition: .2s; }
+        .pm-upgrade-btn:hover { transform: scale(1.04); }
+
+        /* Channels list below video */
+        .pm-channels-list { flex: 1; overflow-y: auto; }
+        .pm-list-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: .15s; position: relative; }
+        .pm-list-item:hover, .pm-list-item.active { background: rgba(229,9,20,.06); }
+        .pm-list-item.active { border-left: 3px solid var(--red); }
+        .pm-list-logo { width: 44px; height: 44px; border-radius: 10px; background: var(--card); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1px solid var(--border); }
+        .pm-list-logo img { width: 100%; height: 100%; object-fit: contain; padding: 4px; }
+        .pm-list-info { flex: 1; min-width: 0; }
+        .pm-list-name { font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .pm-list-cat { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+        .pm-list-lock { color: var(--gold); font-size: .8rem; }
+        .pm-list-live { width: 7px; height: 7px; background: #22c55e; border-radius: 50%; flex-shrink: 0; animation: liveDot 1.5s infinite; }
+
+        /* ── AD OVERLAY ── */
+        #ad-overlay {
+            position: fixed; inset: 0; z-index: 3000;
+            background: #000;
+            display: none; flex-direction: column;
+        }
+        #ad-overlay.on { display: flex; }
+        .ad-skip-bar { height: 4px; background: rgba(255,255,255,.1); position: relative; }
+        .ad-skip-fill { height: 100%; background: var(--red); transition: width 1s linear; }
+        .ad-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(0,0,0,.8); }
+        .ad-label { display: flex; align-items: center; gap: 8px; font-size: .75rem; color: rgba(255,255,255,.6); }
+        .ad-label span { background: rgba(255,165,0,.15); border: 1px solid rgba(255,165,0,.3); border-radius: 4px; padding: 2px 8px; font-size: .65rem; font-weight: 800; color: orange; letter-spacing: 1px; }
+        #ad-skip-btn { padding: 7px 18px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); border-radius: 6px; color: #fff; font-size: .75rem; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; display: none; transition: .2s; }
+        #ad-skip-btn:hover { background: rgba(255,255,255,.2); }
+        #ad-skip-btn.show { display: block; }
+        #ad-countdown { font-size: .75rem; color: rgba(255,255,255,.5); font-weight: 700; }
+        .ad-content { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; position: relative; }
+        .ad-frame { width: 100%; max-width: 700px; border-radius: 16px; overflow: hidden; background: var(--card); border: 1px solid var(--border); }
+        .ad-image { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+        .ad-body { padding: 20px; }
+        .ad-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+        .ad-sub { font-size: .82rem; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+        .ad-cta { display: inline-flex; align-items: center; gap: 8px; background: var(--red); color: #fff; padding: 10px 22px; border-radius: 8px; font-size: .85rem; font-weight: 800; text-decoration: none; transition: .2s; }
+        .ad-cta:hover { background: var(--red2); }
+        .ad-powered { font-size: .6rem; color: var(--muted); text-align: center; padding: 8px; }
+
+        /* ── PLAN POPUP ── */
+        #plan-popup {
+            position: fixed; inset: 0; z-index: 4000;
+            background: rgba(0,0,0,.85); backdrop-filter: blur(16px);
+            display: none; align-items: center; justify-content: center; padding: 20px;
+        }
+        #plan-popup.on { display: flex; }
+        .pp-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 24px; max-width: 380px; width: 100%; overflow: hidden; box-shadow: 0 32px 80px rgba(0,0,0,.7); animation: ppIn .4s var(--spring); }
+        @keyframes ppIn { from{opacity:0;transform:scale(.85) translateY(30px);} to{opacity:1;transform:none;} }
+        .pp-top { padding: 28px 24px 20px; text-align: center; position: relative; background: linear-gradient(180deg, rgba(229,9,20,.08) 0%, transparent 100%); }
+        .pp-close-btn { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,.07); border: 1px solid var(--border); color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .75rem; transition: .2s; }
+        .pp-close-btn:hover { background: var(--red); border-color: var(--red); color: #fff; }
+        .pp-icon { font-size: 2.8rem; margin-bottom: 10px; }
+        .pp-title { font-family: 'Bebas Neue', cursive; font-size: 1.8rem; letter-spacing: 2px; }
+        .pp-sub { font-size: .85rem; color: var(--text2); margin-top: 4px; line-height: 1.5; }
+        .pp-plans { padding: 0 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+        .pp-plan { padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--card); cursor: pointer; transition: .2s; display: flex; align-items: center; justify-content: space-between; }
+        .pp-plan:hover { border-color: rgba(229,9,20,.4); }
+        .pp-plan.popular { border-color: var(--red); background: rgba(229,9,20,.06); }
+        .pp-plan-left .pp-plan-name { font-size: .9rem; font-weight: 800; }
+        .pp-plan-left .pp-plan-desc { font-size: .72rem; color: var(--text2); margin-top: 2px; }
+        .pp-plan-right { text-align: right; }
+        .pp-plan-price { font-size: 1.1rem; font-weight: 900; }
+        .pp-plan-per { font-size: .65rem; color: var(--text2); }
+        .pp-popular-tag { display: inline-block; background: var(--red); color: #fff; font-size: .55rem; font-weight: 800; letter-spacing: 1px; padding: 2px 8px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+        .pp-pay-btn { margin: 0 20px 20px; display: flex; align-items: center; justify-content: center; gap: 10px; width: calc(100% - 40px); padding: 15px; background: linear-gradient(135deg, var(--red), #c0000b); border: none; border-radius: 12px; color: #fff; font-size: 1rem; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: .2s; box-shadow: 0 6px 20px rgba(229,9,20,.4); }
+        .pp-pay-btn:hover { transform: scale(1.02); box-shadow: 0 8px 28px rgba(229,9,20,.5); }
+        .pp-note { padding: 0 20px 20px; font-size: .68rem; color: var(--muted); text-align: center; }
+
+        /* ── LOADING SCREEN ── */
+        #loading-screen { position: fixed; inset: 0; z-index: 5000; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; transition: opacity .5s; }
+        #loading-screen.hide { opacity: 0; pointer-events: none; }
+        .loading-logo { font-family: 'Bebas Neue', cursive; font-size: 3rem; letter-spacing: 4px; }
+        .loading-logo span { color: var(--red); }
+        .loading-bar-wrap { width: 160px; height: 3px; background: rgba(255,255,255,.08); border-radius: 4px; overflow: hidden; }
+        .loading-bar { height: 100%; background: var(--red); border-radius: 4px; width: 0; animation: loadBar 2s var(--ease) forwards; }
+        @keyframes loadBar { to { width: 100%; } }
+        .loading-text { font-size: .75rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+        /* Scrollbar for list */
+        .pm-channels-list::-webkit-scrollbar { width: 3px; }
+        .pm-channels-list::-webkit-scrollbar-thumb { background: var(--red); }
+
+        /* Modal layout for desktop */
+        @media(min-width: 800px) {
+            #player-modal { flex-direction: row; }
+            .pm-header { display: none; }
+            .pm-left { flex: 1; display: flex; flex-direction: column; }
+            .pm-right { width: 300px; border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+            .pm-right-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+            .pm-right-title { font-size: .85rem; font-weight: 800; color: var(--text2); }
+            .pm-close-desktop { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: .8rem; transition: .2s; }
+            .pm-close-desktop:hover { background: var(--red); border-color: var(--red); }
+        }
+        @media(max-width: 799px) {
+            .pm-left { display: flex; flex-direction: column; width: 100%; }
+            .pm-right { flex: 1; overflow-y: auto; }
+            .pm-right-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+            .pm-right-title { font-size: .82rem; font-weight: 800; color: var(--text2); }
+            .pm-close-desktop { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Loading Screen -->
+<div id="loading-screen">
+    <div class="loading-logo"><span>KS</span> LIVE TV</div>
+    <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+    <div class="loading-text" id="loading-text">Loading Channels…</div>
+</div>
+
+<!-- Top Nav -->
+<nav id="topnav">
+    <a href="user.html" class="nav-back"><i class="fa-solid fa-arrow-left"></i></a>
+    <div class="nav-logo"><span class="ks">KS</span> LIVE TV <span class="live-pill">LIVE</span></div>
+    <div class="nav-plan-badge free" id="nav-plan-btn" onclick="openPlanPopup()">FREE</div>
+</nav>
+
+<!-- Hero Ads -->
+<section id="hero">
+    <div class="hero-slides" id="hero-slides"></div>
+    <div class="hero-dots" id="hero-dots"></div>
+    <div class="hero-arrow left" onclick="heroNav(-1)"><i class="fa-solid fa-chevron-left"></i></div>
+    <div class="hero-arrow right" onclick="heroNav(1)"><i class="fa-solid fa-chevron-right"></i></div>
+</section>
+
+<!-- Controls -->
+<div id="controls">
+    <div class="search-wrap">
+        <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="search-input" placeholder="Search channels…" oninput="onSearch(this.value)">
+            <span class="clear-btn" id="clear-btn" onclick="clearSearch()"><i class="fa-solid fa-xmark"></i></span>
+        </div>
+    </div>
+    <div class="cats-wrap" id="cats-wrap"></div>
+</div>
+
+<!-- Channels Grid -->
+<section id="channels-section">
+    <div class="section-header">
+        <div class="section-title">
+            <div class="live-dot"></div>
+            LIVE CHANNELS
+            <span class="count" id="ch-count">0</span>
+        </div>
+    </div>
+    <div id="channels-grid">
+        <!-- Skeletons -->
+        <div class="ch-skeleton"></div><div class="ch-skeleton"></div><div class="ch-skeleton"></div>
+        <div class="ch-skeleton"></div><div class="ch-skeleton"></div><div class="ch-skeleton"></div>
+    </div>
+</section>
+
+<!-- Player Modal -->
+<div id="player-modal">
+    <!-- Mobile header -->
+    <div class="pm-header">
+        <div class="pm-close" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i></div>
+        <div class="pm-ch-info">
+            <div class="pm-ch-name" id="pm-name">Channel</div>
+            <div class="pm-ch-cat" id="pm-cat">Category</div>
+        </div>
+        <div class="pm-live"><div class="pm-live-dot"></div> LIVE</div>
+    </div>
+
+    <!-- Left: player area -->
+    <div class="pm-left">
+        <div class="pm-video-wrap">
+            <video id="pm-video" playsinline controls></video>
+            <div id="pm-spinner"><div class="spin-ring"></div></div>
+            <div id="pm-error">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <h3>Stream Unavailable</h3>
+                <p>This channel stream is currently unavailable. Try another channel or check your connection.</p>
+                <button class="err-retry" onclick="retryStream()">Try Again</button>
+            </div>
+        </div>
+        <!-- Timer bar -->
+        <div id="pm-timer-bar">
+            <div id="pm-timer-fill"></div>
+        </div>
+        <!-- Channel detail strip -->
+        <div class="pm-ch-details">
+            <div class="pm-ch-details-row">
+                <div class="pm-ch-logo-sm" id="pm-logo-sm"><img id="pm-logo-sm-img" src="" alt=""></div>
+                <div class="pm-ch-details-info">
+                    <div class="pm-ch-details-name" id="pm-detail-name">Channel</div>
+                    <div class="pm-ch-details-cat" id="pm-detail-cat">Category</div>
+                </div>
+                <button class="pm-upgrade-btn" onclick="openPlanPopup()" id="pm-upgrade-btn" style="display:none">⚡ Upgrade</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right: channel list -->
+    <div class="pm-right">
+        <div class="pm-right-header">
+            <span class="pm-right-title">ALL CHANNELS</span>
+            <div class="pm-close-desktop" onclick="closePlayer()"><i class="fa-solid fa-xmark"></i></div>
+        </div>
+        <div class="pm-channels-list" id="pm-channels-list"></div>
+    </div>
+</div>
+
+<!-- Ad Overlay -->
+<div id="ad-overlay">
+    <div class="ad-skip-bar"><div class="ad-skip-fill" id="ad-fill"></div></div>
+    <div class="ad-header">
+        <div class="ad-label"><span>AD</span> Advertisement — supports free streaming</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+            <span id="ad-countdown">60</span>
+            <button id="ad-skip-btn" onclick="skipAd()">Skip Ad ›</button>
+        </div>
+    </div>
+    <div class="ad-content">
+        <div class="ad-frame" id="ad-frame">
+            <img class="ad-image" id="ad-img" src="" alt="Advertisement">
+            <div class="ad-body">
+                <div class="ad-title" id="ad-title">KS Movies Premium</div>
+                <div class="ad-sub" id="ad-sub">Upgrade to enjoy unlimited streaming without ads. Watch all premium channels anytime, anywhere.</div>
+                <a class="ad-cta" href="kspay.html" id="ad-cta"><i class="fa-solid fa-crown"></i> Upgrade Now</a>
+            </div>
+        </div>
+    </div>
+    <div class="ad-powered">Advertisement • KS Movies Network</div>
+</div>
+
+<!-- Plan Popup -->
+<div id="plan-popup">
+    <div class="pp-card">
+        <div class="pp-top">
+            <div class="pp-close-btn" onclick="closePlanPopup()"><i class="fa-solid fa-xmark"></i></div>
+            <div class="pp-icon">👑</div>
+            <div class="pp-title">Go Premium</div>
+            <div class="pp-sub" id="pp-sub-text">Your 10-minute free preview has ended. Upgrade to watch without limits.</div>
+        </div>
+        <div class="pp-plans" id="pp-plans-list">
+            <div class="pp-plan" onclick="selectPlan('weekly')" id="plan-weekly">
+                <div class="pp-plan-left">
+                    <div class="pp-plan-name">Weekly</div>
+                    <div class="pp-plan-desc">7 days full access</div>
+                </div>
+                <div class="pp-plan-right">
+                    <div class="pp-plan-price">₹49</div>
+                    <div class="pp-plan-per">per week</div>
+                </div>
+            </div>
+            <div class="pp-plan popular" onclick="selectPlan('monthly')" id="plan-monthly">
+                <div class="pp-plan-left">
+                    <div class="pp-plan-name">Monthly <span class="pp-popular-tag">POPULAR</span></div>
+                    <div class="pp-plan-desc">30 days unlimited</div>
+                </div>
+                <div class="pp-plan-right">
+                    <div class="pp-plan-price">₹149</div>
+                    <div class="pp-plan-per">per month</div>
+                </div>
+            </div>
+            <div class="pp-plan" onclick="selectPlan('yearly')" id="plan-yearly">
+                <div class="pp-plan-left">
+                    <div class="pp-plan-name">Annual <span class="pp-popular-tag" style="background:#f5c518;color:#000">BEST</span></div>
+                    <div class="pp-plan-desc">365 days — save 60%</div>
+                </div>
+                <div class="pp-plan-right">
+                    <div class="pp-plan-price">₹699</div>
+                    <div class="pp-plan-per">per year</div>
+                </div>
+            </div>
+        </div>
+        <button class="pp-pay-btn" onclick="proceedPayment()">
+            <i class="fa-solid fa-lock-open"></i>
+            <span id="pp-pay-label">Pay ₹149 — Continue</span>
+        </button>
+        <div class="pp-note">🔒 Secure payment via KS Pay • Cancel anytime</div>
+    </div>
+</div>
+
+<!-- Firebase + HLS + App Script -->
+<script>
+// ── FIREBASE ──────────────────────────────────────────────
+const firebaseConfig = {
+    apiKey:"AIzaSyBNyfzP26mSnB0qsm24zIeTM2K9sVBV1zc",
+    authDomain:"ks-movies-98e3e.firebaseapp.com",
+    databaseURL:"https://ks-movies-98e3e-default-rtdb.firebaseio.com",
+    projectId:"ks-movies-98e3e",
+    storageBucket:"ks-movies-98e3e.firebasestorage.app",
+    messagingSenderId:"392323800373",
+    appId:"1:392323800373:web:b289cf81f4c0232d66007c"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+// ── STATE ─────────────────────────────────────────────────
+let allChannels = [];
+let filteredChannels = [];
+let activeCategory = 'All';
+let searchQuery = '';
+let isPremium = false;
+let currentChannel = null;
+let hlsInstance = null;
+let watchTimer = null;
+let watchSeconds = 0;
+let adTimer = null;
+let adSeconds = 0;
+let lastAdTime = 0; // seconds of total watch time since last ad
+let selectedPlan = 'monthly';
+let heroIndex = 0;
+let heroInterval;
+let streamRetries = 0;
+
+const PAID_TIER_MINUTES = 10; // free users get 10 min on paid channels
+const AD_INTERVAL_SECONDS = 15 * 60; // ad every 15 min
+const AD_NONSKIP_SECONDS = 60; // non-skippable for 60 sec
+
+// ── PAID NETWORKS (channels with these keywords are "premium") ──
+const PAID_KEYWORDS = [
+    'star','sony','zee','colors','&tv','sab','sun','gemini','udaya','surya',
+    'vijay','asianet','mazhavil','flowers','reporters','kairali','kaumudy',
+    'espn','willow','ten sports','dsport','discovery','animal planet','tlc',
+    'history','natgeo','national geographic','aaj tak hd','india today',
+    'cnbc','nbc','cnn','bbc','al jazeera','fox','mtv','vh1','eros','alt balaji',
+    'hotstar','jio','manorama','bharat','etv','tv9','ndtv 24x7','times now hd',
+    'republic','wion','mirror now','news18 india','news nation',
+    'hbo','fx','star world','star movies','romedy now','&pictures',
+    'b4u','music india','b4u kadak'
+];
+
+const FREE_KEYWORDS = ['doordarshan','dd national','dd india','dd news','dd sports','dd bharati','dd kisan','lok sabha','rajya sabha','loksabha','rajyasabha'];
+
+function isChannelPaid(ch) {
+    if (!ch) return false;
+    const name = (ch.name || '').toLowerCase();
+    const grp  = (ch.group || '').toLowerCase();
+    // explicitly free
+    for (const kw of FREE_KEYWORDS) { if (name.includes(kw) || grp.includes(kw)) return false; }
+    // paid networks
+    for (const kw of PAID_KEYWORDS) { if (name.includes(kw)) return true; }
+    return false;
+}
+
+// ── HERO ADS DATA — Firebase se load hoga ─────────────────
+// Default fallback (agar Firebase se nahi aaya)
+const HERO_ADS_DEFAULT = [
+    {
+        img: 'https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg',
+        title: 'Upgrade to KS Premium',
+        sub: 'Unlimited live TV • No ads • All channels',
+        cta: 'Get Premium →',
+        link: 'kspay.html?source=livetv'
+    },
+    {
+        img: 'https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg',
+        title: '300+ Live Channels',
+        sub: 'Entertainment • News • Sports • Regional',
+        cta: 'Watch Free →',
+        link: '#'
+    },
+    {
+        img: 'https://image.tmdb.org/t/p/original/rktDFPbfHfUbArZ6OOOKsXcv0Bm.jpg',
+        title: 'Live Sports Coverage',
+        sub: 'Cricket • Football • Formula 1 & more',
+        cta: 'Upgrade Now →',
+        link: 'kspay.html?source=livetv'
+    },
+    {
+        img: 'https://image.tmdb.org/t/p/original/qNBAXBIQlnOThrVvA6mA2B5ggkl.jpg',
+        title: 'KS Movies + Live TV',
+        sub: 'Movies, shows and live channels — one subscription',
+        cta: 'Explore Plans →',
+        link: 'kspay.html?source=livetv'
+    },
+];
+let HERO_ADS = [...HERO_ADS_DEFAULT];
+
+// Channel break ad config (Firebase se load hoga)
+let channelAdConfig = null; // { url, duration, skipAfter }
+
+// ── FIREBASE LOAD: HERO ADS + CHANNEL AD ──────────────────
+async function loadLiveTVAdsFromFirebase() {
+    try {
+        const snap = await db.ref('liveTV').once('value');
+        const data = snap.val();
+        if (!data) return;
+
+        // Hero Ads
+        if (Array.isArray(data.heroAds)) {
+            const fbAds = data.heroAds
+                .filter(url => url && url.trim())
+                .map(url => ({
+                    img: url,
+                    title: 'KS Live TV',
+                    sub: 'Unlimited entertainment — watch now',
+                    cta: 'Subscribe →',
+                    link: 'kspay.html?source=livetv'
+                }));
+            if (fbAds.length > 0) {
+                HERO_ADS = fbAds;
+            }
+        }
+
+        // Channel Break Ad
+        if (data.channelAd && data.channelAd.url) {
+            channelAdConfig = data.channelAd;
+            // Update skip seconds from Firebase config
+            if (channelAdConfig.skipAfter !== undefined) {
+                window._adSkipSeconds = channelAdConfig.skipAfter;
+            }
+            if (channelAdConfig.duration !== undefined) {
+                window._adDurationSeconds = channelAdConfig.duration;
+            }
+        }
+
+        // Custom M3U URL from admin (overrides default iptv-org source)
+        if (data.m3uUrl && data.m3uUrl.trim()) {
+            M3U_SOURCES.unshift(data.m3uUrl.trim()); // Add as highest priority
+            console.log('[KS LiveTV] Using admin-provided M3U URL:', data.m3uUrl);
+        }
+    } catch(e) {
+        console.log('Firebase ads load error:', e);
+    }
+}
+
+// ── CATEGORIES ────────────────────────────────────────────
+const CATEGORY_ICONS = {
+    'All': 'fa-solid fa-border-all',
+    'Entertainment': 'fa-solid fa-film',
+    'News': 'fa-solid fa-newspaper',
+    'Sports': 'fa-solid fa-futbol',
+    'Movies': 'fa-solid fa-clapperboard',
+    'Kids': 'fa-solid fa-child',
+    'Music': 'fa-solid fa-music',
+    'Religious': 'fa-solid fa-Om',
+    'Lifestyle': 'fa-solid fa-leaf',
+    'Business': 'fa-solid fa-chart-line',
+    'Documentary': 'fa-solid fa-tv',
+    'Regional': 'fa-solid fa-map-marker-alt',
+    'General': 'fa-solid fa-globe',
+};
+
+// ── CORS PROXY LIST (ordered by reliability) ──────────────
+const CORS_PROXIES = [
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+    'https://cors-anywhere.herokuapp.com/',
+    'https://thingproxy.freeboard.io/fetch/',
+];
+
+// ── MULTIPLE M3U SOURCES ──────────────────────────────────
+const M3U_SOURCES = [
+    'https://iptv-org.github.io/iptv/countries/in.m3u',
+    'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/in.m3u',
+    'https://iptv-org.github.io/iptv/languages/hin.m3u',
+];
+
+// ── Firebase channel URL overrides (admin sets these) ─────
+// Structure in Firebase: liveTV/channelOverrides = { "star plus": "https://...", ... }
+let channelUrlOverrides = {}; // key: channel name lowercase → url
+
+async function fetchWithProxy(url) {
+    // 1. Try direct first (sometimes works for non-CORS-restricted)
+    try {
+        const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (resp.ok) return await resp.text();
+    } catch(e) { /* try proxies */ }
+
+    // 2. Try each CORS proxy
+    for (const proxy of CORS_PROXIES) {
+        try {
+            const proxyUrl = proxy + encodeURIComponent(url);
+            const resp = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
+            if (resp.ok) {
+                const text = await resp.text();
+                if (text.includes('#EXTM3U') || text.includes('#EXTINF')) return text;
+            }
+        } catch(e) { continue; }
+    }
+    throw new Error('All proxies failed');
+}
+
+async function fetchChannels() {
+    // ── FILE:// PROTOCOL DETECT ──
+    // fetch() doesn't work on file:// — skip straight to fallback + Firebase overrides
+    const isFileProtocol = window.location.protocol === 'file:';
+
+    // First load Firebase channel URL overrides (works on file:// too via Firebase SDK)
+    try {
+        const snap = await db.ref('liveTV/channelOverrides').once('value');
+        const overrides = snap.val();
+        if (overrides && typeof overrides === 'object') {
+            channelUrlOverrides = {};
+            Object.entries(overrides).forEach(([k, v]) => {
+                channelUrlOverrides[k.toLowerCase().trim()] = v;
+            });
+            console.log('[KS LiveTV] Loaded', Object.keys(channelUrlOverrides).length, 'channel URL overrides from Firebase');
+        }
+    } catch(e) { console.warn('[KS LiveTV] Could not load channel overrides:', e); }
+
+    if (isFileProtocol) {
+        console.warn('[KS LiveTV] file:// protocol detected — using built-in channel list');
+        return applyChannelOverrides(getBuiltinChannels());
+    }
+
+    // Try each M3U source (only when served over http/https)
+    for (const src of M3U_SOURCES) {
+        try {
+            console.log('[KS LiveTV] Trying M3U source:', src);
+            const text = await fetchWithProxy(src);
+            const channels = parseM3U(text);
+            if (channels.length > 0) {
+                console.log('[KS LiveTV] Loaded', channels.length, 'channels from', src);
+                return applyChannelOverrides(channels);
+            }
+        } catch(e) {
+            console.warn('[KS LiveTV] M3U source failed:', src, e.message);
+        }
+    }
+
+    console.error('[KS LiveTV] All M3U sources failed — using built-in channel list');
+    return applyChannelOverrides(getBuiltinChannels());
+}
+
+// Apply Firebase URL overrides to channels
+function applyChannelOverrides(channels) {
+    return channels.map(ch => {
+        const key = (ch.name || '').toLowerCase().trim();
+        // Exact match
+        if (channelUrlOverrides[key]) {
+            ch.url = channelUrlOverrides[key];
+            ch._overridden = true;
+            return ch;
+        }
+        // Partial match (e.g. "star plus" matches "Star Plus HD (1080p)")
+        for (const [k, v] of Object.entries(channelUrlOverrides)) {
+            if (key.includes(k) || k.includes(key)) {
+                ch.url = v;
+                ch._overridden = true;
+                break;
+            }
+        }
+        return ch;
+    });
+}
+
+function parseM3U(text) {
+    const lines = text.split('\n');
+    const channels = [];
+    let current = null;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('#EXTINF')) {
+            current = {};
+            // Extract tvg-name
+            const nameMatch = line.match(/tvg-name="([^"]*)"/);
+            current.name = nameMatch ? nameMatch[1] : '';
+            // Display name fallback (after last comma)
+            const commaIdx = line.lastIndexOf(',');
+            if (!current.name && commaIdx > -1) current.name = line.slice(commaIdx+1).trim();
+            // Logo
+            const logoMatch = line.match(/tvg-logo="([^"]*)"/);
+            current.logo = logoMatch ? logoMatch[1] : '';
+            // Group
+            const groupMatch = line.match(/group-title="([^"]*)"/);
+            current.group = groupMatch ? groupMatch[1].trim() : 'General';
+            // Normalize group
+            current.group = normalizeGroup(current.group);
+            // Language
+            const langMatch = line.match(/tvg-language="([^"]*)"/);
+            current.language = langMatch ? langMatch[1] : '';
+            // tvg-id
+            const idMatch = line.match(/tvg-id="([^"]*)"/);
+            current.id = idMatch ? idMatch[1] : (current.name || 'ch_' + channels.length);
+            // Paid?
+            current.paid = isChannelPaid(current);
+        } else if (current && line && !line.startsWith('#')) {
+            current.url = line;
+            if (current.name) channels.push(current);
+            current = null;
+        }
+    }
+    return channels;
+}
+
+function normalizeGroup(g) {
+    if (!g) return 'General';
+    const l = g.toLowerCase();
+    if (l.includes('entertain')) return 'Entertainment';
+    if (l.includes('news')) return 'News';
+    if (l.includes('sport')) return 'Sports';
+    if (l.includes('movie') || l.includes('cinema')) return 'Movies';
+    if (l.includes('kid') || l.includes('child') || l.includes('cartoon')) return 'Kids';
+    if (l.includes('music') || l.includes('song')) return 'Music';
+    if (l.includes('religi') || l.includes('devotion') || l.includes('spiritual') || l.includes('dharm')) return 'Religious';
+    if (l.includes('lifestyle') || l.includes('fashion') || l.includes('food')) return 'Lifestyle';
+    if (l.includes('business') || l.includes('finance') || l.includes('market')) return 'Business';
+    if (l.includes('document') || l.includes('nature') || l.includes('discovery')) return 'Documentary';
+    if (l.includes('regional') || l.includes('local')) return 'Regional';
+    return 'General';
+}
+
+// ── RENDER HERO ───────────────────────────────────────────
+function renderHero() {
+    const slidesEl = document.getElementById('hero-slides');
+    const dotsEl = document.getElementById('hero-dots');
+    if (!HERO_ADS || HERO_ADS.length === 0) return;
+    slidesEl.innerHTML = HERO_ADS.map((ad, i) => `
+        <div class="hero-slide" onclick="window.location='${ad.link}'">
+            <img src="${ad.img}" alt="${ad.title}" onerror="this.style.display='none'">
+            <div class="hero-slide-overlay"></div>
+            <div class="hero-slide-content">
+                <div class="hero-ad-tag"><i class="fa-solid fa-bolt"></i> PROMOTED</div>
+                <div class="hero-slide-title">${ad.title}</div>
+                <div class="hero-slide-sub">${ad.sub}</div>
+                <div class="hero-slide-cta">${ad.cta}</div>
+            </div>
+        </div>
+    `).join('');
+    dotsEl.innerHTML = HERO_ADS.map((_,i) => `<div class="hero-dot ${i===0?'active':''}" onclick="heroGoTo(${i})"></div>`).join('');
+    heroIndex = 0;
+    startHeroAuto();
+}
+
+function heroGoTo(idx) {
+    heroIndex = (idx + HERO_ADS.length) % HERO_ADS.length;
+    document.getElementById('hero-slides').style.transform = `translateX(-${heroIndex*100}%)`;
+    document.querySelectorAll('.hero-dot').forEach((d,i) => d.classList.toggle('active', i===heroIndex));
+}
+
+function heroNav(dir) { heroGoTo(heroIndex + dir); }
+
+function startHeroAuto() {
+    clearInterval(heroInterval);
+    heroInterval = setInterval(() => heroGoTo(heroIndex + 1), 5000);
+}
+
+// ── RENDER CATEGORIES ─────────────────────────────────────
+function renderCategories() {
+    const groups = ['All', ...new Set(allChannels.map(c => c.group))].sort((a,b) => {
+        if (a === 'All') return -1; if (b === 'All') return 1;
+        const order = ['Entertainment','News','Sports','Movies','Kids','Music','Religious','Lifestyle','Business','Documentary','Regional','General'];
+        return order.indexOf(a) - order.indexOf(b);
+    });
+    const wrap = document.getElementById('cats-wrap');
+    wrap.innerHTML = groups.map(g => {
+        const icon = CATEGORY_ICONS[g] || 'fa-solid fa-circle';
+        return `<button class="cat-btn ${g===activeCategory?'active':''}" onclick="setCategory('${g}')"><i class="${icon}"></i>${g}</button>`;
+    }).join('');
+}
+
+function setCategory(cat) {
+    activeCategory = cat;
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === cat));
+    applyFilters();
+}
+
+// ── SEARCH ────────────────────────────────────────────────
+function onSearch(val) {
+    searchQuery = val.trim().toLowerCase();
+    document.getElementById('clear-btn').classList.toggle('show', val.length > 0);
+    applyFilters();
+}
+
+function clearSearch() {
+    document.getElementById('search-input').value = '';
+    onSearch('');
+}
+
+function applyFilters() {
+    filteredChannels = allChannels.filter(c => {
+        const matchCat = activeCategory === 'All' || c.group === activeCategory;
+        const matchQ = !searchQuery || c.name.toLowerCase().includes(searchQuery);
+        return matchCat && matchQ;
+    });
+    renderChannelGrid();
+    updateSideList();
+}
+
+// ── RENDER GRID ───────────────────────────────────────────
+function renderChannelGrid() {
+    const grid = document.getElementById('channels-grid');
+    document.getElementById('ch-count').textContent = filteredChannels.length;
+    if (filteredChannels.length === 0) {
+        grid.innerHTML = `<div class="empty-state"><i class="fa-solid fa-satellite-dish"></i><p>No channels found. Try a different search.</p></div>`;
+        return;
+    }
+    grid.innerHTML = filteredChannels.map((ch, idx) => {
+        const paid = ch.paid;
+        const lockHtml = paid && !isPremium
+            ? `<div class="ch-lock" title="10 min free preview"><i class="fa-solid fa-lock"></i></div><div style="position:absolute;bottom:28px;right:5px;background:rgba(245,197,24,.18);border:1px solid rgba(245,197,24,.45);border-radius:5px;padding:1px 5px;font-size:.48rem;font-weight:800;color:#f5c518;letter-spacing:.5px;">10 MIN FREE</div>`
+            : (!paid ? `<div class="ch-free-badge">FREE</div>` : '');
+        const logoHtml = ch.logo
+            ? `<img class="ch-logo" src="${ch.logo}" alt="${ch.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ch-logo-fallback" style="display:none">${abbr(ch.name)}</div>`
+            : `<div class="ch-logo-fallback">${abbr(ch.name)}</div>`;
+        return `
+        <div class="ch-card" onclick="playChannel(${allChannels.indexOf(ch)})">
+            <div class="ch-logo-wrap">${logoHtml}</div>
+            <div class="ch-live-badge">LIVE</div>
+            ${lockHtml}
+            <div class="ch-footer">
+                <div class="ch-name">${ch.name}</div>
+                <div class="ch-cat">${ch.group}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function abbr(name) {
+    return (name || '??').split(/\s+/).slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '??';
+}
+
+// ── RENDER SIDE LIST ──────────────────────────────────────
+function updateSideList() {
+    const list = document.getElementById('pm-channels-list');
+    list.innerHTML = filteredChannels.map(ch => {
+        const paid = ch.paid;
+        const isActive = currentChannel && currentChannel.id === ch.id;
+        const lockHtml = paid && !isPremium ? `<i class="fa-solid fa-lock pm-list-lock"></i>` : `<div class="pm-list-live"></div>`;
+        const logoHtml = ch.logo
+            ? `<img src="${ch.logo}" alt="" onerror="this.style.display='none'">`
+            : '';
+        return `
+        <div class="pm-list-item ${isActive?'active':''}" onclick="playChannel(${allChannels.indexOf(ch)})">
+            <div class="pm-list-logo">${logoHtml}</div>
+            <div class="pm-list-info">
+                <div class="pm-list-name">${ch.name}</div>
+                <div class="pm-list-cat">${ch.group}</div>
+            </div>
+            ${lockHtml}
+        </div>`;
+    }).join('');
+}
+
+// ── PLAY CHANNEL ──────────────────────────────────────────
+function playChannel(globalIdx) {
+    const ch = allChannels[globalIdx];
+    if (!ch) return;
+
+    // Stop previous timers before switching channel
+    clearWatchTimer();
+    clearInterval(freeWatchInterval);
+    freeWatchInterval = null;
+
+    currentChannel = ch;
+
+    // Open player modal
+    document.getElementById('player-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Update UI
+    document.getElementById('pm-name').textContent = ch.name;
+    document.getElementById('pm-cat').textContent = ch.group;
+    document.getElementById('pm-detail-name').textContent = ch.name;
+    document.getElementById('pm-detail-cat').textContent = ch.group;
+    if (ch.logo) { document.getElementById('pm-logo-sm-img').src = ch.logo; }
+
+    // Show/hide upgrade button
+    const upgradeBtn = document.getElementById('pm-upgrade-btn');
+    upgradeBtn.style.display = (ch.paid && !isPremium) ? 'block' : 'none';
+
+    // Highlight in side list
+    updateSideList();
+
+    // ── TIMER BAR ──
+    const timerBar = document.getElementById('pm-timer-bar');
+    timerBar.classList.remove('show');
+
+    // Load stream
+    if (!ch.url || ch.url.trim() === '') {
+        const spinner = document.getElementById('pm-spinner');
+        const errEl = document.getElementById('pm-error');
+        spinner.classList.remove('on');
+        errEl.classList.add('on');
+        errEl.querySelector('p').textContent = 'Stream URL unavailable. Please try again later.';
+        return;
+    }
+
+    loadStream(ch.url);
+
+    if (!isPremium) {
+        if (ch.paid) {
+            // FREE USER on PAID CHANNEL → 10 min preview then popup
+            timerBar.classList.add('show');
+            document.getElementById('pm-timer-fill').style.width = '100%';
+            startWatchTimer();
+        } else {
+            // FREE USER on FREE CHANNEL → periodic ads
+            checkAdSchedule();
+        }
+    }
+}
+
+function loadStream(url) {
+    const video = document.getElementById('pm-video');
+    const spinner = document.getElementById('pm-spinner');
+    const errEl = document.getElementById('pm-error');
+
+    errEl.classList.remove('on');
+    spinner.classList.add('on');
+    streamRetries = 0;
+
+    // Clear any previous stall watchdog
+    if (window._stallWatchdog) { clearInterval(window._stallWatchdog); window._stallWatchdog = null; }
+
+    // Destroy previous HLS instance fully
+    if (hlsInstance) {
+        try { hlsInstance.stopLoad(); hlsInstance.detachMedia(); hlsInstance.destroy(); } catch(e){}
+        hlsInstance = null;
+    }
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+
+    if (!url || url.trim() === '') {
+        spinner.classList.remove('on');
+        errEl.classList.add('on');
+        errEl.querySelector('p').textContent = 'Stream unavailable. Please try again later.';
+        return;
+    }
+
+    const MAX_RETRIES = CORS_PROXIES.length + 1; // direct + each proxy
+
+    function tryHLS(streamUrl, proxyIdx) {
+        if (hlsInstance) { try { hlsInstance.stopLoad(); hlsInstance.detachMedia(); hlsInstance.destroy(); } catch(e){} hlsInstance = null; }
+
+        // If not first attempt and previous direct URL failed, try CORS proxy
+        let finalUrl = streamUrl;
+        if (proxyIdx > 0 && proxyIdx <= CORS_PROXIES.length) {
+            // Only proxy M3U/HLS playlists, not TS segments (HLS.js handles those internally)
+            finalUrl = CORS_PROXIES[proxyIdx - 1] + encodeURIComponent(streamUrl);
+            console.log('[KS LiveTV] Trying with proxy:', CORS_PROXIES[proxyIdx - 1]);
+        }
+
+        const hlsCfg = {
+            enableWorker: true,
+            lowLatencyMode: false,
+            backBufferLength: 30,
+            maxBufferLength: 30,
+            maxMaxBufferLength: 60,
+            maxBufferHole: 2.0,
+            highBufferWatchdogPeriod: 3,
+            nudgeMaxRetry: 10,
+            nudgeOffset: 0.2,
+            startFragPrefetch: true,
+            manifestLoadingTimeOut: 15000,
+            manifestLoadingMaxRetry: 3,
+            manifestLoadingRetryDelay: 1000,
+            levelLoadingTimeOut: 15000,
+            levelLoadingMaxRetry: 3,
+            levelLoadingRetryDelay: 1000,
+            fragLoadingTimeOut: 25000,
+            fragLoadingMaxRetry: 5,
+            fragLoadingRetryDelay: 1000,
+            xhrSetup: function(xhr, xhrUrl) {
+                xhr.withCredentials = false;
+            }
+        };
+
+        hlsInstance = new Hls(hlsCfg);
+        hlsInstance.loadSource(finalUrl);
+        hlsInstance.attachMedia(video);
+
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+            spinner.classList.remove('on');
+            streamRetries = 0;
+            video.play().catch(() => { spinner.classList.remove('on'); });
+
+            // Stall watchdog
+            let lastTime = -1;
+            let stallCount = 0;
+            if (window._stallWatchdog) clearInterval(window._stallWatchdog);
+            window._stallWatchdog = setInterval(() => {
+                if (!hlsInstance || video.paused || video.ended) return;
+                if (video.currentTime === lastTime && !video.paused) {
+                    stallCount++;
+                    if (stallCount >= 8) {
+                        stallCount = 0;
+                        console.warn('[KS LiveTV] Stall detected — recovering...');
+                        try { hlsInstance.startLoad(); video.play().catch(()=>{}); } catch(e) {}
+                    }
+                } else {
+                    stallCount = 0;
+                }
+                lastTime = video.currentTime;
+            }, 1000);
+        });
+
+        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+            console.warn('[KS LiveTV] HLS Error:', data.type, data.details, 'fatal:', data.fatal, 'proxyIdx:', proxyIdx);
+
+            if (!data.fatal) {
+                if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+                    data.details === Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE ||
+                    data.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL) {
+                    try { hlsInstance.startLoad(); } catch(e) {}
+                }
+                return;
+            }
+
+            // Fatal — try next strategy
+            spinner.classList.add('on');
+            streamRetries++;
+
+            // Strategy: direct → proxy1 → proxy2 → proxy3 → error
+            const nextProxyIdx = proxyIdx + 1;
+            if (nextProxyIdx <= CORS_PROXIES.length) {
+                console.warn(`[KS LiveTV] Direct/proxy${proxyIdx} failed — trying proxy${nextProxyIdx}...`);
+                setTimeout(() => {
+                    if (!currentChannel) return;
+                    tryHLS(streamUrl, nextProxyIdx); // Always pass ORIGINAL url, not proxied
+                }, 1500);
+            } else {
+                // All proxies exhausted
+                spinner.classList.remove('on');
+                errEl.classList.add('on');
+                errEl.querySelector('p').textContent =
+                    'Stream unavailable — this channel may be geo-blocked or offline. Try another channel.';
+            }
+        });
+    }
+
+    if (Hls.isSupported()) {
+        tryHLS(url, 0); // Start with direct (proxyIdx=0)
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari native HLS
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+            spinner.classList.remove('on');
+            video.play().catch(() => {});
+        }, { once: true });
+        video.addEventListener('error', () => {
+            if (streamRetries < MAX_RETRIES) {
+                streamRetries++;
+                setTimeout(() => { video.load(); video.play().catch(()=>{}); }, 2000);
+            } else {
+                spinner.classList.remove('on');
+                errEl.classList.add('on');
+            }
+        });
+    } else {
+        spinner.classList.remove('on');
+        errEl.classList.add('on');
+        errEl.querySelector('p').textContent = 'Your browser does not support HLS streaming.';
+    }
+}
+
+function retryStream() {
+    if (!currentChannel) return;
+    document.getElementById('pm-error').classList.remove('on');
+    streamRetries = 0;
+    loadStream(currentChannel.url);
+    // Restart timer if it was a paid channel
+    if (!isPremium && currentChannel.paid) {
+        document.getElementById('pm-timer-bar').classList.add('show');
+        startWatchTimer();
+    }
+}
+
+function closePlayer() {
+    document.getElementById('player-modal').classList.remove('open');
+    document.body.style.overflow = '';
+    // Cleanup HLS
+    if (window._stallWatchdog) { clearInterval(window._stallWatchdog); window._stallWatchdog = null; }
+    if (hlsInstance) { try { hlsInstance.stopLoad(); hlsInstance.detachMedia(); hlsInstance.destroy(); } catch(e){} hlsInstance = null; }
+    const video = document.getElementById('pm-video');
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    clearWatchTimer();
+    clearAdTimer();
+    clearInterval(freeWatchInterval);
+    freeWatchInterval = null;
+    currentChannel = null;
+    // Hide timer bar
+    document.getElementById('pm-timer-bar').classList.remove('show');
+}
+
+// ── WATCH TIMER (paid 10 min limit for free users) ────────
+function startWatchTimer() {
+    clearWatchTimer();
+    watchSeconds = 0;
+    const fill = document.getElementById('pm-timer-fill');
+    const timerBar = document.getElementById('pm-timer-bar');
+    const totalSec = PAID_TIER_MINUTES * 60;
+    fill.style.width = '100%';
+    fill.style.transition = 'width 1s linear';
+    timerBar.classList.add('show');
+
+    // Set timer text label
+    let timerTextEl = timerBar.querySelector('.pm-timer-text');
+    if (!timerTextEl) {
+        timerTextEl = document.createElement('div');
+        timerTextEl.className = 'pm-timer-text';
+        timerBar.appendChild(timerTextEl);
+    }
+
+    watchTimer = setInterval(() => {
+        watchSeconds++;
+        const remaining = Math.max(0, totalSec - watchSeconds);
+        const pct = Math.max(0, 100 - (watchSeconds / totalSec * 100));
+        fill.style.width = pct + '%';
+
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        timerTextEl.innerHTML = `<i class="fa-solid fa-clock" style="color:var(--gold);font-size:.55rem;"></i> Free preview: ${mins}:${secs.toString().padStart(2,'0')} left`;
+
+        if (watchSeconds >= totalSec) {
+            clearWatchTimer();
+            // Pause video and show upgrade popup
+            const video = document.getElementById('pm-video');
+            video.pause();
+            // Show upgrade button in player
+            document.getElementById('pm-upgrade-btn').style.display = 'block';
+            // Open plan popup with slight delay for UX
+            setTimeout(() => openPlanPopup(true), 300);
+        }
+    }, 1000);
+}
+
+function clearWatchTimer() {
+    clearInterval(watchTimer);
+    watchTimer = null;
+    watchSeconds = 0;
+}
+
+// ── AD SYSTEM ─────────────────────────────────────────────
+const ADS_DATA = [
+    {
+        img: 'https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg',
+        title: 'KS Movies Premium',
+        sub: 'Watch all channels without interruption. Upgrade now and enjoy ad-free streaming!',
+        cta: '🚀 Get Premium',
+        link: 'kspay.html'
+    },
+    {
+        img: 'https://image.tmdb.org/t/p/original/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg',
+        title: 'KS Movies Library',
+        sub: 'Thousands of movies and shows available on-demand for subscribers.',
+        cta: '🎬 Browse Movies',
+        link: 'user.html'
+    },
+    {
+        img: 'https://image.tmdb.org/t/p/original/rktDFPbfHfUbArZ6OOOKsXcv0Bm.jpg',
+        title: 'Live Sports Premium',
+        sub: 'Watch live cricket, football, F1 and more. Upgrade for full sports access.',
+        cta: '⚡ Upgrade Now',
+        link: 'kspay.html'
+    },
+];
+
+let freeWatchSeconds = 0;
+let freeWatchInterval = null;
+let adShowing = false;
+
+function startFreeWatchClock() {
+    clearInterval(freeWatchInterval);
+    freeWatchInterval = setInterval(() => {
+        if (adShowing) return;
+        freeWatchSeconds++;
+        if (freeWatchSeconds - lastAdTime >= AD_INTERVAL_SECONDS) {
+            lastAdTime = freeWatchSeconds;
+            showAd();
+        }
+    }, 1000);
+}
+
+function checkAdSchedule() {
+    // Start free watch clock if not already
+    if (!freeWatchInterval) startFreeWatchClock();
+}
+
+function showAd() {
+    if (isPremium) return;
+    adShowing = true;
+    adSeconds = 0;
+
+    // Pause video
+    const video = document.getElementById('pm-video');
+    video.pause();
+
+    // Use Firebase channel ad config if available, else fallback to ADS_DATA
+    let adUrl = null;
+    let adTitle = 'KS Movies Premium';
+    let adSub = 'Watch all channels without interruption. Upgrade now!';
+    let adCta = '🚀 Get Premium';
+    let adLink = 'kspay.html?source=livetv';
+    let adDuration = window._adDurationSeconds || 60;
+    let adSkipAfter = window._adSkipSeconds !== undefined ? window._adSkipSeconds : 60;
+
+    if (channelAdConfig && channelAdConfig.url) {
+        adUrl = channelAdConfig.url;
+    } else {
+        // Fallback to random from ADS_DATA
+        const ad = ADS_DATA[Math.floor(Math.random() * ADS_DATA.length)];
+        adUrl = ad.img;
+        adTitle = ad.title;
+        adSub = ad.sub;
+        adCta = ad.cta;
+        adLink = ad.link;
+    }
+
+    // Check if it's a video URL (mp4, webm, etc.)
+    const isVideo = adUrl && /\.(mp4|webm|ogg|m3u8)(\?|$)/i.test(adUrl);
+    const adImgEl = document.getElementById('ad-img');
+    const adOverlay = document.getElementById('ad-overlay');
+
+    if (isVideo) {
+        // Replace ad-img with video element
+        adImgEl.style.display = 'none';
+        let adVid = document.getElementById('ad-video-el');
+        if (!adVid) {
+            adVid = document.createElement('video');
+            adVid.id = 'ad-video-el';
+            adVid.autoplay = true;
+            adVid.muted = false;
+            adVid.style.cssText = 'width:100%;max-height:260px;object-fit:contain;background:#000;border-radius:12px;margin-bottom:14px;';
+            adImgEl.parentNode.insertBefore(adVid, adImgEl);
+        }
+        adVid.src = adUrl;
+        adVid.style.display = 'block';
+        adVid.play().catch(()=>{});
+        // Auto dismiss when video ends
+        adVid.onended = () => { clearAdTimer(); dismissAd(); };
+    } else {
+        // Image ad
+        adImgEl.src = adUrl;
+        adImgEl.style.display = 'block';
+        const adVid = document.getElementById('ad-video-el');
+        if (adVid) { adVid.pause(); adVid.style.display = 'none'; }
+    }
+
+    document.getElementById('ad-title').textContent = adTitle;
+    document.getElementById('ad-sub').textContent = adSub;
+    const ctaEl = document.getElementById('ad-cta');
+    ctaEl.textContent = adCta;
+    ctaEl.href = adLink;
+
+    // Reset countdown
+    const totalSecs = adDuration;
+    document.getElementById('ad-fill').style.width = '100%';
+    document.getElementById('ad-skip-btn').classList.remove('show');
+    document.getElementById('ad-countdown').textContent = totalSecs;
+
+    adOverlay.classList.add('on');
+
+    // Start countdown
+    clearAdTimer();
+    adTimer = setInterval(() => {
+        adSeconds++;
+        const remaining = Math.max(0, totalSecs - adSeconds);
+        document.getElementById('ad-countdown').textContent = remaining;
+        const pct = Math.max(0, 100 - (adSeconds / totalSecs * 100));
+        document.getElementById('ad-fill').style.width = pct + '%';
+
+        if (adSkipAfter === 0 || adSeconds >= adSkipAfter) {
+            document.getElementById('ad-skip-btn').classList.add('show');
+            document.getElementById('ad-skip-btn').textContent = adSeconds >= totalSecs ? 'Close ›' : 'Skip Ad ›';
+        }
+        if (adSeconds >= totalSecs) {
+            clearAdTimer();
+            dismissAd();
+        }
+    }, 1000);
+}
+
+function skipAd() {
+    const skipAfter = window._adSkipSeconds !== undefined ? window._adSkipSeconds : 60;
+    if (skipAfter > 0 && adSeconds < skipAfter) return;
+    clearAdTimer();
+    dismissAd();
+}
+
+function dismissAd() {
+    adShowing = false;
+    document.getElementById('ad-overlay').classList.remove('on');
+    // Pause ad video if playing
+    const adVid = document.getElementById('ad-video-el');
+    if (adVid) { adVid.pause(); adVid.src = ''; }
+    // Resume channel video
+    const video = document.getElementById('pm-video');
+    video.play().catch(()=>{});
+}
+
+function clearAdTimer() { clearInterval(adTimer); adTimer = null; }
+
+// ── PLAN POPUP ────────────────────────────────────────────
+function openPlanPopup(fromTimer) {
+    const subEl = document.getElementById('pp-sub-text');
+    if (fromTimer || (currentChannel && currentChannel.paid && !isPremium && watchSeconds === 0)) {
+        if (subEl) subEl.textContent = 'Your 10-minute free preview has ended. Upgrade to watch without limits.';
+    } else {
+        if (subEl) subEl.textContent = 'Unlock all channels with no time limits and no ads.';
+    }
+    document.getElementById('plan-popup').classList.add('on');
+}
+function closePlanPopup() { document.getElementById('plan-popup').classList.remove('on'); }
+
+const PLAN_PRICES = { weekly: 49, monthly: 149, yearly: 699 };
+
+function selectPlan(plan) {
+    selectedPlan = plan;
+    document.querySelectorAll('.pp-plan').forEach(p => p.classList.remove('popular'));
+    document.getElementById('plan-' + plan).classList.add('popular');
+    document.getElementById('pp-pay-label').textContent = `Pay ₹${PLAN_PRICES[plan]} — Continue`;
+}
+
+function proceedPayment() {
+    const price = PLAN_PRICES[selectedPlan];
+    window.location.href = `kspay.html?plan=${selectedPlan}&amount=${price}&source=livetv`;
+}
+
+// ── CHECK PREMIUM STATUS ──────────────────────────────────
+function checkPremiumStatus(uid) {
+    db.ref(`users/${uid}/subscription`).once('value').then(snap => {
+        const sub = snap.val();
+        if (sub && sub.active && sub.expiry > Date.now()) {
+            isPremium = true;
+            const btn = document.getElementById('nav-plan-btn');
+            btn.textContent = 'PREMIUM';
+            btn.className = 'nav-plan-badge premium';
+            // If player is open and was counting down, stop timer
+            clearWatchTimer();
+            document.getElementById('pm-timer-bar').classList.remove('show');
+            document.getElementById('pm-upgrade-btn').style.display = 'none';
+            // Re-render grid to remove lock badges
+            renderChannelGrid();
+            updateSideList();
+        }
+    }).catch(()=>{});
+}
+
+// ── INIT ──────────────────────────────────────────────────
+async function init() {
+    // Update loading message based on protocol
+    const loadingTextEl = document.getElementById('loading-text');
+    if (window.location.protocol === 'file:') {
+        if (loadingTextEl) loadingTextEl.textContent = 'Connecting to Firebase…';
+    }
+
+    // Safety: force-hide loading screen after 12s no matter what
+    const loadingTimeout = setTimeout(() => {
+        document.getElementById('loading-screen').classList.add('hide');
+    }, 12000);
+
+    try {
+        // 1. Load ads from Firebase (non-blocking — don't await forever)
+        const adsPromise = loadLiveTVAdsFromFirebase();
+        await Promise.race([adsPromise, new Promise(r => setTimeout(r, 4000))]);
+        renderHero();
+
+        // 2. Auth check
+        auth.onAuthStateChanged(user => {
+            if (user) checkPremiumStatus(user.uid);
+        });
+
+        // 3. Fetch channels
+        const channels = await fetchChannels();
+        if (channels.length === 0) {
+            allChannels = getFallbackChannels();
+        } else {
+            allChannels = channels;
+        }
+
+    } catch(e) {
+        console.error('[KS LiveTV] Init error:', e);
+        allChannels = getFallbackChannels();
+    }
+
+    filteredChannels = [...allChannels];
+    renderCategories();
+    renderChannelGrid();
+    updateSideList();
+
+    // Hide loading
+    clearTimeout(loadingTimeout);
+    setTimeout(() => {
+        document.getElementById('loading-screen').classList.add('hide');
+    }, 400);
+}
+
+// ── BUILT-IN CHANNEL LIST (works on file:// & when M3U fails) ──
+// These are verified working public/free-to-air streams
+// Admin can override any URL via Firebase liveTV/channelOverrides
+function getBuiltinChannels() {
+    return [
+        // ── FREE / DOORDARSHAN ──
+        { id:'dd_national', name:'DD National', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/DD_National_logo_vector.svg/200px-DD_National_logo_vector.svg.png', url:'https://ddnatlive.com/hls/dd_national/index.m3u8', paid:false },
+        { id:'dd_news', name:'DD News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/DD_News_logo.svg/200px-DD_News_logo.svg.png', url:'https://ddnews.live/hls/ddnews/index.m3u8', paid:false },
+        { id:'dd_india', name:'DD India', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/DD_India_logo.svg/200px-DD_India_logo.svg.png', url:'https://ddnatlive.com/hls/dd_india/index.m3u8', paid:false },
+        { id:'dd_sports', name:'DD Sports', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/DD_Sports_logo.svg/200px-DD_Sports_logo.svg.png', url:'https://ddnatlive.com/hls/dd_sports/index.m3u8', paid:false },
+        { id:'dd_bharati', name:'DD Bharati', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/DD_Bharati.svg/200px-DD_Bharati.svg.png', url:'https://ddnatlive.com/hls/dd_bharati/index.m3u8', paid:false },
+        { id:'dd_kisan', name:'DD Kisan', group:'General', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/DD_Kisan_logo.svg/200px-DD_Kisan_logo.svg.png', url:'https://ddnatlive.com/hls/dd_kisan/index.m3u8', paid:false },
+        { id:'lok_sabha', name:'Lok Sabha TV', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Lok_Sabha_TV_logo.png/200px-Lok_Sabha_TV_logo.png', url:'https://ddnatlive.com/hls/loksabhatv/index.m3u8', paid:false },
+        { id:'rajya_sabha', name:'Rajya Sabha TV', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/RSTV_Logo.png/200px-RSTV_Logo.png', url:'https://ddnatlive.com/hls/rajyasabhatv/index.m3u8', paid:false },
+
+        // ── PAID — ENTERTAINMENT (URLs set via Admin Panel) ──
+        { id:'star_plus', name:'Star Plus', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Star_Plus_2020.svg/200px-Star_Plus_2020.svg.png', url:'', paid:true },
+        { id:'star_gold', name:'Star Gold', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Star_Gold_logo.svg/200px-Star_Gold_logo.svg.png', url:'', paid:true },
+        { id:'star_world', name:'Star World', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Star_World_logo.svg/200px-Star_World_logo.svg.png', url:'', paid:true },
+        { id:'star_movies', name:'Star Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'', paid:true },
+        { id:'star_vijay', name:'Star Vijay', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Vijay_TV_logo.svg/200px-Vijay_TV_logo.svg.png', url:'', paid:true },
+        { id:'sony_ent', name:'Sony Entertainment', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Sony_Entertainment_Television_%282017%29.svg/200px-Sony_Entertainment_Television_%282017%29.svg.png', url:'', paid:true },
+        { id:'sony_max', name:'Sony MAX', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/SonyMAX.svg/200px-SonyMAX.svg.png', url:'', paid:true },
+        { id:'sony_sab', name:'Sony SAB', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/SAB_TV_logo.svg/200px-SAB_TV_logo.svg.png', url:'', paid:true },
+        { id:'sony_liv', name:'Sony LIV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Sony_LIV_2020.svg/200px-Sony_LIV_2020.svg.png', url:'', paid:true },
+        { id:'zee_tv', name:'Zee TV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Zee_TV.svg/200px-Zee_TV.svg.png', url:'', paid:true },
+        { id:'zee_cinema', name:'Zee Cinema', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Zee_Cinema.svg/200px-Zee_Cinema.svg.png', url:'', paid:true },
+        { id:'zee5', name:'ZEE5', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/ZEE5_logo.svg/200px-ZEE5_logo.svg.png', url:'', paid:true },
+        { id:'colors_tv', name:'Colors TV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Colors_TV_logo_2020.svg/200px-Colors_TV_logo_2020.svg.png', url:'', paid:true },
+        { id:'colors_cinema', name:'Colors Cineplex', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Colors_Cineplex_logo.svg/200px-Colors_Cineplex_logo.svg.png', url:'', paid:true },
+        { id:'and_tv', name:'&TV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/%26TV_logo.svg/200px-%26TV_logo.svg.png', url:'', paid:true },
+        { id:'and_pictures', name:'&Pictures', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/%26pictures_logo.svg/200px-%26pictures_logo.svg.png', url:'', paid:true },
+
+        // ── PAID — NEWS ──
+        { id:'aaj_tak', name:'Aaj Tak', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Aaj_Tak_logo.svg/200px-Aaj_Tak_logo.svg.png', url:'', paid:true },
+        { id:'india_today', name:'India Today', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/India_Today_logo.svg/200px-India_Today_logo.svg.png', url:'', paid:true },
+        { id:'ndtv', name:'NDTV 24x7', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/NDTV_logo_new.svg/200px-NDTV_logo_new.svg.png', url:'', paid:true },
+        { id:'republic', name:'Republic TV', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Republic_TV.png/200px-Republic_TV.png', url:'', paid:true },
+        { id:'times_now', name:'Times Now', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Times_Now_logo.png/200px-Times_Now_logo.png', url:'', paid:true },
+        { id:'news18_india', name:'News18 India', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/News18_India_logo.svg/200px-News18_India_logo.svg.png', url:'', paid:true },
+        { id:'wion', name:'WION', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/WION_logo.svg/200px-WION_logo.svg.png', url:'', paid:true },
+
+        // ── PAID — REGIONAL ──
+        { id:'sun_tv', name:'Sun TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Sun_TV_logo.svg/200px-Sun_TV_logo.svg.png', url:'', paid:true },
+        { id:'vijay_tv', name:'Vijay TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Vijay_TV_logo.svg/200px-Vijay_TV_logo.svg.png', url:'', paid:true },
+        { id:'asianet', name:'Asianet', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Asianet_logo.svg/200px-Asianet_logo.svg.png', url:'', paid:true },
+        { id:'mazhavil', name:'Mazhavil Manorama', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Mazhavil_Manorama_logo.svg/200px-Mazhavil_Manorama_logo.svg.png', url:'', paid:true },
+        { id:'flowers_tv', name:'Flowers TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Flowers_TV_logo.png/200px-Flowers_TV_logo.png', url:'', paid:true },
+        { id:'zee_kannada', name:'Zee Kannada', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Zee_Kannada_logo.svg/200px-Zee_Kannada_logo.svg.png', url:'', paid:true },
+        { id:'etv_telugu', name:'ETV Telugu', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/ETV_Telugu_logo.svg/200px-ETV_Telugu_logo.svg.png', url:'', paid:true },
+        { id:'gemini_tv', name:'Gemini TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Gemini_TV_logo.svg/200px-Gemini_TV_logo.svg.png', url:'', paid:true },
+
+        // ── PAID — SPORTS ──
+        { id:'star_sports1', name:'Star Sports 1', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Star_Sports_1_logo.svg/200px-Star_Sports_1_logo.svg.png', url:'', paid:true },
+        { id:'star_sports2', name:'Star Sports 2', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Star_Sports_2_logo.svg/200px-Star_Sports_2_logo.svg.png', url:'', paid:true },
+        { id:'sony_ten1', name:'Sony Ten 1', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Sony_Ten_1_logo.svg/200px-Sony_Ten_1_logo.svg.png', url:'', paid:true },
+        { id:'sony_ten2', name:'Sony Ten 2', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Sony_Ten_2_logo.svg/200px-Sony_Ten_2_logo.svg.png', url:'', paid:true },
+
+        // ── PAID — MOVIES ──
+        { id:'b4u_movies', name:'B4U Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/B4U_Movies_logo.svg/200px-B4U_Movies_logo.svg.png', url:'', paid:true },
+        { id:'b4u_kadak', name:'B4U Kadak', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/B4U_Kadak_logo.png/200px-B4U_Kadak_logo.png', url:'', paid:true },
+        { id:'romedy_now', name:'Romedy Now', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Romedy_NOW_logo.svg/200px-Romedy_NOW_logo.svg.png', url:'', paid:true },
+        { id:'hbo', name:'HBO', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/200px-HBO_logo.svg.png', url:'', paid:true },
+        { id:'movies_now', name:'Movies Now', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Movies_Now_logo.svg/200px-Movies_Now_logo.svg.png', url:'', paid:true },
+
+        // ── PAID — MUSIC ──
+        { id:'mtv_india', name:'MTV India', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MTV_India_Logo.svg/200px-MTV_India_Logo.svg.png', url:'', paid:true },
+        { id:'vh1_india', name:'VH1 India', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/VH1_India_logo.svg/200px-VH1_India_logo.svg.png', url:'', paid:true },
+        { id:'music_india', name:'Music India', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Music_India_logo.png/200px-Music_India_logo.png', url:'', paid:true },
+
+        // ── PAID — KIDS ──
+        { id:'cartoon_network', name:'Cartoon Network', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Cartoon_Network_2010_logo.svg/200px-Cartoon_Network_2010_logo.svg.png', url:'', paid:true },
+        { id:'nickelodeon', name:'Nickelodeon India', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Previous_Nickelodeon_logo.svg/200px-Previous_Nickelodeon_logo.svg.png', url:'', paid:true },
+        { id:'disney_junior', name:'Disney Junior', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Disney_Junior_logo.svg/200px-Disney_Junior_logo.svg.png', url:'', paid:true },
+        { id:'pogo', name:'POGO', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Pogo_TV_logo.svg/200px-Pogo_TV_logo.svg.png', url:'', paid:true },
+
+        // ── PAID — DOCUMENTARY ──
+        { id:'discovery', name:'Discovery Channel', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'', paid:true },
+        { id:'natgeo', name:'National Geographic', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Natgeo_logo_b.svg/200px-Natgeo_logo_b.svg.png', url:'', paid:true },
+        { id:'animal_planet', name:'Animal Planet', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Animal_Planet_logo_2018.svg/200px-Animal_Planet_logo_2018.svg.png', url:'', paid:true },
+        { id:'history_tv', name:'History TV18', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/History_TV18_logo.png/200px-History_TV18_logo.png', url:'', paid:true },
+    ];
+}
+
+// ── FALLBACK CHANNELS (minimal, only if Firebase also fails) ──
+function getFallbackChannels() {
+    // Use the full built-in list as fallback
+    return getBuiltinChannels();
+}
+
+// ── CLOSE MODAL ON OUTSIDE CLICK ─────────────────────────
+document.getElementById('plan-popup').addEventListener('click', function(e) {
+    if (e.target === this) closePlanPopup();
+});
+
+// ── KEYBOARD SHORTCUTS ────────────────────────────────────
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { closePlayer(); closePlanPopup(); }
+});
+
+// ── CONTEXT MENU / DEV TOOLS PROTECTION ──────────────────
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) e.preventDefault();
+});
+
+// Start!
+init();
+</script>
+</body>
+</html>
