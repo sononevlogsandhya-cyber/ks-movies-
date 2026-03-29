@@ -445,15 +445,14 @@ const CORS_PROXIES = [
 function detectUrlType(url){
   if(!url) return 'none';
   if(/\.m3u8(\?[^#]*)?$/i.test(url)) return 'hls';
-  if(/\.mpd(\?[^#]*)?$/i.test(url))  return 'hls'; // DASH (treat same path)
+  if(/\.mpd(\?[^#]*)?$/i.test(url))  return 'hls';
   if(/\.(mp4|webm|ogg|mov|mkv)(\?[^#]*)?$/i.test(url)) return 'direct';
-  // Loose check — if has a video extension in path
   if(/\/(mp4|webm|m3u8)(\?|$|\/)/i.test(url)) return 'direct';
-  // PHP / redirect pages
-  if(/\.(php|aspx?|jsp)(\?.*)?$/i.test(url)) return 'redirect';
-  // Any URL without a clear extension might be a redirect/stream
+  // dl.php and redirect links — use blob stream method
+  if(/dl\.php|download\.php|stream\.php|get\.php/i.test(url)) return 'dlphp';
+  if(/\.(php|aspx?|jsp)(\?.*)?$/i.test(url)) return 'dlphp';
   const noQuery = url.split('?')[0];
-  if(!/\.\w{2,5}$/.test(noQuery)) return 'redirect';
+  if(!/\.\w{2,5}$/.test(noQuery)) return 'dlphp';
   return 'direct';
 }
 
@@ -556,45 +555,25 @@ function destroyHLS(){
   videoEl.load();
 }
 
-// ── IFRAME EMBED — PHP redirect / stream URLs ke liye ──
+// ── IFRAME EMBED (last resort) ──
 function initIframe(url){
   videoEl.style.display='none';
   document.getElementById('pip-btn').style.display='none';
   document.getElementById('quality-btn').style.display='none';
   const old=document.getElementById('ks-iframe'); if(old) old.remove();
-
   const ifr=document.createElement('iframe');
-  ifr.id='ks-iframe';
-  // For PHP download links — pass referrer and allow everything
-  ifr.src=url;
-  ifr.allowFullscreen=true;
-  ifr.allow='autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope';
-  ifr.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups allow-presentation allow-top-navigation-by-user-activation');
-  ifr.setAttribute('referrerpolicy','no-referrer');
-  ifr.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;z-index:5;';
-
+  ifr.id='ks-iframe'; ifr.src=url; ifr.allowFullscreen=true;
+  ifr.allow='autoplay; fullscreen; picture-in-picture; encrypted-media';
+  ifr.style.cssText='position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;';
   let loaded=false;
   ifr.onload=()=>{
-    loaded=true;
-    // Check if iframe is blank/blocked
-    try{
-      const d=ifr.contentDocument||ifr.contentWindow?.document;
-      if(d&&d.body&&(d.body.innerHTML===''||d.title==='404 Not Found')){
-        showEmbedFallback(url); return;
-      }
-    }catch(e){
-      // Cross-origin block = content IS loading (good sign!)
-    }
-    hideSpinner();
-    isPlaying=true; updatePlayIcon();
-    showToast('▶ Video player ready!');
+    try{ const d=ifr.contentDocument||ifr.contentWindow?.document; if(d&&d.body&&d.body.innerHTML===''){showEmbedFallback(url);return;} }catch(e){}
+    loaded=true; hideSpinner(); isPlaying=true; updatePlayIcon(); showToast('▶ Video loading…');
   };
-  ifr.onerror=()=>{ hideSpinner(); showEmbedFallback(url); };
+  ifr.onerror=()=>showEmbedFallback(url);
   document.getElementById('video-area').appendChild(ifr);
   showSpinner();
-
-  // If not loaded in 15s, show fallback
-  setTimeout(()=>{ if(!loaded){ hideSpinner(); showEmbedFallback(url); } },15000);
+  setTimeout(()=>{ if(!loaded) showEmbedFallback(url); },12000);
 }
 
 // ── EMBED FALLBACK UI ──
@@ -609,18 +588,16 @@ function showEmbedFallback(url){
       <div style="width:72px;height:72px;background:rgba(229,9,20,.12);border:2px solid rgba(229,9,20,.4);border-radius:50%;display:flex;align-items:center;justify-content:center;">
         <i class="fa-solid fa-film" style="font-size:1.8rem;color:#e50914;"></i>
       </div>
-      <div style="font-family:'Bebas Neue',cursive;font-size:1.6rem;letter-spacing:2px;">Video Load Karne Mein Problem</div>
-      <div style="color:#888;font-size:0.88rem;max-width:320px;line-height:1.6;">
-        Yeh site direct embed nahi hoti. Neeche options try karo — <b style="color:#fff">Naye Tab</b> wala option <b style="color:#e50914">100% kaam karta hai</b>.
-      </div>
+      <div style="font-family:'Bebas Neue',cursive;font-size:1.6rem;letter-spacing:2px;">Direct Play Nahi Ho Raha</div>
+      <div style="color:#888;font-size:0.88rem;max-width:300px;line-height:1.6;">Yeh video site embed nahi karti. Neeche diye gaye options try karo:</div>
       <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px;">
-        <a href="${url}" target="_blank" rel="noopener"
-           style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;background:linear-gradient(135deg,#e50914,#c0000b);color:#fff;border-radius:10px;text-decoration:none;font-weight:800;font-size:.95rem;box-shadow:0 4px 20px rgba(229,9,20,0.4);">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Naye Tab Mein Kholo (Best!)
+        <a href="${encodeURI(url)}" target="_blank" rel="noopener"
+           style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 24px;background:linear-gradient(135deg,#e50914,#c0000b);color:#fff;border-radius:10px;text-decoration:none;font-weight:800;font-size:.95rem;">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Naye Tab Mein Kholo
         </a>
-        <button onclick="_ksRetryProxy('${url.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')"
+        <button onclick="_ksRetryProxy('${url.replace(/'/g,"\\'")}')"
            style="display:flex;align-items:center;justify-content:center;gap:10px;padding:13px 24px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:10px;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">
-          <i class="fa-solid fa-rotate-right"></i> Direct Play Try Karo
+          <i class="fa-solid fa-rotate-right"></i> Proxy Se Try Karo
         </button>
         <button onclick="goBack()"
            style="padding:11px;background:none;border:none;color:#555;font-size:.82rem;cursor:pointer;font-family:inherit;">
@@ -633,18 +610,9 @@ function showEmbedFallback(url){
 
 async function _ksRetryProxy(url){
   const fb=document.getElementById('ks-embed-fallback'); if(fb) fb.style.display='none';
-  showSpinner(); showToast('🔄 Direct play try kar rahe hain…',3000);
-  // Try CORS proxies to get real video URL
+  showSpinner(); showToast('🔄 Proxy se try kar rahe hain…',3000);
   const resolved=await resolveRedirectUrl(url);
-  if(resolved&&resolved!==url){
-    showToast('✅ Video mili! Load ho rahi hai…',2000);
-    const rType=detectUrlType(resolved);
-    if(rType==='hls'&&Hls.isSupported()){ initHLS(resolved); return; }
-    const ok=await tryDirectPlay(resolved);
-    if(ok) return;
-    if(Hls.isSupported()){ initHLS(resolved); return; }
-  }
-  // Last resort: open in new tab
+  if(resolved){ showToast('✅ Video mili! Load ho rahi hai…',2000); const ok=await tryDirectPlay(resolved); if(ok) return; }
   hideSpinner(); if(fb) fb.style.display='flex';
   showToast('⚠️ Naye tab mein khul raha hai…',2500);
   setTimeout(()=>window.open(url,'_blank','noopener'),800);
@@ -658,34 +626,33 @@ async function initNative(url){
 
   const urlType=detectUrlType(url);
 
-  // ★ Strategy 0: PHP / redirect URLs — IFRAME FIRST (no server needed!)
-  // mp4moviez, jiocinema-style dl.php links work best as iframes
-  if(urlType==='redirect'){
-    showToast('▶ Video load ho rahi hai…',3000);
-    initIframe(url);
-    return;
-  }
-
-  // Strategy 1: M3U8 / HLS — use HLS.js (or native Safari)
+  // Strategy 1: M3U8 / HLS
   if(urlType==='hls'){
     if(Hls.isSupported()){
       initHLS(url); return;
     } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
       await tryDirectPlay(url); return;
     } else {
-      showError('Browser Error','Your browser does not support HLS/M3U8 streams. Please use Chrome or Firefox.');
+      showError('Browser Error','HLS not supported. Use Chrome or Firefox.');
       return;
     }
   }
 
-  // Strategy 2: Direct MP4/WebM — try native first
+  // Strategy 2: Direct MP4/WebM
   if(urlType==='direct'){
     const ok=await tryDirectPlay(url);
     if(ok) return;
     if(Hls.isSupported()){ initHLS(url); return; }
   }
 
-  // Strategy 3: CORS proxy resolve
+  // ★ Strategy 3: dl.php / redirect → Blob streaming (NO download dialog!)
+  if(urlType==='dlphp'){
+    showToast('⏳ Video stream ho rahi hai…',4000);
+    await tryBlobStream(url);
+    return;
+  }
+
+  // Strategy 4: CORS proxy fallback
   showToast('🔄 Video link resolve ho raha hai…',3500);
   const resolved=await resolveRedirectUrl(url);
   if(resolved&&resolved!==url){
@@ -697,15 +664,77 @@ async function initNative(url){
     if(Hls.isSupported()){ initHLS(resolved); return; }
   }
 
-  // Strategy 4: Direct last attempt
+  // Strategy 5: Direct last attempt
   showToast('🔄 Direct load try kar rahe hain…',2000);
   const ok2=await tryDirectPlay(url);
   if(ok2) return;
 
-  // Strategy 5: Iframe fallback
-  showToast('🔄 Embed player try kar rahe hain…',2000);
-  playerMode='iframe'; videoEl.style.display='none';
-  initIframe(url);
+  // Strategy 6: HLS.js last attempt
+  if(Hls.isSupported()){ showToast('🔄 HLS se try kar rahe hain…',2000); initHLS(url); return; }
+
+  showError('Playback Error','Could not play this video. Please use an M3U8 or MP4 URL.');
+}
+
+// ★ BLOB STREAM — fetches video as blob, prevents download dialog
+async function tryBlobStream(url){
+  try{
+    showToast('🔄 Stream fetch ho rahi hai…',6000);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Range': 'bytes=0-' },
+      signal: AbortSignal.timeout(25000)
+    });
+
+    if(response.ok || response.status===206){
+      const ct = response.headers.get('content-type') || '';
+
+      // It's a video stream!
+      if(ct.includes('video') || ct.includes('octet-stream') || response.status===206){
+        showToast('📦 Video buffer ho rahi hai…',5000);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const ok = await tryDirectPlay(blobUrl);
+        if(ok){
+          showToast('✅ Video play ho rahi hai!',2000);
+          videoEl.addEventListener('ended', ()=>URL.revokeObjectURL(blobUrl), {once:true});
+          return;
+        }
+        URL.revokeObjectURL(blobUrl);
+      }
+
+      // HTML response — extract video URL
+      if(ct.includes('html') || ct.includes('text')){
+        const html = await response.text();
+        const extracted = extractVideoUrl(html);
+        if(extracted){
+          showToast('✅ Stream URL mili!',2000);
+          await initNative(extracted);
+          return;
+        }
+      }
+    }
+  }catch(e){
+    console.warn('[KS BlobStream]', e.message);
+  }
+
+  // Fallback: CORS proxy
+  showToast('🔄 Proxy se try kar rahe hain…',4000);
+  const resolved = await resolveRedirectUrl(url);
+  if(resolved && resolved!==url){
+    showToast('✅ URL resolve hua!',2000);
+    await initNative(resolved);
+    return;
+  }
+
+  // Last: direct native try
+  showToast('🔄 Direct play try kar rahe hain…',3000);
+  const ok = await tryDirectPlay(url);
+  if(ok) return;
+
+  // HLS try
+  if(Hls.isSupported()){ initHLS(url); return; }
+
+  showError('Stream Error','Yeh URL stream nahi ho pa rahi. Koi M3U8 ya MP4 URL use karein.');
 }
 
 // Helper: try playing URL in native <video> tag — returns true if success
