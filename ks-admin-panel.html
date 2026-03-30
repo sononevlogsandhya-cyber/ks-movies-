@@ -1893,6 +1893,103 @@ img { display: block; max-width: 100%; }
 }
 .ads-channel-url-box input::placeholder { color: var(--text-3); }
 
+/* ── KS CRICKET ADS PANEL ── */
+.cricket-ads-panel {
+  background: var(--bg-card);
+  border: 1px solid rgba(255,98,0,0.2);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.cricket-ads-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, rgba(255,98,0,0.08) 0%, rgba(0,51,160,0.06) 100%);
+  border-bottom: 1px solid rgba(255,98,0,0.15);
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 1;
+}
+.cricket-ads-hdr * { cursor: pointer; }
+.cricket-ads-hdr-left { display: flex; align-items: center; gap: 12px; }
+.cricket-ads-icon {
+  width: 38px; height: 38px;
+  background: linear-gradient(135deg, rgba(0,51,160,0.25), rgba(255,98,0,0.25));
+  border: 1px solid rgba(255,98,0,0.35);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+}
+.cricket-ipl-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg,rgba(0,51,160,0.2),rgba(255,98,0,0.2));
+  border: 1px solid rgba(255,98,0,0.35);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 0.65rem; font-weight: 800; color: #ff6200; letter-spacing: 1px;
+}
+.cricket-ads-body { padding: 22px; display: flex; flex-direction: column; gap: 24px; }
+.cricket-ad-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: border-color 0.2s;
+  animation: fadeUp 0.25s ease;
+}
+.cricket-ad-row:focus-within { border-color: rgba(255,98,0,0.5); }
+.cricket-ad-num {
+  width: 26px; height: 26px;
+  background: linear-gradient(135deg, rgba(0,51,160,0.2), rgba(255,98,0,0.2));
+  border: 1px solid rgba(255,98,0,0.3);
+  border-radius: 7px; font-size: 0.72rem; font-weight: 800;
+  color: #ff6200; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cricket-ad-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text-1); font-size: 0.85rem; font-family: inherit;
+  min-width: 0;
+}
+.cricket-ad-input::placeholder { color: var(--text-3); }
+.cricket-ad-del {
+  background: none; border: none; color: var(--text-3); font-size: 0.8rem;
+  cursor: pointer; padding: 4px; border-radius: 5px; transition: color 0.2s; flex-shrink: 0;
+}
+.cricket-ad-del:hover { color: var(--accent); }
+.cricket-add-url-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px;
+  background: rgba(255,98,0,0.07);
+  border: 1.5px dashed rgba(255,98,0,0.35);
+  border-radius: 10px; color: #ff6200;
+  font-size: 0.82rem; font-weight: 700; font-family: inherit;
+  cursor: pointer; transition: all 0.2s;
+}
+.cricket-add-url-btn:hover { background: rgba(255,98,0,0.12); border-style: solid; }
+.cricket-save-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #0033a0, #ff6200);
+  color: #fff; border: none; border-radius: 10px;
+  font-size: 0.88rem; font-weight: 800; font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255,98,0,0.3);
+  transition: all 0.2s; width: 100%;
+}
+.cricket-save-btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,98,0,0.4); }
+.cricket-save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.cricket-status-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px;
+  font-size: 0.78rem; color: var(--text-3);
+}
+
 .ads-info-note {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 10px 14px;
@@ -2585,6 +2682,127 @@ img { display: block; max-width: 100%; }
       </div><!-- /livetv-ads-body -->
     </div><!-- /livetv-ads-panel -->
 
+    <!-- ═══════════════════════════════════════ -->
+    <!--       KS CRICKET — ADS MANAGER          -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="cricket-ads-panel" id="cricket-ads-panel">
+
+      <!-- Header -->
+      <div class="cricket-ads-hdr" onclick="toggleCricketAdsPanel()">
+        <div class="cricket-ads-hdr-left">
+          <div class="cricket-ads-icon">
+            🏏
+          </div>
+          <div>
+            <div class="livetv-ads-title">KS Cricket — Ads Manager</div>
+            <div style="font-size:0.72rem;color:var(--text-3);margin-top:2px;">IPL live stream ke ads aur stream URL control karo</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="cricket-ipl-badge">🏆 IPL 2026</span>
+          <i class="fas fa-chevron-down" id="cricket-ads-chevron" style="color:var(--text-3);transition:transform 0.3s;font-size:0.85rem;"></i>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="cricket-ads-body" id="cricket-ads-body" style="display:none;">
+
+        <!-- ── FORM 1: STREAM URL OVERRIDE ── -->
+        <div class="ads-form-card" style="border-color:rgba(0,51,160,0.3);">
+          <div class="ads-form-card-hdr" style="background:rgba(0,51,160,0.08);">
+            <i class="fas fa-satellite-dish" style="color:#3b82f6;"></i>
+            <span class="ads-form-card-title">IPL Live Stream URL</span>
+            <span class="ads-form-card-sub" style="color:#3b82f6;">HLS / M3U8 ⚡</span>
+          </div>
+          <div class="ads-form-body">
+            <div class="ads-info-note" style="background:rgba(0,51,160,0.08);border-color:rgba(59,130,246,0.25);">
+              <i class="fas fa-circle-info" style="color:#3b82f6;"></i>
+              <span>IPL ka live HLS stream URL yahan daalo. Yeh ks-cricket.html mein hardcoded URL ko override kar dega. Khaali chhodo to default URL use hoga.</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <label style="font-size:0.78rem;font-weight:700;color:var(--text-2);">Stream URL (.m3u8)</label>
+              <div class="ads-channel-url-box" style="border-color:rgba(59,130,246,0.25);">
+                <input type="url" id="cricket-stream-url" placeholder="http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8">
+                <button onclick="document.getElementById('cricket-stream-url').value=''" style="background:none;border:none;color:var(--text-3);cursor:pointer;" title="Clear"><i class="fas fa-xmark"></i></button>
+              </div>
+            </div>
+            <div class="cricket-status-row" id="cricket-stream-status">
+              <i class="fas fa-circle-xmark" style="color:var(--text-3);"></i>
+              Koi custom stream URL set nahi hai — default use hoga
+            </div>
+            <button class="cricket-save-btn" id="cricket-stream-save-btn" onclick="saveCricketStreamUrl()" style="background:linear-gradient(135deg,#0d47a1,#1D9BF0);">
+              <i class="fas fa-floppy-disk"></i>
+              <span>Stream URL Save Karo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ── FORM 2: AD URLs ── -->
+        <div class="ads-form-card" style="border-color:rgba(255,98,0,0.25);">
+          <div class="ads-form-card-hdr" style="background:rgba(255,98,0,0.06);">
+            <i class="fas fa-rectangle-ad" style="color:#ff6200;"></i>
+            <span class="ads-form-card-title">Pre-Roll Ad URLs</span>
+            <span class="ads-form-card-sub" style="color:#ff6200;">Rotate karte hain 🔄</span>
+          </div>
+          <div class="ads-form-body">
+            <div class="ads-info-note" style="background:rgba(255,98,0,0.06);border-color:rgba(255,98,0,0.2);">
+              <i class="fas fa-circle-info" style="color:#ff6200;"></i>
+              <span>Cricket dekhne se pehle jo <strong style="color:#fff;">ad play hogi</strong> uske URLs yahan daalo. Har baar ek random URL pick hoga. Khaali fields skip ho jayenge.</span>
+            </div>
+
+            <!-- 4 default blank slots -->
+            <div id="cricket-ads-slots" style="display:flex;flex-direction:column;gap:8px;">
+              <!-- JS se render hoga -->
+            </div>
+
+            <!-- Add more button -->
+            <button class="cricket-add-url-btn" onclick="addCricketAdSlot()">
+              <i class="fas fa-plus"></i>
+              Naya Ad URL Add Karo
+            </button>
+
+            <!-- Preview/status -->
+            <div id="cricket-ads-count" class="cricket-status-row" style="display:none;">
+              <i class="fas fa-circle-check" style="color:var(--success);"></i>
+              <span id="cricket-ads-count-text"></span>
+            </div>
+
+            <button class="cricket-save-btn" id="cricket-ads-save-btn" onclick="saveCricketAds()">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <span>Ad URLs Save Karo → Firebase</span>
+            </button>
+            <div id="cricket-ads-status" style="font-size:0.75rem;color:var(--text-3);text-align:center;min-height:18px;"></div>
+          </div>
+        </div>
+
+        <!-- ── FORM 3: FREE TRIAL DURATION ── -->
+        <div class="ads-form-card" style="border-color:rgba(245,197,24,0.2);">
+          <div class="ads-form-card-hdr" style="background:rgba(245,197,24,0.05);">
+            <i class="fas fa-clock" style="color:var(--gold);"></i>
+            <span class="ads-form-card-title">Free Trial Duration</span>
+            <span class="ads-form-card-sub" style="color:var(--gold);">Minutes mein ⏱</span>
+          </div>
+          <div class="ads-form-body">
+            <div class="ads-info-note" style="background:rgba(245,197,24,0.06);border-color:rgba(245,197,24,0.25);">
+              <i class="fas fa-triangle-exclamation" style="color:var(--gold);"></i>
+              <span>Free users kitni der tak IPL dekh sakte hain bina pay kiye. Default <strong style="color:#fff;">10 minutes</strong> hai.</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="ads-channel-url-box" style="flex:1;border-color:rgba(245,197,24,0.25);">
+                <input type="number" id="cricket-trial-min" placeholder="10" min="1" max="120" value="10" style="width:100%;">
+              </div>
+              <span style="font-size:0.85rem;font-weight:700;color:var(--text-2);white-space:nowrap;">Minutes</span>
+            </div>
+            <button class="cricket-save-btn" id="cricket-trial-save-btn" onclick="saveCricketTrial()" style="background:linear-gradient(135deg,#c9940a,var(--gold));color:#000;">
+              <i class="fas fa-floppy-disk"></i>
+              <span>Trial Duration Save Karo</span>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /cricket-ads-body -->
+    </div><!-- /cricket-ads-panel -->
+
   </div>
 </div>
 
@@ -3073,14 +3291,15 @@ function renderMovies(movies) {
       </div>
       <div class="mi-actions">
         <button class="btn-edit"
-          onclick="startEdit('${esc(m.id)}')">
+          data-id="${esc(m.id)}"
+          onclick="startEdit(this.dataset.id)">
           <i class="fas fa-pen-to-square"></i>
           <span>Edit</span>
         </button>
         <button class="btn-del"
-          onclick="confirmDelete(
-            '${esc(m.id)}',
-            '${esc(m.title||'')}')">
+          data-id="${esc(m.id)}"
+          data-title="${esc(m.title||'')}"
+          onclick="confirmDelete(this.dataset.id, this.dataset.title)">
           <i class="fas fa-trash"></i>
         </button>
       </div>
@@ -3392,24 +3611,21 @@ function cancelEdit() {
 
 // DELETE
 function confirmDelete(movieId, movieTitle) {
-  const dialog =
-    document.getElementById('confirm-dialog');
-  const dTitle =
-    document.getElementById('dlg-title');
-  const dMsg =
-    document.getElementById('dlg-msg');
-  const dBtn =
-    document.getElementById('dlg-confirm-btn');
+  const dialog = document.getElementById('confirm-dialog');
+  const dTitle = document.getElementById('dlg-title');
+  const dMsg   = document.getElementById('dlg-msg');
+  const dBtn   = document.getElementById('dlg-confirm-btn');
   if (!dialog) return;
   if (dTitle) dTitle.textContent = 'Delete Movie?';
   if (dMsg) dMsg.innerHTML =
     `Delete <strong>${esc(movieTitle)}</strong>?` +
-    `<br><span style="font-size:0.82rem;color:#555">
-    This cannot be undone.</span>`;
-  if (dBtn) dBtn.onclick = () => {
-    doDelete(movieId, movieTitle);
-    closeDialog();
-  };
+    `<br><span style="font-size:0.82rem;color:#555">This cannot be undone.</span>`;
+  // Clone button to remove any previous onclick listeners
+  if (dBtn) {
+    const newBtn = dBtn.cloneNode(true);
+    newBtn.onclick = () => { doDelete(movieId, movieTitle); closeDialog(); };
+    dBtn.parentNode.replaceChild(newBtn, dBtn);
+  }
   dialog.classList.add('open');
 }
 
@@ -3418,10 +3634,13 @@ function closeDialog() {
     ?.classList.remove('open');
 }
 
-document.getElementById('confirm-dialog')
-  ?.addEventListener('click', function(e) {
-    if (e.target === this) closeDialog();
-  });
+// Confirm dialog backdrop click - moved here to ensure DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('confirm-dialog')
+    ?.addEventListener('click', function(e) {
+      if (e.target === this) closeDialog();
+    });
+});
 
 async function doDelete(movieId, title) {
   try {
@@ -3987,7 +4206,7 @@ function sv(id, val) {
                 <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:8px;align-items:center;padding:8px 10px;background:var(--bg-card);border:1px solid rgba(245,197,24,0.15);border-radius:8px;">
                     <div style="font-size:0.8rem;font-weight:700;color:var(--text-1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${name}">${name}</div>
                     <div style="font-size:0.7rem;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${url}">${url}</div>
-                    <button onclick="removeChannelOverride('${name.replace(/'/g,"\\'")}'')" style="width:28px;height:28px;border-radius:6px;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.25);color:#ff1744;cursor:pointer;font-size:0.75rem;display:flex;align-items:center;justify-content:center;">
+                    <button data-chname="${name.replace(/"/g,'&quot;')}" onclick="removeChannelOverride(this.dataset.chname)" style="width:28px;height:28px;border-radius:6px;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.25);color:#ff1744;cursor:pointer;font-size:0.75rem;display:flex;align-items:center;justify-content:center;">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>`).join('');
@@ -4886,6 +5105,227 @@ async function deleteKSMovie(id) {
   }
 
   // Load users on init
+  // ═══════════════════════════════════════════════════
+  //          KS CRICKET ADS MANAGER
+  // ═══════════════════════════════════════════════════
+
+  let cricketAdCount = 4; // start with 4 blank slots
+
+  // Toggle panel open/close
+  function toggleCricketAdsPanel() {
+    const body = document.getElementById('cricket-ads-body');
+    const chevron = document.getElementById('cricket-ads-chevron');
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display = isOpen ? 'none' : 'flex';
+    if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    if (!isOpen) {
+      loadCricketAds();
+      loadCricketStreamUrl();
+      loadCricketTrial();
+    }
+  }
+
+  // Render ad slots in DOM
+  function renderCricketAdSlots(urls) {
+    const container = document.getElementById('cricket-ads-slots');
+    container.innerHTML = '';
+    urls.forEach((url, i) => {
+      container.appendChild(makeCricketAdRow(i + 1, url));
+    });
+    cricketAdCount = urls.length;
+    updateCricketAdCount();
+  }
+
+  function makeCricketAdRow(num, val) {
+    const row = document.createElement('div');
+    row.className = 'cricket-ad-row';
+    row.id = 'cricket-ad-row-' + num;
+    row.innerHTML = `
+      <div class="cricket-ad-num">${num}</div>
+      <input type="url" class="cricket-ad-input" id="cricket-ad-url-${num}"
+        placeholder="Ad URL ${num} — e.g. https://..." value="${val || ''}"
+        oninput="updateCricketAdCount()">
+      <button class="cricket-ad-del" onclick="removeCricketAdRow(${num})" title="Hatao">
+        <i class="fas fa-xmark"></i>
+      </button>
+    `;
+    return row;
+  }
+
+  function addCricketAdSlot() {
+    cricketAdCount++;
+    const container = document.getElementById('cricket-ads-slots');
+    container.appendChild(makeCricketAdRow(cricketAdCount, ''));
+    updateCricketAdCount();
+    // Scroll to new row
+    document.getElementById('cricket-ad-row-' + cricketAdCount).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function removeCricketAdRow(num) {
+    const row = document.getElementById('cricket-ad-row-' + num);
+    if (row) {
+      row.style.opacity = '0'; row.style.transform = 'scale(0.95)';
+      row.style.transition = 'all 0.2s';
+      setTimeout(() => {
+        row.remove();
+        // Re-number remaining rows
+        const container = document.getElementById('cricket-ads-slots');
+        const rows = container.querySelectorAll('.cricket-ad-row');
+        rows.forEach((r, idx) => {
+          r.id = 'cricket-ad-row-' + (idx + 1);
+          r.querySelector('.cricket-ad-num').textContent = idx + 1;
+          r.querySelector('.cricket-ad-input').id = 'cricket-ad-url-' + (idx + 1);
+          r.querySelector('.cricket-ad-del').setAttribute('onclick', `removeCricketAdRow(${idx + 1})`);
+        });
+        cricketAdCount = rows.length;
+        updateCricketAdCount();
+      }, 200);
+    }
+  }
+
+  function updateCricketAdCount() {
+    const container = document.getElementById('cricket-ads-slots');
+    const filled = Array.from(container.querySelectorAll('.cricket-ad-input')).filter(i => i.value.trim()).length;
+    const total = container.querySelectorAll('.cricket-ad-input').length;
+    const countEl = document.getElementById('cricket-ads-count');
+    const textEl = document.getElementById('cricket-ads-count-text');
+    if (filled > 0) {
+      countEl.style.display = 'flex';
+      textEl.textContent = `${filled} active ad URL${filled > 1 ? 's' : ''} of ${total} total`;
+    } else {
+      countEl.style.display = 'none';
+    }
+  }
+
+  // ── SAVE ADS → FIREBASE ──
+  async function saveCricketAds() {
+    const btn = document.getElementById('cricket-ads-save-btn');
+    const container = document.getElementById('cricket-ads-slots');
+    const inputs = container.querySelectorAll('.cricket-ad-input');
+    const urls = Array.from(inputs).map(i => i.value.trim()).filter(Boolean);
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+
+    try {
+      await DB.ref('cricket/ads').set(urls);
+      btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+      btn.style.background = 'linear-gradient(135deg, #00c853, #1b5e20)';
+      showToast(`✅ ${urls.length} Cricket Ads save ho gaye! Firebase pe live hain.`, 'success');
+      document.getElementById('cricket-ads-status').textContent = `Last saved: ${new Date().toLocaleTimeString('en-IN')} — ${urls.length} URLs`;
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Ad URLs Save Karo → Firebase';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2500);
+    } catch (err) {
+      btn.innerHTML = '<i class="fas fa-xmark"></i> Error!';
+      btn.style.background = 'linear-gradient(135deg, #ff1744, #b71c1c)';
+      showToast('Error: ' + err.message, 'error');
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Ad URLs Save Karo → Firebase';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2500);
+    }
+  }
+
+  // ── LOAD ADS ← FIREBASE ──
+  function loadCricketAds() {
+    DB.ref('cricket/ads').once('value').then(snap => {
+      const data = snap.val();
+      const urls = Array.isArray(data) && data.length > 0 ? data : ['', '', '', ''];
+      renderCricketAdSlots(urls);
+      if (data && data.filter(Boolean).length > 0) {
+        document.getElementById('cricket-ads-status').textContent = `${data.filter(Boolean).length} URLs Firebase se loaded`;
+      }
+    }).catch(() => {
+      renderCricketAdSlots(['', '', '', '']);
+    });
+  }
+
+  // ── STREAM URL ──
+  async function saveCricketStreamUrl() {
+    const btn = document.getElementById('cricket-stream-save-btn');
+    const url = document.getElementById('cricket-stream-url').value.trim();
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+    try {
+      await DB.ref('cricket/streamUrl').set(url || null);
+      btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+      btn.style.background = 'linear-gradient(135deg, #00c853, #1b5e20)';
+      showToast(url ? '✅ Stream URL save ho gaya!' : '⚠️ Stream URL clear ho gaya — default use hoga', url ? 'success' : 'warning');
+      updateCricketStreamStatus(url);
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Stream URL Save Karo';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2500);
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+      btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Stream URL Save Karo';
+      btn.style.background = '';
+      btn.disabled = false;
+    }
+  }
+
+  const DEFAULT_CRICKET_STREAM = 'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8';
+
+  function loadCricketStreamUrl() {
+    DB.ref('cricket/streamUrl').once('value').then(snap => {
+      const url = snap.val();
+      const activeUrl = url || DEFAULT_CRICKET_STREAM;
+      document.getElementById('cricket-stream-url').value = activeUrl;
+      updateCricketStreamStatus(activeUrl);
+    }).catch(() => {
+      document.getElementById('cricket-stream-url').value = DEFAULT_CRICKET_STREAM;
+      updateCricketStreamStatus(DEFAULT_CRICKET_STREAM);
+    });
+  }
+
+  function updateCricketStreamStatus(url) {
+    const el = document.getElementById('cricket-stream-status');
+    if (url) {
+      const shortUrl = url.length > 60 ? url.substring(0, 60) + '…' : url;
+      el.innerHTML = `<i class="fas fa-circle-check" style="color:var(--success);"></i> Active: <span style="color:var(--text-2);margin-left:4px;">${shortUrl}</span>`;
+    } else {
+      el.innerHTML = '<i class="fas fa-circle-xmark" style="color:var(--text-3);"></i> Koi custom stream URL set nahi hai — default use hoga';
+    }
+  }
+
+  // ── FREE TRIAL ──
+  async function saveCricketTrial() {
+    const btn = document.getElementById('cricket-trial-save-btn');
+    const minutes = parseInt(document.getElementById('cricket-trial-min').value) || 10;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+    try {
+      await DB.ref('cricket/freeTrialMinutes').set(minutes);
+      btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
+      btn.style.background = 'linear-gradient(135deg, #00c853, #1b5e20)';
+      showToast(`✅ Free trial ${minutes} minutes set ho gaya!`, 'success');
+      setTimeout(() => {
+        btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Trial Duration Save Karo';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 2500);
+    } catch (err) {
+      showToast('Error: ' + err.message, 'error');
+      btn.disabled = false;
+    }
+  }
+
+  function loadCricketTrial() {
+    DB.ref('cricket/freeTrialMinutes').once('value').then(snap => {
+      const val = snap.val();
+      if (val) document.getElementById('cricket-trial-min').value = val;
+    }).catch(() => {});
+  }
+
+  // Init cricket panel with blank 4 slots on page load
+  renderCricketAdSlots(['', '', '', '']);
+
   fetchUsers();
   startPendingPoller();
   // Initial pending count
