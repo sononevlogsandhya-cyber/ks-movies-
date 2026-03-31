@@ -867,17 +867,17 @@ const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
 // ── FALLBACK STREAM URLs — Sirf IPL 2026 Hindi Channels ──
-// Channel 1: Star Sports 1 (sm-monirul) — PRIMARY
-// Channel 2: Star Sports 2 (sm-monirul)
-// Channel 3: Star Sports 2 (stvlive)
-// Channel 4: Star Sports Hindi (stvlive backup)
-// Channel 5: Star Sports 1 HD
+// Channel 1: Star Sports 2 (stvlive) — PRIMARY ✅ WORKING
+// Channel 2: Star Sports Hindi (stvlive backup)
+// Channel 3: Star Sports 1 HD
+// Channel 4: Star Sports 1 (sm-monirul)
+// Channel 5: Star Sports 2 (sm-monirul)
 const FALLBACK_URLS = [
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMQ==&e=.m3u8', // Ch1: Star Sports 1 (sm-monirul) PRIMARY
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch2: Star Sports 2 (sm-monirul)
-  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch3: Star Sports 2 (stvlive)
-  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch4: Star Sports Hindi (stvlive)
-  'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch5: Star Sports 1 HD
+  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch1: Star Sports 2 (stvlive) PRIMARY ✅
+  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch2: Star Sports Hindi (stvlive)
+  'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch3: Star Sports 1 HD
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMQ==&e=.m3u8', // Ch4: Star Sports 1 (sm-monirul)
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch5: Star Sports 2 (sm-monirul)
 ];
 
 let currentUrlIndex = 0;
