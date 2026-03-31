@@ -866,22 +866,26 @@ const DEFAULT_FREE_TRIAL_MIN = 10;
 const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
-// ── FALLBACK STREAM URLs — Star Sports 2 PRIORITY ──
-// ORDER: Star Sports 2 ke saare variants PEHLE, baaki baad mein
-// Ch1: Star Sports 2 (stvlive)   — PRIMARY
-// Ch2: Star Sports 2 (sm-monirul) — SS2 backup
-// Ch3: Star Sports Hindi (stvlive) — Hindi backup
-// Ch4: Star Sports 1 HD            — last resort SS1
-// Ch5: Star Sports Select 1        — only if SS2 totally dead
-// Ch6: Star Sports Select 2        — last fallback
+// ── FALLBACK STREAM URLs — Sirf IPL 2026 Hindi Channels ──
+// Channel 1: Star Sports 1 (sm-monirul) — PRIMARY
+// Channel 2: Star Sports 2 (sm-monirul)
+// Channel 3: Star Sports 2 (stvlive)
+// Channel 4: Star Sports Hindi (stvlive backup)
+// Channel 5: Star Sports 1 HD
 const FALLBACK_URLS = [
-  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',                                                    // Ch1: Star Sports 2 (stvlive) PRIMARY ★
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8',                             // Ch2: Star Sports 2 (sm-monirul) ★
-  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',                                                // Ch3: Star Sports Hindi (stvlive)
-  'http://41.205.93.154/STARSPORTS1/index.m3u8',                                                                   // Ch4: Star Sports 1 HD
-  'https://mflixott.com/tv/plusbox/live/StarSportsSelect1/index.m3u8',                                             // Ch5: Star Sports Select 1
-  'https://mflixott.com/tv/plusbox/live/StarSportsSelect2/index.m3u8',                                             // Ch6: Star Sports Select 2
+  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch1: Star Sports 2 (stvlive) PRIMARY ★
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch2: Star Sports 2 (sm-monirul) ★
+  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch3: Star Sports Hindi (stvlive)
+  'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch4: Star Sports 1 HD
 ];
+
+// ── CORS PROXY — http:// links https site pe kaam karane ke liye ──
+function proxify(url){
+  if(url.startsWith('http://') && location.protocol === 'https:'){
+    return 'https://corsproxy.io/?' + encodeURIComponent(url);
+  }
+  return url;
+}
 
 let currentUrlIndex = 0;
 let STREAM_URL = FALLBACK_URLS[0];
@@ -1067,15 +1071,6 @@ function tryNextStream(){
 }
 
 function showFallbackToast(idx){
-  const CHANNEL_NAMES = [
-    '⭐ Star Sports 2 (Primary)',
-    '⭐ Star Sports 2 (Backup)',
-    '📡 Star Sports Hindi',
-    '📺 Star Sports 1 HD',
-    '🔄 Star Sports Select 1',
-    '🔄 Star Sports Select 2',
-  ];
-  const chName = CHANNEL_NAMES[idx] || ('Link ' + idx);
   let t = document.getElementById('ks-fallback-toast');
   if(!t){
     t = document.createElement('div');
@@ -1083,7 +1078,7 @@ function showFallbackToast(idx){
     t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.8rem;z-index:9999;border:1px solid rgba(229,9,20,0.4);font-family:DM Sans,sans-serif;text-align:center;';
     document.body.appendChild(t);
   }
-  t.textContent = '🔄 Switching to: ' + chName + ' (' + (FALLBACK_URLS.length - idx) + ' backup baaki)';
+  t.textContent = '🔄 Link '+idx+' try ho raha hai... ('+(FALLBACK_URLS.length - idx)+' backup baaki)';
   t.style.display='block';
   clearTimeout(t._timer);
   t._timer = setTimeout(()=>{ t.style.display='none'; }, 4000);
@@ -1097,10 +1092,21 @@ function startHLS(){
   if(Hls.isSupported()){
     hlsInst=new Hls({
       enableWorker:true,
-      lowLatencyMode:true,
-      backBufferLength:30,
+      lowLatencyMode:false,
+      backBufferLength:60,
+      maxBufferLength:60,
+      maxMaxBufferLength:120,
+      maxBufferSize:60*1000*1000,
+      maxBufferHole:0.5,
+      manifestLoadingTimeOut:15000,
+      manifestLoadingMaxRetry:4,
+      levelLoadingTimeOut:15000,
+      levelLoadingMaxRetry:4,
+      fragLoadingTimeOut:20000,
+      fragLoadingMaxRetry:4,
+      startLevel:-1,
     });
-    hlsInst.loadSource(STREAM_URL);
+    hlsInst.loadSource(proxify(STREAM_URL));
     hlsInst.attachMedia(videoEl);
     hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
       hideSpinner();
@@ -1117,7 +1123,7 @@ function startHLS(){
       if(d.fatal){ tryNextStream(); }
     });
   } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
-    videoEl.src=STREAM_URL;
+    videoEl.src=proxify(STREAM_URL);
     videoEl.addEventListener('loadedmetadata',()=>{
       hideSpinner();
       videoEl.play().catch(()=>{});
