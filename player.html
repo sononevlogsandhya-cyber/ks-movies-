@@ -445,14 +445,15 @@ const CORS_PROXIES = [
 function detectUrlType(url){
   if(!url) return 'none';
   if(/\.m3u8(\?[^#]*)?$/i.test(url)) return 'hls';
-  if(/\.mpd(\?[^#]*)?$/i.test(url))  return 'hls';
+  if(/\.mpd(\?[^#]*)?$/i.test(url))  return 'hls'; // DASH (treat same path)
   if(/\.(mp4|webm|ogg|mov|mkv)(\?[^#]*)?$/i.test(url)) return 'direct';
+  // Loose check — if has a video extension in path
   if(/\/(mp4|webm|m3u8)(\?|$|\/)/i.test(url)) return 'direct';
-  // dl.php and redirect links — use blob stream method
-  if(/dl\.php|download\.php|stream\.php|get\.php/i.test(url)) return 'dlphp';
-  if(/\.(php|aspx?|jsp)(\?.*)?$/i.test(url)) return 'dlphp';
+  // PHP / redirect pages
+  if(/\.(php|aspx?|jsp)(\?.*)?$/i.test(url)) return 'redirect';
+  // Any URL without a clear extension might be a redirect/stream
   const noQuery = url.split('?')[0];
-  if(!/\.\w{2,5}$/.test(noQuery)) return 'dlphp';
+  if(!/\.\w{2,5}$/.test(noQuery)) return 'redirect';
   return 'direct';
 }
 
@@ -622,18 +623,20 @@ async function _ksRetryProxy(url){
 async function initNative(url){
   videoEl.style.display='block';
   showSpinner();
+  // Destroy any previous HLS instance before starting
   destroyHLS();
 
   const urlType=detectUrlType(url);
 
-  // Strategy 1: M3U8 / HLS
+  // Strategy 1: M3U8 / HLS — use HLS.js (or native Safari)
   if(urlType==='hls'){
     if(Hls.isSupported()){
       initHLS(url); return;
     } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
+      // Safari native HLS
       await tryDirectPlay(url); return;
     } else {
-      showError('Browser Error','HLS not supported. Use Chrome or Firefox.');
+      showError('Browser Error','Your browser does not support HLS/M3U8 streams. Please use Chrome or Firefox.');
       return;
     }
   }
@@ -642,17 +645,11 @@ async function initNative(url){
   if(urlType==='direct'){
     const ok=await tryDirectPlay(url);
     if(ok) return;
+    // Direct failed → try as HLS (sometimes mp4 links are actually m3u8 redirects)
     if(Hls.isSupported()){ initHLS(url); return; }
   }
 
-  // ★ Strategy 3: dl.php / redirect → Blob streaming (NO download dialog!)
-  if(urlType==='dlphp'){
-    showToast('⏳ Video stream ho rahi hai…',4000);
-    await tryBlobStream(url);
-    return;
-  }
-
-  // Strategy 4: CORS proxy fallback
+  // Strategy 3: CORS proxy — extract real video URL from page HTML
   showToast('🔄 Video link resolve ho raha hai…',3500);
   const resolved=await resolveRedirectUrl(url);
   if(resolved&&resolved!==url){
@@ -661,80 +658,17 @@ async function initNative(url){
     if(rType==='hls'&&Hls.isSupported()){ initHLS(resolved); return; }
     const ok=await tryDirectPlay(resolved);
     if(ok) return;
-    if(Hls.isSupported()){ initHLS(resolved); return; }
   }
 
-  // Strategy 5: Direct last attempt
+  // Strategy 4: Try direct as last native attempt
   showToast('🔄 Direct load try kar rahe hain…',2000);
   const ok2=await tryDirectPlay(url);
   if(ok2) return;
 
-  // Strategy 6: HLS.js last attempt
-  if(Hls.isSupported()){ showToast('🔄 HLS se try kar rahe hain…',2000); initHLS(url); return; }
-
-  showError('Playback Error','Could not play this video. Please use an M3U8 or MP4 URL.');
-}
-
-// ★ BLOB STREAM — fetches video as blob, prevents download dialog
-async function tryBlobStream(url){
-  try{
-    showToast('🔄 Stream fetch ho rahi hai…',6000);
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: { 'Range': 'bytes=0-' },
-      signal: AbortSignal.timeout(25000)
-    });
-
-    if(response.ok || response.status===206){
-      const ct = response.headers.get('content-type') || '';
-
-      // It's a video stream!
-      if(ct.includes('video') || ct.includes('octet-stream') || response.status===206){
-        showToast('📦 Video buffer ho rahi hai…',5000);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        const ok = await tryDirectPlay(blobUrl);
-        if(ok){
-          showToast('✅ Video play ho rahi hai!',2000);
-          videoEl.addEventListener('ended', ()=>URL.revokeObjectURL(blobUrl), {once:true});
-          return;
-        }
-        URL.revokeObjectURL(blobUrl);
-      }
-
-      // HTML response — extract video URL
-      if(ct.includes('html') || ct.includes('text')){
-        const html = await response.text();
-        const extracted = extractVideoUrl(html);
-        if(extracted){
-          showToast('✅ Stream URL mili!',2000);
-          await initNative(extracted);
-          return;
-        }
-      }
-    }
-  }catch(e){
-    console.warn('[KS BlobStream]', e.message);
-  }
-
-  // Fallback: CORS proxy
-  showToast('🔄 Proxy se try kar rahe hain…',4000);
-  const resolved = await resolveRedirectUrl(url);
-  if(resolved && resolved!==url){
-    showToast('✅ URL resolve hua!',2000);
-    await initNative(resolved);
-    return;
-  }
-
-  // Last: direct native try
-  showToast('🔄 Direct play try kar rahe hain…',3000);
-  const ok = await tryDirectPlay(url);
-  if(ok) return;
-
-  // HLS try
-  if(Hls.isSupported()){ initHLS(url); return; }
-
-  showError('Stream Error','Yeh URL stream nahi ho pa rahi. Koi M3U8 ya MP4 URL use karein.');
+  // Strategy 5: Iframe embed
+  showToast('🔄 Embed player try kar rahe hain…',2000);
+  playerMode='iframe'; videoEl.style.display='none';
+  initIframe(url);
 }
 
 // Helper: try playing URL in native <video> tag — returns true if success
