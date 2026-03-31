@@ -867,26 +867,22 @@ const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
 // ── FALLBACK STREAM URLs — Sirf IPL 2026 Hindi Channels ──
-// Channel 1: Star Sports 2 (stvlive) — PRIMARY ✅ WORKING
+// Channel 1: Star Sports 2 (stvlive) — Primary
 // Channel 2: Star Sports Hindi (stvlive backup)
 // Channel 3: Star Sports 1 HD
-// Channel 4: Star Sports 1 (sm-monirul)
-// Channel 5: Star Sports 2 (sm-monirul)
+// Channel 4: Star Sports Select 1
+// Channel 5: Star Sports Select 2
+// Channel 6: Star Sports 1 (sm-monirul)
+// Channel 7: Star Sports 2 (sm-monirul)
 const FALLBACK_URLS = [
-  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch1: Star Sports 2 (stvlive) PRIMARY ✅
-  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch2: Star Sports Hindi (stvlive)
+  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch1: Star Sports 2 (stvlive) PRIMARY
+  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch2: Star Sports Hindi (stvlive backup)
   'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch3: Star Sports 1 HD
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMQ==&e=.m3u8', // Ch4: Star Sports 1 (sm-monirul)
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch5: Star Sports 2 (sm-monirul)
+  'https://mflixott.com/tv/plusbox/live/StarSportsSelect1/index.m3u8',  // Ch4: Star Sports Select 1
+  'https://mflixott.com/tv/plusbox/live/StarSportsSelect2/index.m3u8',  // Ch5: Star Sports Select 2
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMQ==&e=.m3u8', // Ch6: Star Sports 1 (sm-monirul)
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch7: Star Sports 2 (sm-monirul)
 ];
-
-// ── CORS PROXY — http:// links ko https site pe kaam karane ke liye ──
-function proxify(url){
-  if(url.startsWith("http://") && location.protocol === "https:"){
-    return "https://corsproxy.io/?" + encodeURIComponent(url);
-  }
-  return url;
-}
 
 let currentUrlIndex = 0;
 let STREAM_URL = FALLBACK_URLS[0];
@@ -1093,21 +1089,10 @@ function startHLS(){
   if(Hls.isSupported()){
     hlsInst=new Hls({
       enableWorker:true,
-      lowLatencyMode:false,
-      backBufferLength:60,
-      maxBufferLength:60,
-      maxMaxBufferLength:120,
-      maxBufferSize:60*1000*1000,
-      maxBufferHole:0.5,
-      manifestLoadingTimeOut:15000,
-      manifestLoadingMaxRetry:4,
-      levelLoadingTimeOut:15000,
-      levelLoadingMaxRetry:4,
-      fragLoadingTimeOut:20000,
-      fragLoadingMaxRetry:4,
-      startLevel:-1,
+      lowLatencyMode:true,
+      backBufferLength:30,
     });
-    hlsInst.loadSource(proxify(STREAM_URL));
+    hlsInst.loadSource(STREAM_URL);
     hlsInst.attachMedia(videoEl);
     hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
       hideSpinner();
@@ -1124,7 +1109,7 @@ function startHLS(){
       if(d.fatal){ tryNextStream(); }
     });
   } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
-    videoEl.src=proxify(STREAM_URL);
+    videoEl.src=STREAM_URL;
     videoEl.addEventListener('loadedmetadata',()=>{
       hideSpinner();
       videoEl.play().catch(()=>{});
