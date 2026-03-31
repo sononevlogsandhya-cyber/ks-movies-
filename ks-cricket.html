@@ -12,9 +12,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
-<!-- Firebase for dynamic stream URL + ads + auth -->
+<!-- Firebase for dynamic stream URL + ads -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
 :root{
@@ -858,7 +857,6 @@ if(!window._ksFirebaseApp){
     if(typeof firebase !== 'undefined'){
       window._ksFirebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(_fbCfg);
       window._ksDB = firebase.database();
-      window._ksAuth = firebase.auth();
     }
   } catch(e){ console.warn('[KS Cricket] Firebase init failed:', e); }
 }
@@ -868,18 +866,19 @@ const DEFAULT_FREE_TRIAL_MIN = 10;
 const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
-// ── FALLBACK STREAM URLs ──
-// Vercel HTTPS pe http:// block hota hai — proxy se fix karo
-const PROXY = 'https://corsproxy.io/?';
-const RAW_URLS = [
-  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8',
-  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',
-  'http://41.205.93.154/STARSPORTS1/index.m3u8',
+// ── FALLBACK STREAM URLs — Sirf IPL 2026 Hindi Channels ──
+// Channel 1: Star Sports 1 (sm-monirul) — PRIMARY
+// Channel 2: Star Sports 2 (sm-monirul)
+// Channel 3: Star Sports 2 (stvlive)
+// Channel 4: Star Sports Hindi (stvlive backup)
+// Channel 5: Star Sports 1 HD
+const FALLBACK_URLS = [
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMQ==&e=.m3u8', // Ch1: Star Sports 1 (sm-monirul) PRIMARY
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch2: Star Sports 2 (sm-monirul)
+  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch3: Star Sports 2 (stvlive)
+  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch4: Star Sports Hindi (stvlive)
+  'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch5: Star Sports 1 HD
 ];
-// HTTPS pe proxy lagao, local file pe direct use karo
-const IS_HTTPS = location.protocol === 'https:';
-const FALLBACK_URLS = RAW_URLS.map(u => IS_HTTPS ? PROXY + encodeURIComponent(u) : u);
 
 let currentUrlIndex = 0;
 let STREAM_URL = FALLBACK_URLS[0];
@@ -901,41 +900,12 @@ let liveSeconds=0, liveTimer=null;
 //   ks_trial_done   — '1' jab 10 min trial khatam ho gaya (refresh ke baad bhi yaad rahe)
 
 function checkPremium(){
-  // Step 1: localStorage check (fast, instant)
   const exp = localStorage.getItem('ks_ipl_expiry');
   if(exp && Date.now() < parseInt(exp)){
-    isPremium = true;
+    isPremium=true;
   }
 }
 checkPremium();
-
-// Step 2: Firebase se bhi check karo (admin approval ke liye)
-// Ye splash ke baad run hoga — agar admin ne approve kiya ho toh premium mil jayega
-async function checkPremiumFromFirebase(){
-  if(isPremium) return; // already premium, skip
-  if(!window._ksDB || !window._ksAuth) return;
-  try {
-    const user = window._ksAuth.currentUser;
-    if(!user) return;
-    const snap = await window._ksDB.ref('users/' + user.uid).once('value');
-    const userData = snap.val();
-    if(userData && userData.cricketActive === true){
-      const fbExpiry = userData.cricketExpiresAt;
-      if(fbExpiry && Date.now() < parseInt(fbExpiry)){
-        // Admin ne approve kiya — premium activate karo
-        isPremium = true;
-        localStorage.setItem('ks_ipl_expiry', fbExpiry.toString());
-        // Trial/block restrictions clear karo
-        localStorage.removeItem('ks_trial_done');
-        localStorage.removeItem('ks_block_until');
-        localStorage.removeItem('ks_block_count');
-        console.log('[KS Cricket] Firebase se premium confirmed ✅');
-      }
-    }
-  } catch(e){
-    console.warn('[KS Cricket] Firebase premium check failed:', e);
-  }
-}
 
 // Check if user is currently blocked
 function isBlocked(){
@@ -983,9 +953,13 @@ async function loadFirebaseConfig(){
       window._ksDB.ref('cricket/ads').once('value'),
       window._ksDB.ref('cricket/freeTrialMinutes').once('value'),
     ]);
-    // Stream URL — Firebase override DISABLED
-    // Hardcoded fallback URLs hi use honge hamesha
-    // (Firebase se aane wale URLs mixed-content / Select channel issues create karte hain)
+    // Stream URL override — insert at front of fallback list
+    const fbUrl = streamSnap.val();
+    if(fbUrl && typeof fbUrl === 'string' && fbUrl.trim()){
+      FALLBACK_URLS.unshift(fbUrl.trim());
+      STREAM_URL = fbUrl.trim();
+      currentUrlIndex = 0;
+    }
     // Ads override
     const fbAds = adsSnap.val();
     if(Array.isArray(fbAds) && fbAds.filter(Boolean).length > 0){
@@ -1013,7 +987,6 @@ async function loadFirebaseConfig(){
       setTimeout(async ()=>{
         document.getElementById('ks-splash').style.display='none';
         await loadFirebaseConfig();
-        await checkPremiumFromFirebase(); // Admin approval check
         initPlayer();
       },600);
     },300);
@@ -1091,13 +1064,6 @@ function tryNextStream(){
 }
 
 function showFallbackToast(idx){
-  const CHANNEL_NAMES = [
-    '⭐ Star Sports 2 (Primary)',
-    '⭐ Star Sports 2 (Backup)',
-    '📡 Star Sports Hindi',
-    '📺 Star Sports 1 HD',
-  ];
-  const chName = CHANNEL_NAMES[idx] || ('Link ' + idx);
   let t = document.getElementById('ks-fallback-toast');
   if(!t){
     t = document.createElement('div');
@@ -1105,7 +1071,7 @@ function showFallbackToast(idx){
     t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.8rem;z-index:9999;border:1px solid rgba(229,9,20,0.4);font-family:DM Sans,sans-serif;text-align:center;';
     document.body.appendChild(t);
   }
-  t.textContent = '🔄 Switching to: ' + chName + ' (' + (FALLBACK_URLS.length - idx) + ' backup baaki)';
+  t.textContent = '🔄 Link '+idx+' try ho raha hai... ('+(FALLBACK_URLS.length - idx)+' backup baaki)';
   t.style.display='block';
   clearTimeout(t._timer);
   t._timer = setTimeout(()=>{ t.style.display='none'; }, 4000);
@@ -1119,8 +1085,19 @@ function startHLS(){
   if(Hls.isSupported()){
     hlsInst=new Hls({
       enableWorker:true,
-      lowLatencyMode:true,
-      backBufferLength:30,
+      lowLatencyMode:false,
+      backBufferLength:60,
+      maxBufferLength:60,
+      maxMaxBufferLength:120,
+      maxBufferSize:60*1000*1000,
+      maxBufferHole:0.5,
+      manifestLoadingTimeOut:15000,
+      manifestLoadingMaxRetry:4,
+      levelLoadingTimeOut:15000,
+      levelLoadingMaxRetry:4,
+      fragLoadingTimeOut:20000,
+      fragLoadingMaxRetry:4,
+      startLevel:-1,
     });
     hlsInst.loadSource(STREAM_URL);
     hlsInst.attachMedia(videoEl);
@@ -1464,41 +1441,20 @@ async function startVerify(){
   document.getElementById('step-'+(VERIFY_STEPS.length-1)).className='step-item done';
   await sleep(400);
   ov.classList.remove('show');
-  await activatePlan(utr);
+  activatePlan(utr);
 }
 
-async function activatePlan(utr){
-  // Step 1: localStorage mein optimistic activation (instant UX)
-  const expiry = Date.now() + (65*24*60*60*1000);
-  localStorage.setItem('ks_ipl_expiry', expiry.toString());
-  isPremium = true;
+function activatePlan(utr){
+  // Set 65-day expiry
+  const expiry=Date.now()+(65*24*60*60*1000);
+  localStorage.setItem('ks_ipl_expiry',expiry.toString());
+  isPremium=true;
+  // Payment ho gaya — sab restrictions clear karo
   localStorage.removeItem('ks_trial_done');
   localStorage.removeItem('ks_block_until');
   localStorage.removeItem('ks_block_count');
 
-  // Step 2: Firebase mein payment request save karo (admin ko dikhega)
-  try {
-    if(window._ksDB){
-      const user = window._ksAuth ? window._ksAuth.currentUser : null;
-      const requestData = {
-        utr: utr,
-        amount: 59,
-        plan: 'IPL Special',
-        status: 'pending',
-        submittedAt: Date.now(),
-        uid: user ? user.uid : 'guest',
-        email: user ? (user.email || '') : '',
-        platform: 'cricket',
-      };
-      // paymentRequestsCricket path pe save karo
-      await window._ksDB.ref('paymentRequestsCricket').push(requestData);
-      console.log('[KS Cricket] Payment request Firebase mein save ✅');
-    }
-  } catch(e){
-    console.warn('[KS Cricket] Firebase payment save failed (local activation still active):', e);
-  }
-
-  const now = new Date();
+  const now=new Date();
   document.getElementById('receiptBox').innerHTML=`
     <div class="receipt-row"><span class="receipt-label">Amount Paid</span><span class="receipt-val">₹59</span></div>
     <div class="receipt-row"><span class="receipt-label">UTR Reference</span><span class="receipt-val">${utr}</span></div>
