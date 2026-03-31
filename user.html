@@ -268,15 +268,15 @@
 
         .row-card {
             flex-shrink: 0;
-            width: 280px;
-            aspect-ratio: 16/9;
-            border-radius: 4px;
+            width: 140px;
+            aspect-ratio: 9/16;
+            border-radius: 8px;
             overflow: visible;
             position: relative;
             cursor: pointer;
             transition: transform 0.3s cubic-bezier(.4,0,.2,1), z-index 0s 0.3s;
         }
-        .row-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+        .row-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
         
         .row-card:hover { transform: scale(1.3); z-index: 100; transition: transform 0.3s cubic-bezier(.4,0,.2,1), z-index 0s; }
         .row-card:first-child:hover { transform: scale(1.3) translateX(15%); }
@@ -906,9 +906,9 @@
         .cat-track-wrap { position: relative; }
         .cat-track { display: flex; gap: 8px; overflow-x: auto; overflow-y: visible; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; padding: 8px 0 12px; }
         .cat-track::-webkit-scrollbar { display: none; }
-        .cat-card { flex-shrink: 0; width: 220px; aspect-ratio: 16/9; border-radius: 10px; overflow: visible; cursor: pointer; position: relative; transition: transform 0.3s var(--ease), z-index 0s 0.3s; }
-        @media(min-width:600px) { .cat-card { width: 240px; } }
-        @media(min-width:900px) { .cat-card { width: 280px; } }
+        .cat-card { flex-shrink: 0; width: 110px; aspect-ratio: 9/16; border-radius: 10px; overflow: visible; cursor: pointer; position: relative; transition: transform 0.3s var(--ease), z-index 0s 0.3s; }
+        @media(min-width:600px) { .cat-card { width: 120px; } }
+        @media(min-width:900px) { .cat-card { width: 140px; } }
         .cat-card img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block; }
         .cat-card:hover { transform: scale(1.08); z-index: 10; transition: transform 0.3s var(--ease), z-index 0s; }
         .cat-card-badge { position: absolute; top: 6px; left: 6px; font-size: 0.55rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.4px; z-index: 2; }
@@ -1369,6 +1369,7 @@
           <a href="#" class="nav-link" onclick="navTo('movies'); return false;">Movies</a>
           <a href="#" class="nav-link" onclick="navTo('new'); return false;">New & Popular</a>
           <a href="live.html" class="nav-link" style="color:#e50914;font-weight:700;" title="Watch Live TV"><i class="fa-solid fa-circle" style="font-size:0.5rem;vertical-align:middle;margin-right:4px;animation:livePulseBanner 1.5s infinite;"></i>Live TV</a>
+          <a href="ks-cricket.html" class="nav-link" style="color:#ff6200;font-weight:700;display:flex;align-items:center;gap:5px;" title="KS Cricket — IPL Live">🏏 Cricket</a>
           <a href="#" class="nav-link" onclick="handleMyListClick(); return false;">My List</a>
         </nav>
         <div class="nav-right">
@@ -1502,6 +1503,49 @@
                         <span style="font-size:0.75rem;font-weight:700;color:#e50914;white-space:nowrap;">Watch Now</span>
                         <div style="width:30px;height:30px;background:rgba(229,9,20,0.15);border:1px solid rgba(229,9,20,0.4);border-radius:8px;display:flex;align-items:center;justify-content:center;">
                             <i class="fa-solid fa-chevron-right" style="color:#e50914;font-size:0.75rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- KS Cricket IPL Banner -->
+            <div id="cricket-section" style="padding: 10px 4% 0;">
+                <div onclick="window.location.href='ks-cricket.html'" style="
+                    position: relative;
+                    background: linear-gradient(135deg, #000c2a 0%, #001a5e 50%, #0a0a0a 100%);
+                    border: 1px solid rgba(255,98,0,0.35);
+                    border-radius: 16px;
+                    overflow: hidden;
+                    cursor: pointer;
+                    padding: 18px 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    box-shadow: 0 4px 24px rgba(255,98,0,0.18);
+                    transition: all 0.25s ease;
+                " onmouseover="this.style.boxShadow='0 8px 36px rgba(255,98,0,0.35)';this.style.borderColor='rgba(255,98,0,0.6)'"
+                   onmouseout="this.style.boxShadow='0 4px 24px rgba(255,98,0,0.18)';this.style.borderColor='rgba(255,98,0,0.35)'">
+                    <!-- Glows -->
+                    <div style="position:absolute;top:-20px;right:80px;width:140px;height:140px;background:radial-gradient(circle,rgba(255,98,0,0.15) 0%,transparent 70%);pointer-events:none;"></div>
+                    <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at 20% 50%,rgba(0,51,160,0.12) 0%,transparent 60%);pointer-events:none;"></div>
+                    <div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;position:relative;z-index:1;">
+                        <!-- Cricket Icon -->
+                        <div style="width:48px;height:48px;background:linear-gradient(135deg,#0033a0,#ff6200);border-radius:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 16px rgba(255,98,0,0.45);font-size:1.5rem;">
+                            🏏
+                        </div>
+                        <div style="min-width:0;">
+                            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                                <span style="font-family:'Bebas Neue',cursive;font-size:1.25rem;letter-spacing:2px;color:#fff;">KS Cricket</span>
+                                <span style="background:linear-gradient(135deg,#0033a0,#ff6200);color:#fff;font-size:0.52rem;font-weight:800;letter-spacing:1px;padding:2px 9px;border-radius:4px;">IPL 2026</span>
+                                <span style="background:rgba(229,9,20,0.15);border:1px solid rgba(229,9,20,0.4);color:#e50914;font-size:0.5rem;font-weight:800;letter-spacing:1.5px;padding:2px 8px;border-radius:4px;animation:livePulseBanner 2s infinite;">● LIVE</span>
+                            </div>
+                            <div style="font-size:0.75rem;color:#b3b3b3;margin-top:2px;">TATA IPL 2026 • Sare 74 matches • HD Streaming • Sirf ₹59</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;position:relative;z-index:1;">
+                        <span style="font-size:0.75rem;font-weight:700;color:#ff6200;white-space:nowrap;">Watch Live</span>
+                        <div style="width:30px;height:30px;background:rgba(255,98,0,0.15);border:1px solid rgba(255,98,0,0.4);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-chevron-right" style="color:#ff6200;font-size:0.75rem;"></i>
                         </div>
                     </div>
                 </div>
@@ -2911,7 +2955,7 @@
                         <div class="row-track" id="${rowId}">
                             ${movies.map(m => `
                                 <div class="row-card" onclick="openMovieModal('${m.id}')">
-                                    <img src="${m.backdrop || m.poster}" alt="${esc(m.title)}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='https://placehold.co/500x750/111/fff?text=${esc(m.title)}'" style="opacity:0; transition: opacity 0.3s" onload="this.style.opacity='1'">
+                                    <img src="${m.poster || m.backdrop}" alt="${esc(m.title)}" loading="lazy" decoding="async" onerror="this.onerror=null; this.src='https://placehold.co/500x750/111/fff?text=${esc(m.title)}'" style="opacity:0; transition: opacity 0.3s" onload="this.style.opacity='1'">
                                     <div class="card-hover-info">
                                         <div class="hover-icons">
                                             <div class="hover-circ play" onclick="playMovieDirectly('${m.id}', event)"><i class="fa-solid fa-play"></i></div>
@@ -5196,6 +5240,605 @@ window.addEventListener('resize', () => {
      "Hey KS" Wake Word | Hindi + English
      Alt+V to open | Double-tap FAB to stop TTS
      ═══════════════════════════════════════════ -->
+<!-- ═══════════════════════════════════════════════════════════
+     KS MOVIES — ADVANCED AI AGENT (Claude API Powered)
+     ChatGPT/Gemini level intelligence
+     Voice input (Mic) + Text chat + Streaming responses
+     Hinglish + English + Any language support
+     ═══════════════════════════════════════════════════════════ -->
+<style>
+/* ── FAB BUTTON ── */
+#ks-ai-fab {
+    position: fixed;
+    left: 18px;
+    bottom: 90px;
+    z-index: 4901;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+@media(min-width:769px) {
+    #ks-ai-fab { bottom: auto; top: 42%; transform: translateY(-50%); left: 14px; }
+}
+@media(max-width:768px) {
+    #ks-ai-fab { bottom: 76px; left: 12px; }
+}
+
+/* ── CHAT PANEL ── */
+#ks-ai-panel {
+    position: fixed;
+    left: 14px;
+    bottom: 160px;
+    width: min(380px, calc(100vw - 28px));
+    max-height: 70vh;
+    background: linear-gradient(160deg, #111 0%, #0a0a0a 100%);
+    border: 1px solid rgba(229,9,20,0.35);
+    border-radius: 22px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.04);
+    z-index: 4902;
+    display: none;
+    flex-direction: column;
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    backdrop-filter: blur(20px);
+}
+@media(min-width:769px) {
+    #ks-ai-panel { left: 80px; bottom: 40px; width: 400px; max-height: 75vh; }
+}
+#ks-ai-panel.ks-open {
+    display: flex;
+    animation: ksAiIn 0.32s cubic-bezier(.34,1.4,.64,1);
+}
+@keyframes ksAiIn {
+    from { opacity:0; transform: scale(0.88) translateY(24px); }
+    to   { opacity:1; transform: scale(1) translateY(0); }
+}
+
+/* ── HEADER ── */
+.ksai-header {
+    background: linear-gradient(135deg, rgba(229,9,20,0.18), rgba(229,9,20,0.06));
+    padding: 13px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    flex-shrink: 0;
+}
+.ksai-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, #e50914, #ff4444);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    box-shadow: 0 0 0 2px rgba(229,9,20,0.35), 0 0 12px rgba(229,9,20,0.25);
+    flex-shrink: 0;
+}
+.ksai-pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #46d369;
+    box-shadow: 0 0 6px #46d369;
+    animation: ksAiPulse 2s ease-in-out infinite;
+}
+@keyframes ksAiPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+
+/* ── MESSAGES ── */
+.ksai-msgs {
+    flex: 1; overflow-y: auto; padding: 14px 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    scrollbar-width: thin; scrollbar-color: rgba(229,9,20,0.3) transparent;
+}
+.ksai-msgs::-webkit-scrollbar { width: 3px; }
+.ksai-msgs::-webkit-scrollbar-thumb { background: rgba(229,9,20,0.3); border-radius: 4px; }
+
+.ksai-msg {
+    max-width: 88%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 0.84rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.ksai-msg.bot {
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.09);
+    color: #ddd;
+    align-self: flex-start;
+    border-radius: 4px 14px 14px 14px;
+}
+.ksai-msg.user {
+    background: linear-gradient(135deg, rgba(229,9,20,0.35), rgba(229,9,20,0.18));
+    border: 1px solid rgba(229,9,20,0.3);
+    color: #fff;
+    align-self: flex-end;
+    border-radius: 14px 4px 14px 14px;
+}
+.ksai-msg.error {
+    background: rgba(255,100,0,0.12);
+    border: 1px solid rgba(255,100,0,0.3);
+    color: #ff8a50;
+    align-self: flex-start;
+    border-radius: 4px 14px 14px 14px;
+    font-size: 0.78rem;
+}
+
+/* ── STREAMING CURSOR ── */
+.ksai-cursor {
+    display: inline-block;
+    width: 2px; height: 13px;
+    background: #e50914;
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: ksaiCursor 0.8s ease-in-out infinite;
+}
+@keyframes ksaiCursor { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ── TYPING DOTS ── */
+.ksai-typing {
+    display: flex; gap: 5px; padding: 10px 14px;
+    align-self: flex-start;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 4px 14px 14px 14px;
+}
+.ksai-typing span {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #e50914;
+    animation: ksAiDot 1.3s ease-in-out infinite;
+}
+.ksai-typing span:nth-child(2) { animation-delay: 0.18s; }
+.ksai-typing span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes ksAiDot {
+    0%,80%,100% { transform: scale(0.55); opacity: 0.35; }
+    40% { transform: scale(1.1); opacity: 1; }
+}
+
+/* ── SUGGESTIONS ── */
+.ksai-suggestions {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 0 12px 10px;
+}
+.ksai-chip {
+    background: rgba(229,9,20,0.1);
+    border: 1px solid rgba(229,9,20,0.25);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #e88;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.ksai-chip:hover { background: rgba(229,9,20,0.22); color: #fff; }
+
+/* ── INPUT ROW ── */
+.ksai-input-row {
+    display: flex; gap: 8px; padding: 10px 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+.ksai-input {
+    flex: 1;
+    background: rgba(255,255,255,0.055);
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    color: #fff;
+    padding: 9px 12px;
+    font-size: 0.84rem;
+    outline: none;
+    font-family: inherit;
+    resize: none;
+    max-height: 100px;
+    min-height: 38px;
+    line-height: 1.4;
+    transition: border-color 0.2s;
+}
+.ksai-input:focus { border-color: rgba(229,9,20,0.55); }
+.ksai-input::placeholder { color: #555; }
+
+.ksai-btn {
+    width: 38px; height: 38px; border-radius: 11px;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    transition: all 0.18s;
+    flex-shrink: 0;
+}
+.ksai-mic-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1.5px solid rgba(255,255,255,0.12);
+    color: #aaa;
+}
+.ksai-mic-btn.recording {
+    background: rgba(229,9,20,0.25);
+    border-color: #e50914;
+    color: #e50914;
+    animation: ksaiMicPulse 0.9s ease-in-out infinite;
+}
+@keyframes ksaiMicPulse { 0%,100%{box-shadow:0 0 0 0 rgba(229,9,20,0.4)} 50%{box-shadow:0 0 0 8px rgba(229,9,20,0)} }
+.ksai-send-btn {
+    background: linear-gradient(135deg, #e50914, #ff2030);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(229,9,20,0.4);
+}
+.ksai-send-btn:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(229,9,20,0.55); }
+.ksai-send-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+
+/* ── CLEAR BTN ── */
+.ksai-clear-btn {
+    background: none; border: none; color: #444;
+    font-size: 0.7rem; cursor: pointer;
+    padding: 2px 6px; border-radius: 6px;
+    transition: color 0.2s;
+    font-family: inherit;
+}
+.ksai-clear-btn:hover { color: #e50914; }
+</style>
+
+<!-- ════ KS AI FAB ════ -->
+<div id="ks-ai-fab" onclick="ksAiToggle()" title="KS AI Assistant">
+    <div style="position:absolute;inset:-7px;border-radius:50%;background:radial-gradient(circle,rgba(229,9,20,0.32) 0%,transparent 70%);animation:referFabGlow 2.5s ease-in-out infinite;pointer-events:none;"></div>
+    <div id="ksai-fab-icon" style="width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#e50914,#ff4444);box-shadow:0 4px 22px rgba(229,9,20,0.55),0 0 0 3px rgba(229,9,20,0.2);display:flex;align-items:center;justify-content:center;font-size:1.45rem;position:relative;z-index:1;transition:transform 0.22s cubic-bezier(.34,1.56,.64,1);"
+        onmouseover="this.style.transform='scale(1.13)'" onmouseout="this.style.transform='scale(1)'">🤖</div>
+    <div style="margin-top:5px;background:rgba(0,0,0,0.85);border:1px solid rgba(229,9,20,0.32);border-radius:20px;padding:3px 10px;font-size:0.62rem;font-weight:800;color:#e50914;letter-spacing:0.7px;text-transform:uppercase;white-space:nowrap;backdrop-filter:blur(8px);">KS AI</div>
+</div>
+
+<!-- ════ KS AI CHAT PANEL ════ -->
+<div id="ks-ai-panel">
+
+    <!-- Header -->
+    <div class="ksai-header">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <div class="ksai-avatar">🤖</div>
+            <div>
+                <div style="font-weight:800;color:#fff;font-size:0.92rem;letter-spacing:-0.3px;">KS AI Assistant</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:1px;">
+                    <div class="ksai-pulse"></div>
+                    <span style="font-size:0.68rem;color:#46d369;font-weight:700;">Online • Claude AI</span>
+                </div>
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+            <button class="ksai-clear-btn" onclick="ksAiClear()" title="Clear chat">🗑 Clear</button>
+            <button onclick="ksAiToggle()" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#888;width:30px;height:30px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">✕</button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="ksai-msgs" id="ksai-msgs"></div>
+
+    <!-- Quick suggestions -->
+    <div class="ksai-suggestions" id="ksai-chips">
+        <div class="ksai-chip" onclick="ksAiChip('Plans aur price batao')">💎 Plans & Price</div>
+        <div class="ksai-chip" onclick="ksAiChip('Movies recommend karo')">🎬 Recommend</div>
+        <div class="ksai-chip" onclick="ksAiChip('Download kaise kare?')">📥 Download</div>
+        <div class="ksai-chip" onclick="ksAiChip('Coins kaise earn kare?')">🪙 Earn Coins</div>
+    </div>
+
+    <!-- Input row -->
+    <div class="ksai-input-row">
+        <textarea class="ksai-input" id="ksai-input" placeholder="Kuch bhi poochho... (Hindi/English)" rows="1"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ksAiSend();}"
+            oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+        <button class="ksai-btn ksai-mic-btn" id="ksai-mic-btn" onclick="ksAiMic()" title="Voice input">
+            <i class="fa-solid fa-microphone" id="ksai-mic-icon"></i>
+        </button>
+        <button class="ksai-btn ksai-send-btn" id="ksai-send-btn" onclick="ksAiSend()" title="Send">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ════ KS AI ENGINE ════ -->
+<script>
+(function() {
+    'use strict';
+
+    // ── CONFIG ──
+    // Anthropic Claude API Key
+    var KS_GROQ_KEY = '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';
+    // OmniDimension Voice AI API Key
+    var KS_OMNIDIM_KEY = '2HFIPbaWkLX3Yuyc-VQ2_IztiHWUILia-9VWYc3kWJI';
+
+    var KS_SYSTEM = `You are KS AI — the official smart assistant for KS Movies, an Indian OTT streaming platform.
+
+PERSONALITY:
+- Friendly, helpful, intelligent — like a mix of ChatGPT and Gemini
+- Respond naturally in Hinglish (Hindi + English mix) by default
+- If user writes in pure Hindi → reply in Hindi
+- If user writes in pure English → reply in English
+- Keep responses concise but complete — no unnecessary padding
+- Use relevant emojis naturally (not excessively)
+
+KS MOVIES INFO (always accurate):
+PLANS:
+- Silver/Basic: ₹50/month — HD 720p, 1 screen, Silver Badge
+- Blue/Standard: ₹299/6 months — Full HD 1080p, 2 screens, Downloads, Blue Badge  
+- Gold/Premium: ₹500/year — 4K+HDR, 4 screens, Downloads, Spatial Audio, Gold Badge
+Payment: UPI/QR code scan → enter UTR → admin approves in 2-4 hours
+
+FEATURES:
+- 1000+ movies & web series in Hindi, English, Tamil, Telugu, etc.
+- Free movies available (no plan needed)
+- Premium movies need Silver/above plan OR unlock with coins
+- Coins: earn 10 per referral, 100 coins = 1 premium movie unlock
+- Refer friends via golden FAB button (bottom right)
+- Dark/Light mode in settings drawer (hamburger menu)
+- Bottom nav on mobile: Home, Search, Live TV, My List, More
+- Live TV available via live.html
+- IPL/Cricket: ks-cricket.html
+
+SUPPORT: WhatsApp +91 9561409361
+
+CAPABILITIES:
+- Answer ANY question (not just KS Movies) — you are a general AI assistant
+- Help with movies, actors, plots, recommendations
+- General knowledge, coding help, writing, math, science — everything
+- Always be accurate and honest`;
+
+    // ── STATE ──
+    var aiOpen = false;
+    var aiHistory = [];
+    var aiTyping = false;
+    var micRecording = false;
+    var recognition = null;
+    var streamingMsgEl = null;
+
+    // ── INIT ──
+    window.addEventListener('DOMContentLoaded', function() {
+        addBotMsg('Namaste! 🎬 Main hoon **KS AI** — aapka smart assistant!\n\nMain kisi bhi sawaal ka jawab de sakta hoon — movies, plans, general knowledge, coding, sab kuch. Kya poochna hai?');
+    });
+
+    // ── TOGGLE ──
+    window.ksAiToggle = function() {
+        aiOpen = !aiOpen;
+        var panel = document.getElementById('ks-ai-panel');
+        if (aiOpen) {
+            panel.classList.add('ks-open');
+            hideChips();
+            setTimeout(function() { document.getElementById('ksai-input').focus(); }, 80);
+        } else {
+            panel.classList.remove('ks-open');
+        }
+    };
+
+    // ── CLEAR ──
+    window.ksAiClear = function() {
+        aiHistory = [];
+        var msgs = document.getElementById('ksai-msgs');
+        msgs.innerHTML = '';
+        addBotMsg('Chat clear ho gaya! 🗑 Ab naya sawaal poochho.');
+        showChips();
+    };
+
+    // ── CHIP CLICK ──
+    window.ksAiChip = function(text) {
+        hideChips();
+        document.getElementById('ksai-input').value = text;
+        ksAiSend();
+    };
+
+    function hideChips() {
+        var c = document.getElementById('ksai-chips');
+        if (c) c.style.display = 'none';
+    }
+    function showChips() {
+        var c = document.getElementById('ksai-chips');
+        if (c) c.style.display = 'flex';
+    }
+
+    // ── SEND ──
+    window.ksAiSend = async function() {
+        if (aiTyping) return;
+        var input = document.getElementById('ksai-input');
+        var text = input.value.trim();
+        if (!text) return;
+
+        input.value = '';
+        input.style.height = 'auto';
+        hideChips();
+        addUserMsg(text);
+        aiHistory.push({ role: 'user', content: text });
+
+        await callClaudeAPI();
+    };
+
+    // ── MIC (Voice Input) ──
+    window.ksAiMic = function() {
+        var SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRec) {
+            showToast('🎤 Voice input aapke browser mein support nahi hai. Chrome use karo!');
+            return;
+        }
+        var micBtn = document.getElementById('ksai-mic-btn');
+        var micIcon = document.getElementById('ksai-mic-icon');
+
+        if (micRecording) {
+            // Stop
+            if (recognition) recognition.stop();
+            micRecording = false;
+            micBtn.classList.remove('recording');
+            micIcon.className = 'fa-solid fa-microphone';
+            return;
+        }
+
+        recognition = new SpeechRec();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'hi-IN'; // Hindi first, falls back to English
+
+        micRecording = true;
+        micBtn.classList.add('recording');
+        micIcon.className = 'fa-solid fa-circle';
+
+        recognition.start();
+
+        recognition.onresult = function(e) {
+            var transcript = '';
+            for (var i = e.resultIndex; i < e.results.length; i++) {
+                transcript += e.results[i][0].transcript;
+            }
+            document.getElementById('ksai-input').value = transcript;
+        };
+
+        recognition.onend = function() {
+            micRecording = false;
+            micBtn.classList.remove('recording');
+            micIcon.className = 'fa-solid fa-microphone';
+            var val = document.getElementById('ksai-input').value.trim();
+            if (val) { setTimeout(ksAiSend, 300); }
+        };
+
+        recognition.onerror = function(e) {
+            micRecording = false;
+            micBtn.classList.remove('recording');
+            micIcon.className = 'fa-solid fa-microphone';
+            if (e.error !== 'no-speech') {
+                showToast('🎤 Mic error: ' + e.error);
+            }
+        };
+    };
+
+    // ── CLAUDE API CALL (with streaming) ──
+    async function callClaudeAPI() {
+        aiTyping = true;
+        setSendDisabled(true);
+        showTyping();
+
+        try {
+                var resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + KS_GROQ_KEY
+                },
+                body: JSON.stringify({
+                    model: 'llama-3.3-70b-versatile',
+                    max_tokens: 1024,
+                    messages: [{ role: 'system', content: KS_SYSTEM }].concat(aiHistory.slice(-12))
+                })
+            });
+
+            if (!resp.ok) {
+                var errData = await resp.json().catch(function(){ return {}; });
+                throw new Error((errData.error && errData.error.message) || 'API error ' + resp.status);
+            }
+
+            var data = await resp.json();
+            removeTyping();
+
+            var assistantText = '';
+            if (data.choices && data.choices[0] && data.choices[0].message) {
+                assistantText = data.choices[0].message.content || '';
+            }
+
+            if (assistantText) {
+                addBotMsg(assistantText);
+                aiHistory.push({ role: 'assistant', content: assistantText });
+            } else {
+                addErrorMsg('Koi response nahi mila. Please dobara try karo.');
+            }
+
+        } catch (err) {
+            removeTyping();
+            console.error('KS AI Error:', err);
+            var errMsg = err.message || '';
+            if (errMsg.includes('401') || errMsg.includes('authentication')) {
+                addErrorMsg('⚠️ API authentication error. Admin se contact karo.');
+            } else if (errMsg.includes('429')) {
+                addErrorMsg('⚠️ Too many requests! Thodi der baad try karo.');
+            } else if (errMsg.includes('NetworkError') || errMsg.includes('Failed to fetch')) {
+                addErrorMsg('⚠️ Network error. Internet connection check karo.');
+            } else {
+                addErrorMsg('⚠️ Error: ' + errMsg + '\n\nPlease dobara try karo ya WhatsApp karo: +91 9561409361');
+            }
+        }
+
+        aiTyping = false;
+        setSendDisabled(false);
+    }
+
+    // ── UI HELPERS ──
+    function addUserMsg(text) {
+        var msgs = document.getElementById('ksai-msgs');
+        var div = document.createElement('div');
+        div.className = 'ksai-msg user';
+        div.textContent = text;
+        msgs.appendChild(div);
+        scrollDown();
+    }
+
+    function addBotMsg(text) {
+        var msgs = document.getElementById('ksai-msgs');
+        var div = document.createElement('div');
+        div.className = 'ksai-msg bot';
+        // Format markdown-lite: **bold**, bullets
+        div.innerHTML = formatMsg(text);
+        msgs.appendChild(div);
+        scrollDown();
+    }
+
+    function addErrorMsg(text) {
+        var msgs = document.getElementById('ksai-msgs');
+        var div = document.createElement('div');
+        div.className = 'ksai-msg error';
+        div.textContent = text;
+        msgs.appendChild(div);
+        scrollDown();
+    }
+
+    function formatMsg(text) {
+        // Escape HTML
+        text = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        // **bold**
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong style="color:#fff">$1</strong>');
+        // *italic*
+        text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // Line breaks
+        text = text.replace(/\n/g, '<br>');
+        return text;
+    }
+
+    function showTyping() {
+        removeTyping();
+        var msgs = document.getElementById('ksai-msgs');
+        var div = document.createElement('div');
+        div.className = 'ksai-typing';
+        div.id = 'ksai-typing-el';
+        div.innerHTML = '<span></span><span></span><span></span>';
+        msgs.appendChild(div);
+        scrollDown();
+    }
+
+    function removeTyping() {
+        var t = document.getElementById('ksai-typing-el');
+        if (t) t.remove();
+    }
+
+    function scrollDown() {
+        var msgs = document.getElementById('ksai-msgs');
+        setTimeout(function() { msgs.scrollTop = msgs.scrollHeight; }, 50);
+    }
+
+    function setSendDisabled(disabled) {
+        var btn = document.getElementById('ksai-send-btn');
+        if (btn) btn.disabled = disabled;
+    }
+
+    function showToast(msg) {
+        var t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:180px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.82rem;z-index:9999;border:1px solid rgba(229,9,20,0.3);font-family:DM Sans,sans-serif;max-width:80vw;text-align:center;';
+        t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(function() { t.remove(); }, 3500);
+    }
+
+})();
+</script>
+
 <script src="ks-voice-ai.js" defer></script>
 </body>
 </html>
