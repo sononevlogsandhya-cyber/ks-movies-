@@ -898,10 +898,10 @@ let liveSeconds=0, liveTimer=null;
 
 // ── ESCALATING BLOCK SYSTEM ──
 // localStorage keys:
-//   ks_ipl_expiry      — paid plan expiry timestamp
-//   ks_block_until     — block end timestamp
-//   ks_block_count     — how many times blocked (starts at 1)
-//   ks_popup_closed    — whether user closed KsPay popup
+//   ks_ipl_expiry   — paid plan expiry timestamp
+//   ks_block_until  — block end timestamp
+//   ks_block_count  — kitni baar block hua (1→24h, 2→48h, 3→72h ...)
+//   ks_trial_done   — '1' jab 10 min trial khatam ho gaya (refresh ke baad bhi yaad rahe)
 
 function checkPremium(){
   const exp = localStorage.getItem('ks_ipl_expiry');
@@ -999,16 +999,23 @@ async function loadFirebaseConfig(){
 
 // ── PLAYER INIT ──
 function initPlayer(){
-  if(!isPremium && isBlocked()){
+  if(isPremium){
+    showSpinner();
+    startHLS();
+    return;
+  }
+  // Non-premium: check block first
+  if(isBlocked()){
     showBlockScreen();
     return;
   }
-  showSpinner();
-  if(isPremium){
-    startHLS(); // No ads for paid users
-  } else {
-    showAdThenPlay();
+  // Refresh/reopen ke baad: agar trial pehle hi khatam ho chuka hai toh seedha popup dikhao
+  if(localStorage.getItem('ks_trial_done') === '1'){
+    showKsPayPopup();
+    return;
   }
+  showSpinner();
+  showAdThenPlay();
 }
 
 let adIdx=0, adCountdown=0, adInterval=null;
@@ -1133,7 +1140,9 @@ function startFreeTrial(){
       badge.style.display = 'none';
       try{ videoEl.pause(); }catch(e){}
       isPlaying = false; updatePlayIcon();
-      // Show KsPay popup instead of just lock
+      // Trial khatam — localStorage mein save karo (refresh/reopen ke baad bhi yaad rahe)
+      localStorage.setItem('ks_trial_done', '1');
+      // KsPay popup dikhao
       showKsPayPopup();
     }
   },1000);
@@ -1148,9 +1157,11 @@ function showKsPayPopup(){
 function closeKsPayPopup(){
   const popup = document.getElementById('kspay-popup');
   if(popup) popup.classList.remove('visible');
-  // User ne close kiya — block lagao!
+  // User ne popup close kiya — escalating block lagao!
+  // 1st time: 24h block, 2nd time: 48h, 3rd time: 72h ...
   const { count, blockHrs } = applyBlock();
-  showBlockScreen();
+  showToast('⏳ ' + blockHrs + ' ghante ke liye access band. Payment karo to unlock hoga!', 4000);
+  setTimeout(() => showBlockScreen(), 500);
 }
 
 // ── BLOCK SCREEN ──
@@ -1431,6 +1442,10 @@ function activatePlan(utr){
   const expiry=Date.now()+(65*24*60*60*1000);
   localStorage.setItem('ks_ipl_expiry',expiry.toString());
   isPremium=true;
+  // Payment ho gaya — sab restrictions clear karo
+  localStorage.removeItem('ks_trial_done');
+  localStorage.removeItem('ks_block_until');
+  localStorage.removeItem('ks_block_count');
 
   const now=new Date();
   document.getElementById('receiptBox').innerHTML=`
