@@ -150,6 +150,12 @@ header{
 /* Premium lock */
 #premium-lock{display:none;position:absolute;inset:0;z-index:40;background:linear-gradient(180deg,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0.97) 50%);backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:40px;}
 #premium-lock.visible{display:flex;}
+
+/* KsPay popup & Block screen */
+#kspay-popup{display:none;}
+#kspay-popup.visible{display:flex;}
+#block-screen{display:none;}
+#block-screen.visible{display:flex;}
 .lock-icon{font-size:2.8rem;color:var(--gold);animation:lockBounce 1.5s var(--spring) infinite alternate;}
 @keyframes lockBounce{from{transform:scale(1);}to{transform:scale(1.12);}}
 .lock-title{font-family:'Bebas Neue',cursive;font-size:1.8rem;letter-spacing:2px;}
@@ -576,6 +582,42 @@ footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;colo
           <div class="ad-prog-bar"><div class="ad-prog-fill" id="ad-prog-fill" style="width:0%"></div></div>
         </div>
 
+        <!-- KS PAY POPUP (10 min ke baad free users ko) -->
+        <div id="kspay-popup" style="display:none;position:absolute;inset:0;z-index:55;background:linear-gradient(180deg,rgba(0,0,0,0.3) 0%,rgba(0,0,0,0.97) 40%);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:28px;">
+          <div style="position:absolute;top:14px;right:14px;">
+            <button onclick="closeKsPayPopup()" style="width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50%;color:rgba(255,255,255,0.6);font-size:0.9rem;cursor:pointer;transition:0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">✕</button>
+          </div>
+          <div style="font-size:2.2rem;">⏰</div>
+          <div style="background:rgba(229,9,20,0.15);border:1px solid rgba(229,9,20,0.4);border-radius:20px;padding:4px 14px;font-size:0.68rem;font-weight:800;color:var(--accent);letter-spacing:1px;">FREE TRIAL KHATAM</div>
+          <div style="font-family:'Bebas Neue',cursive;font-size:1.9rem;letter-spacing:2px;line-height:1.1;">IPL Dekhna Jaari<br>Rakhna Hai?</div>
+          <div style="color:rgba(255,255,255,0.6);font-size:0.88rem;max-width:280px;line-height:1.6;">Sirf <strong style="color:var(--ipl2);">₹59</strong> mein poora IPL 2026 dekho — bina kisi interruption ke! 65 din ka full coverage.</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin:4px 0;">
+            <span style="font-family:'Bebas Neue',cursive;font-size:3rem;color:var(--ipl2);">₹59</span>
+            <span style="font-size:0.82rem;color:rgba(255,255,255,0.45);">/ 2 months</span>
+          </div>
+          <button onclick="document.getElementById('kspay-popup').classList.remove('visible');document.getElementById('pay-section').scrollIntoView({behavior:'smooth'});" style="padding:14px 36px;background:linear-gradient(135deg,var(--ipl),var(--ipl2));border:none;border-radius:14px;color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(255,98,0,0.4);transition:0.2s;font-family:'DM Sans',sans-serif;">
+            🏏 ₹59 Mein Unlock Karo
+          </button>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.3);">Close karne par kuch ghante ke liye block ho jaoge</div>
+        </div>
+
+        <!-- BLOCK SCREEN (popup close karne ke baad) -->
+        <div id="block-screen" style="display:none;position:absolute;inset:0;z-index:60;background:rgba(0,0,0,0.97);backdrop-filter:blur(12px);align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:32px;">
+          <div style="font-size:3rem;">🔒</div>
+          <div style="font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:2px;color:#fff;">Access Block Hai</div>
+          <div style="background:rgba(229,9,20,0.12);border:1px solid rgba(229,9,20,0.3);border-radius:12px;padding:16px 24px;max-width:300px;">
+            <div style="font-size:0.72rem;color:rgba(255,255,255,0.45);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Block Lift Hoga</div>
+            <div style="font-family:'Bebas Neue',cursive;font-size:2.5rem;color:var(--accent);" id="block-hours">24h 0m</div>
+            <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-top:4px;">Attempt #<span id="block-count">1</span></div>
+          </div>
+          <div style="color:rgba(255,255,255,0.5);font-size:0.85rem;max-width:280px;line-height:1.7;">
+            Tumne free trial popup close kiya. Har baar block <strong style="color:#fff;">24 ghante badhta</strong> rahega.<br>Payment karo aur permanently unlock karo.
+          </div>
+          <button onclick="document.getElementById('block-screen').classList.remove('visible');document.getElementById('pay-section').scrollIntoView({behavior:'smooth'});" style="padding:14px 36px;background:linear-gradient(135deg,var(--ipl),var(--ipl2));border:none;border-radius:14px;color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(255,98,0,0.4);font-family:'DM Sans',sans-serif;">
+            🏏 ₹59 Mein Permanent Unlock
+          </button>
+        </div>
+
         <!-- Free Trial Badge -->
         <div id="free-trial-badge" style="display:none;position:absolute;top:52px;right:12px;z-index:30;background:rgba(0,0,0,0.78);border:1px solid rgba(229,9,20,0.5);border-radius:20px;padding:4px 13px;font-size:0.74rem;font-weight:700;color:var(--accent);pointer-events:none;"></div>
 
@@ -837,7 +879,13 @@ let adTimer=null, adShown=false;
 let isPremium=false;
 let liveSeconds=0, liveTimer=null;
 
-// Check if user has IPL plan
+// ── ESCALATING BLOCK SYSTEM ──
+// localStorage keys:
+//   ks_ipl_expiry      — paid plan expiry timestamp
+//   ks_block_until     — block end timestamp
+//   ks_block_count     — how many times blocked (starts at 1)
+//   ks_popup_closed    — whether user closed KsPay popup
+
 function checkPremium(){
   const exp = localStorage.getItem('ks_ipl_expiry');
   if(exp && Date.now() < parseInt(exp)){
@@ -845,6 +893,36 @@ function checkPremium(){
   }
 }
 checkPremium();
+
+// Check if user is currently blocked
+function isBlocked(){
+  if(isPremium) return false;
+  const blockUntil = localStorage.getItem('ks_block_until');
+  if(blockUntil && Date.now() < parseInt(blockUntil)){
+    return true;
+  }
+  return false;
+}
+
+// Get remaining block time in hours+mins
+function getBlockTimeLeft(){
+  const blockUntil = parseInt(localStorage.getItem('ks_block_until') || 0);
+  const left = blockUntil - Date.now();
+  if(left <= 0) return null;
+  const hrs = Math.floor(left / 3600000);
+  const mins = Math.floor((left % 3600000) / 60000);
+  return { hrs, mins, left };
+}
+
+// Apply new block (escalating)
+function applyBlock(){
+  const count = parseInt(localStorage.getItem('ks_block_count') || '0') + 1;
+  const blockHrs = 24 * count;  // day1→24h, day2→48h, day3→72h, ...
+  const blockUntil = Date.now() + (blockHrs * 3600000);
+  localStorage.setItem('ks_block_count', count);
+  localStorage.setItem('ks_block_until', blockUntil.toString());
+  return { count, blockHrs };
+}
 
 let freeTrialUsed = 0, freeTrialTimer = null;
 
@@ -902,10 +980,16 @@ async function loadFirebaseConfig(){
 
 // ── PLAYER INIT ──
 function initPlayer(){
-  // Both free & premium users can watch
-  // Free users get 10 min trial, then premium lock appears
+  if(!isPremium && isBlocked()){
+    showBlockScreen();
+    return;
+  }
   showSpinner();
-  showAdThenPlay();
+  if(isPremium){
+    startHLS(); // No ads for paid users
+  } else {
+    showAdThenPlay();
+  }
 }
 
 let adIdx=0, adCountdown=0, adInterval=null;
@@ -981,7 +1065,6 @@ function startFreeTrial(){
   const badge = document.getElementById('free-trial-badge');
   freeTrialUsed = 0;
   freeTrialTimer = setInterval(()=>{
-    // only tick while actually playing
     if(!isPlaying) return;
     freeTrialUsed++;
     const remaining = FREE_TRIAL_SEC - freeTrialUsed;
@@ -994,9 +1077,56 @@ function startFreeTrial(){
       badge.style.display = 'none';
       try{ videoEl.pause(); }catch(e){}
       isPlaying = false; updatePlayIcon();
-      document.getElementById('premium-lock').classList.add('visible');
+      // Show KsPay popup instead of just lock
+      showKsPayPopup();
     }
   },1000);
+}
+
+// ── KSPAY POPUP (10 min ke baad free users ke liye) ──
+function showKsPayPopup(){
+  const popup = document.getElementById('kspay-popup');
+  if(popup) popup.classList.add('visible');
+}
+
+function closeKsPayPopup(){
+  const popup = document.getElementById('kspay-popup');
+  if(popup) popup.classList.remove('visible');
+  // User ne close kiya — block lagao!
+  const { count, blockHrs } = applyBlock();
+  showBlockScreen();
+}
+
+// ── BLOCK SCREEN ──
+function showBlockScreen(){
+  const blockInfo = getBlockTimeLeft();
+  const screen = document.getElementById('block-screen');
+  const hrEl = document.getElementById('block-hours');
+  const countEl = document.getElementById('block-count');
+  if(hrEl && blockInfo) hrEl.textContent = blockInfo.hrs + 'h ' + blockInfo.mins + 'm';
+  const count = parseInt(localStorage.getItem('ks_block_count') || '1');
+  if(countEl) countEl.textContent = count;
+  if(screen) screen.classList.add('visible');
+  // Start countdown timer on block screen
+  startBlockCountdown();
+}
+
+let blockCountdownTimer = null;
+function startBlockCountdown(){
+  clearInterval(blockCountdownTimer);
+  blockCountdownTimer = setInterval(()=>{
+    const info = getBlockTimeLeft();
+    if(!info){
+      clearInterval(blockCountdownTimer);
+      // Block lifted — reload
+      const screen = document.getElementById('block-screen');
+      if(screen) screen.classList.remove('visible');
+      location.reload();
+      return;
+    }
+    const el = document.getElementById('block-hours');
+    if(el) el.textContent = info.hrs + 'h ' + info.mins + 'm';
+  }, 30000); // Update every 30 seconds
 }
 
 function retryPlayer(){
