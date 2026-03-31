@@ -12,7 +12,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
-<!-- Firebase for dynamic stream URL + ads -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 <style>
@@ -150,12 +149,6 @@ header{
 /* Premium lock */
 #premium-lock{display:none;position:absolute;inset:0;z-index:40;background:linear-gradient(180deg,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0.97) 50%);backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:40px;}
 #premium-lock.visible{display:flex;}
-
-/* KsPay popup & Block screen */
-#kspay-popup{display:none;}
-#kspay-popup.visible{display:flex;}
-#block-screen{display:none;}
-#block-screen.visible{display:flex;}
 .lock-icon{font-size:2.8rem;color:var(--gold);animation:lockBounce 1.5s var(--spring) infinite alternate;}
 @keyframes lockBounce{from{transform:scale(1);}to{transform:scale(1.12);}}
 .lock-title{font-family:'Bebas Neue',cursive;font-size:1.8rem;letter-spacing:2px;}
@@ -582,42 +575,6 @@ footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;colo
           <div class="ad-prog-bar"><div class="ad-prog-fill" id="ad-prog-fill" style="width:0%"></div></div>
         </div>
 
-        <!-- KS PAY POPUP (10 min ke baad free users ko) -->
-        <div id="kspay-popup" style="display:none;position:absolute;inset:0;z-index:55;background:linear-gradient(180deg,rgba(0,0,0,0.3) 0%,rgba(0,0,0,0.97) 40%);backdrop-filter:blur(8px);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:28px;">
-          <div style="position:absolute;top:14px;right:14px;">
-            <button onclick="closeKsPayPopup()" style="width:36px;height:36px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:50%;color:rgba(255,255,255,0.6);font-size:0.9rem;cursor:pointer;transition:0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">✕</button>
-          </div>
-          <div style="font-size:2.2rem;">⏰</div>
-          <div style="background:rgba(229,9,20,0.15);border:1px solid rgba(229,9,20,0.4);border-radius:20px;padding:4px 14px;font-size:0.68rem;font-weight:800;color:var(--accent);letter-spacing:1px;">FREE TRIAL KHATAM</div>
-          <div style="font-family:'Bebas Neue',cursive;font-size:1.9rem;letter-spacing:2px;line-height:1.1;">IPL Dekhna Jaari<br>Rakhna Hai?</div>
-          <div style="color:rgba(255,255,255,0.6);font-size:0.88rem;max-width:280px;line-height:1.6;">Sirf <strong style="color:var(--ipl2);">₹59</strong> mein poora IPL 2026 dekho — bina kisi interruption ke! 65 din ka full coverage.</div>
-          <div style="display:flex;align-items:baseline;gap:4px;margin:4px 0;">
-            <span style="font-family:'Bebas Neue',cursive;font-size:3rem;color:var(--ipl2);">₹59</span>
-            <span style="font-size:0.82rem;color:rgba(255,255,255,0.45);">/ 2 months</span>
-          </div>
-          <button onclick="document.getElementById('kspay-popup').classList.remove('visible');document.getElementById('pay-section').scrollIntoView({behavior:'smooth'});" style="padding:14px 36px;background:linear-gradient(135deg,var(--ipl),var(--ipl2));border:none;border-radius:14px;color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(255,98,0,0.4);transition:0.2s;font-family:'DM Sans',sans-serif;">
-            🏏 ₹59 Mein Unlock Karo
-          </button>
-          <div style="font-size:0.72rem;color:rgba(255,255,255,0.3);">Close karne par kuch ghante ke liye block ho jaoge</div>
-        </div>
-
-        <!-- BLOCK SCREEN (popup close karne ke baad) -->
-        <div id="block-screen" style="display:none;position:absolute;inset:0;z-index:60;background:rgba(0,0,0,0.97);backdrop-filter:blur(12px);align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;padding:32px;">
-          <div style="font-size:3rem;">🔒</div>
-          <div style="font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:2px;color:#fff;">Access Block Hai</div>
-          <div style="background:rgba(229,9,20,0.12);border:1px solid rgba(229,9,20,0.3);border-radius:12px;padding:16px 24px;max-width:300px;">
-            <div style="font-size:0.72rem;color:rgba(255,255,255,0.45);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Block Lift Hoga</div>
-            <div style="font-family:'Bebas Neue',cursive;font-size:2.5rem;color:var(--accent);" id="block-hours">24h 0m</div>
-            <div style="font-size:0.7rem;color:rgba(255,255,255,0.35);margin-top:4px;">Attempt #<span id="block-count">1</span></div>
-          </div>
-          <div style="color:rgba(255,255,255,0.5);font-size:0.85rem;max-width:280px;line-height:1.7;">
-            Tumne free trial popup close kiya. Har baar block <strong style="color:#fff;">24 ghante badhta</strong> rahega.<br>Payment karo aur permanently unlock karo.
-          </div>
-          <button onclick="document.getElementById('block-screen').classList.remove('visible');document.getElementById('pay-section').scrollIntoView({behavior:'smooth'});" style="padding:14px 36px;background:linear-gradient(135deg,var(--ipl),var(--ipl2));border:none;border-radius:14px;color:#fff;font-size:1rem;font-weight:800;cursor:pointer;box-shadow:0 6px 24px rgba(255,98,0,0.4);font-family:'DM Sans',sans-serif;">
-            🏏 ₹59 Mein Permanent Unlock
-          </button>
-        </div>
-
         <!-- Free Trial Badge -->
         <div id="free-trial-badge" style="display:none;position:absolute;top:52px;right:12px;z-index:30;background:rgba(0,0,0,0.78);border:1px solid rgba(229,9,20,0.5);border-radius:20px;padding:4px 13px;font-size:0.74rem;font-weight:700;color:var(--accent);pointer-events:none;"></div>
 
@@ -841,8 +798,9 @@ footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;colo
 window.onerror=(m,s,l,c,e)=>{console.warn('[KS]',m);return true;};
 window.addEventListener('unhandledrejection',e=>{console.warn('[KS]',e.reason);e.preventDefault();});
 
-// ── FIREBASE CONFIG ──
-const _fbCfg = {
+// ── CONSTANTS ──
+// ── FIREBASE INIT ──
+const FIREBASE_CONFIG = {
   apiKey:"AIzaSyBNyfzP26mSnB0qsm24zIeTM2K9sVBV1zc",
   authDomain:"ks-movies-98e3e.firebaseapp.com",
   databaseURL:"https://ks-movies-98e3e-default-rtdb.firebaseio.com",
@@ -851,61 +809,31 @@ const _fbCfg = {
   messagingSenderId:"392323800373",
   appId:"1:392323800373:web:b289cf81f4c0232d66007c"
 };
-// Init Firebase only if not already initialised
-if(!window._ksFirebaseApp){
-  try {
-    if(typeof firebase !== 'undefined'){
-      window._ksFirebaseApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(_fbCfg);
-      window._ksDB = firebase.database();
-    }
-  } catch(e){ console.warn('[KS Cricket] Firebase init failed:', e); }
-}
+if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+const CRICKET_DB = firebase.database();
 
-// ── CONSTANTS (defaults — overridden by Firebase) ──
-const DEFAULT_FREE_TRIAL_MIN = 10;
+// ── DEFAULT VALUES (fallback if Firebase empty) ──
+const DEFAULT_STREAM_URL  = 'http://116.90.120.151:8000/play/a0hi/index.m3u8';
+const DEFAULT_ADS = [
+  'https://www.profitableratecpm.com/q8kkfu6p5?key=c7e57b4f2f5e638dd9c97ba5a4f62b00',
+];
+const DEFAULT_FREE_TRIAL_SEC = 600; // 10 minutes
+
+let STREAM_URL = DEFAULT_STREAM_URL;
 const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
-// ── FALLBACK STREAM URLs — Sirf IPL 2026 Hindi Channels ──
-// Channel 1: Star Sports 1 (sm-monirul) — PRIMARY
-// Channel 2: Star Sports 2 (sm-monirul)
-// Channel 3: Star Sports 2 (stvlive)
-// Channel 4: Star Sports Hindi (stvlive backup)
-// Channel 5: Star Sports 1 HD
-const FALLBACK_URLS = [
-  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch1: Star Sports 2 (stvlive) PRIMARY ★
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch2: Star Sports 2 (sm-monirul) ★
-  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch3: Star Sports Hindi (stvlive)
-  'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch4: Star Sports 1 HD
-];
-
-// ── CORS PROXY — http:// links https site pe kaam karane ke liye ──
-function proxify(url){
-  if(url.startsWith('http://') && location.protocol === 'https:'){
-    return 'https://corsproxy.io/?' + encodeURIComponent(url);
-  }
-  return url;
-}
-
-let currentUrlIndex = 0;
-let STREAM_URL = FALLBACK_URLS[0];
-let FREE_TRIAL_SEC = DEFAULT_FREE_TRIAL_MIN * 60;
-let ADS = [
-  'https://www.profitableratecpm.com/q8kkfu6p5?key=c7e57b4f2f5e638dd9c97ba5a4f62b00',
-];
-
+// ── STATE ──
 let isPlaying=false, isMuted=false, hlsInst=null, ctrlTimer=null, wmTimer=null;
 let adTimer=null, adShown=false;
-let isPremium=false;
+let isPremium=false; // check localStorage
 let liveSeconds=0, liveTimer=null;
 
-// ── ESCALATING BLOCK SYSTEM ──
-// localStorage keys:
-//   ks_ipl_expiry   — paid plan expiry timestamp
-//   ks_block_until  — block end timestamp
-//   ks_block_count  — kitni baar block hua (1→24h, 2→48h, 3→72h ...)
-//   ks_trial_done   — '1' jab 10 min trial khatam ho gaya (refresh ke baad bhi yaad rahe)
+// ── DYNAMIC CONFIG (loaded from Firebase) ──
+let ADS = [...DEFAULT_ADS];
+let FREE_TRIAL_SEC = DEFAULT_FREE_TRIAL_SEC;
 
+// Check if user has IPL plan
 function checkPremium(){
   const exp = localStorage.getItem('ks_ipl_expiry');
   if(exp && Date.now() < parseInt(exp)){
@@ -914,36 +842,7 @@ function checkPremium(){
 }
 checkPremium();
 
-// Check if user is currently blocked
-function isBlocked(){
-  if(isPremium) return false;
-  const blockUntil = localStorage.getItem('ks_block_until');
-  if(blockUntil && Date.now() < parseInt(blockUntil)){
-    return true;
-  }
-  return false;
-}
-
-// Get remaining block time in hours+mins
-function getBlockTimeLeft(){
-  const blockUntil = parseInt(localStorage.getItem('ks_block_until') || 0);
-  const left = blockUntil - Date.now();
-  if(left <= 0) return null;
-  const hrs = Math.floor(left / 3600000);
-  const mins = Math.floor((left % 3600000) / 60000);
-  return { hrs, mins, left };
-}
-
-// Apply new block (escalating)
-function applyBlock(){
-  const count = parseInt(localStorage.getItem('ks_block_count') || '0') + 1;
-  const blockHrs = 24 * count;  // day1→24h, day2→48h, day3→72h, ...
-  const blockUntil = Date.now() + (blockHrs * 3600000);
-  localStorage.setItem('ks_block_count', count);
-  localStorage.setItem('ks_block_until', blockUntil.toString());
-  return { count, blockHrs };
-}
-
+const FREE_TRIAL_SEC_DEFAULT = 600; // fallback
 let freeTrialUsed = 0, freeTrialTimer = null;
 
 const videoEl = document.getElementById('main-video');
@@ -951,72 +850,50 @@ const overlay = document.getElementById('ctrl-overlay');
 const spinner = document.getElementById('spinner');
 const errScr  = document.getElementById('error-screen');
 
-// ── LOAD CONFIG FROM FIREBASE ──
-async function loadFirebaseConfig(){
-  if(!window._ksDB) return;
-  try {
-    const [streamSnap, adsSnap, trialSnap] = await Promise.all([
-      window._ksDB.ref('cricket/streamUrl').once('value'),
-      window._ksDB.ref('cricket/ads').once('value'),
-      window._ksDB.ref('cricket/freeTrialMinutes').once('value'),
-    ]);
-    // Stream URL override — insert at front of fallback list
-    const fbUrl = streamSnap.val();
-    if(fbUrl && typeof fbUrl === 'string' && fbUrl.trim()){
-      FALLBACK_URLS.unshift(fbUrl.trim());
-      STREAM_URL = fbUrl.trim();
-      currentUrlIndex = 0;
-    }
-    // Ads override
+// ── SPLASH + FIREBASE CONFIG LOAD ──
+(()=>{
+  const bar=document.getElementById('splash-bar');
+  let p=0;
+  const iv=setInterval(()=>{ p+=3; bar.style.width=Math.min(p,70)+'%'; if(p>=70)clearInterval(iv); },50);
+
+  // Load config from Firebase
+  Promise.all([
+    CRICKET_DB.ref('cricket/ads').once('value'),
+    CRICKET_DB.ref('cricket/streamUrl').once('value'),
+    CRICKET_DB.ref('cricket/freeTrialMinutes').once('value'),
+  ]).then(([adsSnap, streamSnap, trialSnap])=>{
+    // Update ADS from Firebase
     const fbAds = adsSnap.val();
     if(Array.isArray(fbAds) && fbAds.filter(Boolean).length > 0){
       ADS = fbAds.filter(Boolean);
     }
-    // Free trial override
+    // Update stream URL from Firebase
+    const fbStream = streamSnap.val();
+    if(fbStream && fbStream.trim()) STREAM_URL = fbStream.trim();
+    // Update free trial from Firebase
     const fbTrial = trialSnap.val();
-    if(fbTrial && !isNaN(parseInt(fbTrial))){
-      FREE_TRIAL_SEC = parseInt(fbTrial) * 60;
-    }
-  } catch(e){
-    console.warn('[KS Cricket] Firebase config load failed, using defaults:', e);
-  }
-}
+    if(fbTrial && !isNaN(fbTrial)) FREE_TRIAL_SEC = parseInt(fbTrial) * 60;
 
-// ── SPLASH ──
-(()=>{
-  const bar=document.getElementById('splash-bar');
-  let p=0;
-  const iv=setInterval(()=>{ p+=3; bar.style.width=Math.min(p,92)+'%'; if(p>=92)clearInterval(iv); },50);
-  setTimeout(()=>{
-    bar.style.width='100%';
+  }).catch(()=>{
+    // Use defaults if Firebase fails
+  }).finally(()=>{
+    // Complete splash bar
+    let p2=70;
+    const iv2=setInterval(()=>{ p2+=4; bar.style.width=Math.min(p2,100)+'%'; if(p2>=100)clearInterval(iv2); },30);
     setTimeout(()=>{
-      document.getElementById('ks-splash').classList.add('hide');
-      setTimeout(async ()=>{
-        document.getElementById('ks-splash').style.display='none';
-        await loadFirebaseConfig();
-        initPlayer();
-      },600);
-    },300);
-  },1800);
+      bar.style.width='100%';
+      setTimeout(()=>{
+        document.getElementById('ks-splash').classList.add('hide');
+        setTimeout(()=>{ document.getElementById('ks-splash').style.display='none'; initPlayer(); },600);
+      },300);
+    },600);
+  });
 })();
 
 // ── PLAYER INIT ──
 function initPlayer(){
-  if(isPremium){
-    showSpinner();
-    startHLS();
-    return;
-  }
-  // Non-premium: check block first
-  if(isBlocked()){
-    showBlockScreen();
-    return;
-  }
-  // Refresh/reopen ke baad: agar trial pehle hi khatam ho chuka hai toh seedha popup dikhao
-  if(localStorage.getItem('ks_trial_done') === '1'){
-    showKsPayPopup();
-    return;
-  }
+  // Both free & premium users can watch
+  // Free users get 10 min trial, then premium lock appears
   showSpinner();
   showAdThenPlay();
 }
@@ -1024,6 +901,11 @@ function initPlayer(){
 let adIdx=0, adCountdown=0, adInterval=null;
 
 function showAdThenPlay(){
+  // Pick a random ad URL from ADS array (Firebase-loaded or default)
+  const activeAds = ADS.filter(Boolean);
+  if(activeAds.length === 0){ startHLS(); return; }
+  const randomAd = activeAds[Math.floor(Math.random() * activeAds.length)];
+
   // Show one 30s ad before stream
   const adOverlay = document.getElementById('ad-overlay');
   adOverlay.classList.add('visible');
@@ -1032,7 +914,7 @@ function showAdThenPlay(){
   skipBtn.style.display='block'; skipBtn.classList.remove('active');
   const ifWrap=document.getElementById('ad-iframe-wrap');
   const ifr=document.createElement('iframe');
-  ifr.src=ADS[0]; ifr.setAttribute('allowfullscreen','');
+  ifr.src=randomAd; ifr.setAttribute('allowfullscreen','');
   ifWrap.appendChild(ifr);
   adCountdown=30;
   const progFill=document.getElementById('ad-prog-fill');
@@ -1054,65 +936,17 @@ function closeAd(){
   startHLS();
 }
 
-// ── AUTO FALLBACK: try next URL if current fails ──
-function tryNextStream(){
-  currentUrlIndex++;
-  if(currentUrlIndex >= FALLBACK_URLS.length){
-    // All URLs exhausted
-    hideSpinner();
-    showError();
-    return;
-  }
-  STREAM_URL = FALLBACK_URLS[currentUrlIndex];
-  console.log('[KS Cricket] Trying fallback URL '+ currentUrlIndex +': '+ STREAM_URL);
-  // Show "Trying backup..." toast
-  showFallbackToast(currentUrlIndex);
-  startHLS();
-}
-
-function showFallbackToast(idx){
-  let t = document.getElementById('ks-fallback-toast');
-  if(!t){
-    t = document.createElement('div');
-    t.id = 'ks-fallback-toast';
-    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.8rem;z-index:9999;border:1px solid rgba(229,9,20,0.4);font-family:DM Sans,sans-serif;text-align:center;';
-    document.body.appendChild(t);
-  }
-  t.textContent = '🔄 Link '+idx+' try ho raha hai... ('+(FALLBACK_URLS.length - idx)+' backup baaki)';
-  t.style.display='block';
-  clearTimeout(t._timer);
-  t._timer = setTimeout(()=>{ t.style.display='none'; }, 4000);
-}
-
 function startHLS(){
-  // Destroy previous instance
-  if(hlsInst){ try{ hlsInst.destroy(); }catch(e){} hlsInst=null; }
-  videoEl.removeAttribute('src');
-
   if(Hls.isSupported()){
     hlsInst=new Hls({
       enableWorker:true,
-      lowLatencyMode:false,
-      backBufferLength:60,
-      maxBufferLength:60,
-      maxMaxBufferLength:120,
-      maxBufferSize:60*1000*1000,
-      maxBufferHole:0.5,
-      manifestLoadingTimeOut:15000,
-      manifestLoadingMaxRetry:4,
-      levelLoadingTimeOut:15000,
-      levelLoadingMaxRetry:4,
-      fragLoadingTimeOut:20000,
-      fragLoadingMaxRetry:4,
-      startLevel:-1,
+      lowLatencyMode:true,
+      backBufferLength:30,
     });
-    hlsInst.loadSource(proxify(STREAM_URL));
+    hlsInst.loadSource(STREAM_URL);
     hlsInst.attachMedia(videoEl);
     hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
       hideSpinner();
-      // Hide fallback toast on success
-      const t=document.getElementById('ks-fallback-toast');
-      if(t) t.style.display='none';
       videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
       isPlaying=true; updatePlayIcon();
       startLiveTimer();
@@ -1120,10 +954,10 @@ function startHLS(){
       if(!isPremium) startFreeTrial();
     });
     hlsInst.on(Hls.Events.ERROR,(e,d)=>{
-      if(d.fatal){ tryNextStream(); }
+      if(d.fatal){ hideSpinner(); showError(); }
     });
   } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
-    videoEl.src=proxify(STREAM_URL);
+    videoEl.src=STREAM_URL;
     videoEl.addEventListener('loadedmetadata',()=>{
       hideSpinner();
       videoEl.play().catch(()=>{});
@@ -1131,7 +965,7 @@ function startHLS(){
       startLiveTimer();
       if(!isPremium) startFreeTrial();
     });
-    videoEl.addEventListener('error',()=>{ tryNextStream(); });
+    videoEl.addEventListener('error',()=>{ hideSpinner(); showError(); });
   } else {
     showError();
   }
@@ -1142,6 +976,7 @@ function startFreeTrial(){
   const badge = document.getElementById('free-trial-badge');
   freeTrialUsed = 0;
   freeTrialTimer = setInterval(()=>{
+    // only tick while actually playing
     if(!isPlaying) return;
     freeTrialUsed++;
     const remaining = FREE_TRIAL_SEC - freeTrialUsed;
@@ -1154,70 +989,16 @@ function startFreeTrial(){
       badge.style.display = 'none';
       try{ videoEl.pause(); }catch(e){}
       isPlaying = false; updatePlayIcon();
-      // Trial khatam — localStorage mein save karo (refresh/reopen ke baad bhi yaad rahe)
-      localStorage.setItem('ks_trial_done', '1');
-      // KsPay popup dikhao
-      showKsPayPopup();
+      document.getElementById('premium-lock').classList.add('visible');
     }
   },1000);
 }
 
-// ── KSPAY POPUP (10 min ke baad free users ke liye) ──
-function showKsPayPopup(){
-  const popup = document.getElementById('kspay-popup');
-  if(popup) popup.classList.add('visible');
-}
-
-function closeKsPayPopup(){
-  const popup = document.getElementById('kspay-popup');
-  if(popup) popup.classList.remove('visible');
-  // User ne popup close kiya — escalating block lagao!
-  // 1st time: 24h block, 2nd time: 48h, 3rd time: 72h ...
-  const { count, blockHrs } = applyBlock();
-  showToast('⏳ ' + blockHrs + ' ghante ke liye access band. Payment karo to unlock hoga!', 4000);
-  setTimeout(() => showBlockScreen(), 500);
-}
-
-// ── BLOCK SCREEN ──
-function showBlockScreen(){
-  const blockInfo = getBlockTimeLeft();
-  const screen = document.getElementById('block-screen');
-  const hrEl = document.getElementById('block-hours');
-  const countEl = document.getElementById('block-count');
-  if(hrEl && blockInfo) hrEl.textContent = blockInfo.hrs + 'h ' + blockInfo.mins + 'm';
-  const count = parseInt(localStorage.getItem('ks_block_count') || '1');
-  if(countEl) countEl.textContent = count;
-  if(screen) screen.classList.add('visible');
-  // Start countdown timer on block screen
-  startBlockCountdown();
-}
-
-let blockCountdownTimer = null;
-function startBlockCountdown(){
-  clearInterval(blockCountdownTimer);
-  blockCountdownTimer = setInterval(()=>{
-    const info = getBlockTimeLeft();
-    if(!info){
-      clearInterval(blockCountdownTimer);
-      // Block lifted — reload
-      const screen = document.getElementById('block-screen');
-      if(screen) screen.classList.remove('visible');
-      location.reload();
-      return;
-    }
-    const el = document.getElementById('block-hours');
-    if(el) el.textContent = info.hrs + 'h ' + info.mins + 'm';
-  }, 30000); // Update every 30 seconds
-}
-
 function retryPlayer(){
   errScr.classList.remove('visible');
-  if(hlsInst){ try{ hlsInst.destroy(); }catch(e){} hlsInst=null; }
-  // Reset to first URL and try again from scratch
-  currentUrlIndex = 0;
-  STREAM_URL = FALLBACK_URLS[0];
+  if(hlsInst){ hlsInst.destroy(); hlsInst=null; }
   showSpinner();
-  setTimeout(startHLS, 800);
+  setTimeout(startHLS,800);
 }
 
 // ── LIVE TIMER ──
@@ -1456,10 +1237,6 @@ function activatePlan(utr){
   const expiry=Date.now()+(65*24*60*60*1000);
   localStorage.setItem('ks_ipl_expiry',expiry.toString());
   isPremium=true;
-  // Payment ho gaya — sab restrictions clear karo
-  localStorage.removeItem('ks_trial_done');
-  localStorage.removeItem('ks_block_until');
-  localStorage.removeItem('ks_block_count');
 
   const now=new Date();
   document.getElementById('receiptBox').innerHTML=`
