@@ -662,6 +662,7 @@ const CORS_PROXIES = [
 
 // ── MULTIPLE M3U SOURCES ──────────────────────────────────
 const M3U_SOURCES = [
+    'https://raw.githubusercontent.com/falconcasthoster/promo/refs/heads/main/nolink/master.m3u8',
     'https://iptv-org.github.io/iptv/countries/in.m3u',
     'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/in.m3u',
     'https://iptv-org.github.io/iptv/languages/hin.m3u',
@@ -1496,82 +1497,120 @@ async function init() {
 // Admin can override any URL via Firebase liveTV/channelOverrides
 function getBuiltinChannels() {
     return [
-        // ── FREE / DOORDARSHAN ──
+        // ── SPORTS / IPL ──
+        { id:'star_sports1', name:'Star Sports 1 HD', group:'Sports', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Sports%201%40.jpeg', url:'http://41.205.93.154/STARSPORTS1/index.m3u8', paid:true },
+        { id:'star_sports2', name:'Star Sports 2', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Star_Sports_2_logo.svg/200px-Star_Sports_2_logo.svg.png', url:'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8', paid:true },
+        { id:'star_sports_sel1', name:'Star Sports Select 1', group:'Sports', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Sports%201%40.jpeg', url:'https://mflixott.com/tv/plusbox/live/StarSportsSelect1/index.m3u8', paid:true },
+        { id:'star_sports_sel2', name:'Star Sports Select 2', group:'Sports', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Sports%201%40.jpeg', url:'https://mflixott.com/tv/plusbox/live/StarSportsSelect2/index.m3u8', paid:true },
+        { id:'sony_ten2', name:'Sony Sports Ten 2 HD', group:'Sports', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/56e54462053b1b278b80b532c89c01f17e360fd5/Sony%20Sports%20Ten%202.png', url:'http://103.229.254.25:7001/play/a0ef/index.m3u8', paid:true },
+        { id:'sony_ten5', name:'Sony Ten 5 (IPL)', group:'Sports', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTPkLNzYmE3iWoT0RIUPh5dPx392smbo8bbbTfkUy2nWw&s=10', url:'http://stvlive.net:8080/sonyten5/index.m3u8', paid:true },
+        { id:'dd_sports', name:'DD Sports', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/DD_Sports_logo.svg/200px-DD_Sports_logo.svg.png', url:'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8', paid:false },
+        { id:'dd_sports2', name:'DD Sports 2.0', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/DD_Sports_logo.svg/200px-DD_Sports_logo.svg.png', url:'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index_3.m3u8', paid:false },
+        { id:'eurosport', name:'Eurosports HD', group:'Sports', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Eurosports.png', url:'http://103.161.153.165:8000/play/a01b/index.m3u8', paid:true },
+        { id:'redbull_tv', name:'Red Bull TV', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Red_Bull_TV_Logo.svg/200px-Red_Bull_TV_Logo.svg.png', url:'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master_3360.m3u8', paid:false },
+
+        // ── HINDI ENTERTAINMENT ──
+        { id:'star_plus', name:'Star Plus', group:'Entertainment', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Plus.png', url:'http://103.229.254.25:7001/play/a09z/index.m3u8', paid:true },
+        { id:'zee_tv', name:'Zee TV', group:'Entertainment', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Zee%20TV.png', url:'http://103.161.153.165:8000/play/a01j/index.m3u8', paid:true },
+        { id:'sony_pal', name:'Sony Pal', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/SAB_TV_logo.svg/200px-SAB_TV_logo.svg.png', url:'http://45.127.56.3:6699/live/Corpus-POL1/SRV4/2/SONY-PAL/live.mpd', paid:true },
+        { id:'big_magic', name:'Big Magic', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Star_Plus_2020.svg/200px-Star_Plus_2020.svg.png', url:'http://103.175.73.12:8080/live/13/13_0.m3u8', paid:false },
+        { id:'colors_tv', name:'Colors Infinity HD', group:'Entertainment', logo:'https://gd.mdsharifulislamnayon.workers.dev/1:/TV%20LOGO/colors%20infinity.jpeg', url:'http://103.229.254.25:7001/play/a0du/index.m3u8', paid:true },
+        { id:'fashion_one', name:'Fashion One', group:'Entertainment', logo:'https://i.ibb.co/9grLJCS/fone22.png', url:'https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8', paid:false },
+
+        // ── HINDI MOVIES ──
+        { id:'zee_anmol', name:'Zee Anmol Cinema', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/b/b4/Zee_Anmol_Cinema_logo.png', url:'http://103.175.73.12:8080/live/256/256_0.m3u8', paid:false },
+        { id:'hindi_movies', name:'Hindi Movies HD', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209612/master.m3u8', paid:false },
+        { id:'hindi_movies2', name:'Hindi Movies 2', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209622/master.m3u8', paid:false },
+        { id:'hindi_dub', name:'Hindi Dubbed Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209593/master.m3u8', paid:false },
+        { id:'sony_max', name:'Sony MAX', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Sony%20Max.png', url:'http://103.161.153.165:8000/play/a01k/index.m3u8', paid:true },
+        { id:'zee_action', name:'Zee Action', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Zee%20Action.png', url:'http://103.161.153.165:8000/play/a03s/index.m3u8', paid:true },
+        { id:'star_gold_sel', name:'Star Gold Select HD', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Gold%20Select%20HD.jpg', url:'http://103.229.254.25:7001/play/a032/index.m3u8', paid:true },
+        { id:'and_pictures', name:'&Pictures HD', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/And%20Pictures%20.png', url:'http://103.229.254.25:7001/play/a033/index.m3u8', paid:true },
+        { id:'utv_gold', name:'UTV Gold', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'http://103.161.153.165:8000/play/a03c/index.m3u8', paid:false },
+        { id:'utv_classic', name:'UTV Classic', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'http://103.161.153.165:8000/play/a03d/index.m3u8', paid:false },
+        { id:'utv_pictures', name:'UTV Pictures', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'http://103.161.153.165:8000/play/a03e/index.m3u8', paid:false },
+        { id:'b4u_movies', name:'B4U Movies', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/B4U%20Movies.png', url:'https://cdnb4u.wiseplayout.com/B4U_Movies/HD1080/HD1080.m3u8', paid:false },
+        { id:'b4u_kadak', name:'B4U Kadak', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/B4U%20Movies.png', url:'https://cdn-2.pishow.tv/live/227/master.m3u8', paid:false },
+        { id:'sheemaroo', name:'Sheemaroo Bollywood', group:'Movies', logo:'https://i.ibb.co/KjjqnRH/Picsart-23-06-30-21-35-20-283.png', url:'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00864-shemarooenterta-shemabollywood-ono/playlist.m3u8', paid:false },
+        { id:'goldmines', name:'Goldmines', group:'Movies', logo:'https://static.wikia.nocookie.net/jhmovie/images/7/7b/Goldmines_logo.png/revision/latest?cb=20240404141630', url:'https://cdn-2.pishow.tv/live/1459/master.m3u8', paid:false },
+        { id:'goldmines_bol', name:'Goldmines Bollywood', group:'Movies', logo:'https://static.wikia.nocookie.net/jhmovie/images/7/7b/Goldmines_logo.png/revision/latest?cb=20240404141630', url:'http://103.175.73.12:8080/live/52/52_0.m3u8', paid:false },
+        { id:'goldmines2', name:'Goldmines Movies 2', group:'Movies', logo:'https://static.wikia.nocookie.net/jhmovie/images/7/7b/Goldmines_logo.png/revision/latest?cb=20240404141630', url:'https://cdn-2.pishow.tv/live/1460/master.m3u8', paid:false },
+        { id:'manoranjan', name:'Manoranjan Prime', group:'Movies', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSLOrrVnk_41l-x7vMswKXKH2YJYGL5TNx6MzOEbEvzUA&s', url:'http://103.175.73.12:8080/live/345/345_0.m3u8', paid:false },
+        { id:'movie_club', name:'The Movie Club', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cc-r5hupcym5oehh.akamaized.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-r5hupcym5oehh/SBUM/RunnTV/BollyFlix_IN/BollyFlix_IN.m3u8', paid:false },
+        { id:'kolkata_movies', name:'Kolkata Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209627/master.m3u8', paid:false },
+
+        // ── HINDI MUSIC ──
+        { id:'yrf_music', name:'YRF Music HD', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MTV_India_Logo.svg/200px-MTV_India_Logo.svg.png', url:'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01412-xiaomiasia-yrfmusic-xiaomi/playlist.m3u8', paid:false },
+        { id:'hindi_hits', name:'Hindi Hits HD', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MTV_India_Logo.svg/200px-MTV_India_Logo.svg.png', url:'http://146.59.253.52:8080/hindihitshd/index.m3u8', paid:false },
+        { id:'9xm', name:'9XM', group:'Music', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/9xm.png', url:'http://103.175.73.12:8080/live/155/155_0.m3u8', paid:false },
+        { id:'music_india', name:'Music India', group:'Music', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSKyMNNb_SRC2dnm7IW84llAJ9aO5Zb7V4jdjHaweOo58tzrc9pSsRv85-TZD1w4L57nc4&usqp=CAU', url:'http://103.175.73.12:8080/live/158/158_0.m3u8', paid:false },
+        { id:'joo_music', name:'Joo Music', group:'Music', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSisiK50nT9KXOAVZcRYy4aTrv4cVP9btrY4_s2KvXzXaSzGeUEmvgE3Gj4&s=10', url:'https://livecdn.live247stream.com/joomusic/tv/playlist.m3u8', paid:false },
+        { id:'e24', name:'E24', group:'Music', logo:'https://i.ibb.co/dbjnG3X/20240803-105403.png', url:'http://103.175.73.12:8080/live/159/159_0.m3u8', paid:false },
+
+        // ── NEWS INDIA ──
+        { id:'ndtv_english', name:'NDTV English', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/NDTV_logo_new.svg/200px-NDTV_logo_new.svg.png', url:'https://ndtv24x7elemarchana.akamaized.net/hls/live/2003678/ndtv24x7/master.m3u8', paid:false },
+        { id:'ndtv_hindi', name:'NDTV Hindi', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/NDTV_logo_new.svg/200px-NDTV_logo_new.svg.png', url:'https://ndtvindiaelemarchana.akamaized.net/hls/live/2003679/ndtvindia/master.m3u8', paid:false },
+        { id:'india_today', name:'India Today', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/India_Today_logo.svg/200px-India_Today_logo.svg.png', url:'https://indiatodaylive.akamaized.net/hls/live/2014320/indiatoday/indiatodaylive/playlist.m3u8', paid:false },
+        { id:'wion', name:'WION News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/WION_logo.svg/200px-WION_logo.svg.png', url:'https://d7x8z4yuq42qn.cloudfront.net/index_7.m3u8', paid:false },
+        { id:'times_now', name:'Times of India', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Times_Now_logo.png/200px-Times_Now_logo.png', url:'https://live.sli.ke/live/npnhm84gz9/master.m3u8', paid:false },
+        { id:'tv9_bangla', name:'TV9 Bangla', group:'News', logo:'https://jio.dinesh29.com.np/smart/ardinesh/logos/tv9-bangla.png', url:'https://dyjmyiv3bp2ez.cloudfront.net/pub-iotv9banaen8yq/liveabr/playlist.m3u8', paid:false },
+
+        // ── INTERNATIONAL NEWS ──
+        { id:'cnn', name:'CNN', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png', url:'https://amg01448-samsungin-cnnnow-samsungin-4npqg.amagi.tv/playlist/amg01448-samsungin-cnnnow-samsungin/playlist.m3u8', paid:false },
+        { id:'dw_news', name:'DW News', group:'News', logo:'https://i.ibb.co/7kNhrmW/dw-english-home-tv.png', url:'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8', paid:false },
+        { id:'france24', name:'France 24', group:'News', logo:'https://upload.wikimedia.org/wikipedia/en/thumb/6/65/FRANCE_24_logo.svg/1200px-FRANCE_24_logo.svg.png', url:'https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_2300.m3u8', paid:false },
+        { id:'aljazeera', name:'Al Jazeera', group:'News', logo:'https://i.ibb.co/CzCnTHV/aljazeera-home-tv.png', url:'https://d1cy85syyhvqz5.cloudfront.net/v1/master/7b67fbda7ab859400a821e9aa0deda20ab7ca3d2/aljazeeraLive/AJE/index.m3u8', paid:false },
+        { id:'rt_news', name:'RT News', group:'News', logo:'https://i.ibb.co/M7W5zRy/images.png', url:'https://rt-glb.rttv.com/live/rtnews/playlist.m3u8', paid:false },
+        { id:'trt_world', name:'TRT World', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/TRT_World_logo.svg/200px-TRT_World_logo.svg.png', url:'https://tv-trtworld.medya.trt.com.tr/master.m3u8', paid:false },
+        { id:'press_tv', name:'Press TV Iran', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Press_TV.svg/200px-Press_TV.svg.png', url:'https://live.presstv.ir/hls/presstv_5_482/index.m3u8', paid:false },
+        { id:'cgtn', name:'CGTN News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/CGTN_logo.svg/200px-CGTN_logo.svg.png', url:'https://0472.org/hls/cgtn.m3u8', paid:false },
+
+        // ── KIDS ──
+        { id:'cartoon_net', name:'Cartoon Network', group:'Kids', logo:'https://i.postimg.cc/d3j5T2F8/Cartoon-Network.jpg', url:'https://live20.bozztv.com/giatvplayout7/giatv-209624/index.m3u8', paid:false },
+        { id:'pbs_kids', name:'PBS Kids', group:'Kids', logo:'https://i.imgur.com/ubZMeQv.jpg', url:'https://2-fss-2.streamhoster.com/pl_140/amlst:200914-1298290/playlist.m3u8', paid:false },
+        { id:'zoo_moo', name:'Zoo Moo', group:'Kids', logo:'https://i.postimg.cc/3RxSzVbd/image.jpg', url:'https://zoomoo-samsungau.amagi.tv/playlist.m3u8', paid:false },
+        { id:'motu_patlu', name:'Motu Patlu', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/sco/c/cc/Motu_Patlu_official_logo.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209622/master.m3u8', paid:false },
+        { id:'doraemon', name:'Doraemon', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Doraemon_character.svg/200px-Doraemon_character.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209902/master.m3u8', paid:false },
+        { id:'shinchan', name:'Shinchan', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Shinnosuke_Nohara.jpg/200px-Shinnosuke_Nohara.jpg', url:'https://cloudfrontnet.vercel.app/tplay/playout/209901/master.m3u8', paid:false },
+        { id:'gopal_bhar', name:'Gopal Bhar 24/7', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Cartoon_Network_2010_logo.svg/200px-Cartoon_Network_2010_logo.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209611/master.m3u8', paid:false },
+        { id:'jungle_book', name:'Jungle Book', group:'Kids', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSdYDuOawIs57oT6PcXREjNLnVUF58DK9qrsQ&s', url:'https://cc-4bhi5osabejc9.akamaized.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-4bhi5osabejc9/junglebook.m3u8', paid:false },
+        { id:'cbeebies', name:'BBC CBeebies', group:'Kids', logo:'https://i.postimg.cc/d3j5T2F8/Cartoon-Network.jpg', url:'https://live20.bozztv.com/giatvplayout7/giatv-209622/index.m3u8', paid:false },
+
+        // ── DOCUMENTARY / INFOTAINMENT ──
+        { id:'discovery', name:'Discovery Channel', group:'Documentary', logo:'https://i.ibb.co/V2gtYfH/download-1.png', url:'http://stvlive.net:8080/discovery/index.m3u8', paid:false },
+        { id:'natgeo', name:'Nat Geo HD', group:'Documentary', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/National%20Geographic%20Channel.png', url:'http://103.229.254.25:7001/play/a038/index.m3u8', paid:false },
+        { id:'history_tv', name:'History TV 18', group:'Documentary', logo:'https://images.toffeelive.com/images/program/2429/logo/240x240/mobile_logo_009938001674474908.png', url:'http://103.229.254.25:7001/play/a02z/index.m3u8', paid:false },
+        { id:'bbc_earth', name:'BBC Earth', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/BBC_Earth.svg/200px-BBC_Earth.svg.png', url:'https://amg00793-bbcstudios-amg00793c3-lg-us-2528.playouts.now.amagi.tv/playlist/amg00793-bbcstudios-bbcearta-lgus/playlist.m3u8', paid:false },
+        { id:'wild_earth', name:'Wild Earth', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'https://wildearth-plex.amagi.tv/master.m3u8', paid:false },
+        { id:'real_wild', name:'Real Wild', group:'Documentary', logo:'https://i.ibb.co/sRhcqHT/realwild.png', url:'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg00426-littledotstudio-realwild-tcl/playlist.m3u8', paid:false },
+        { id:'outdoor_ch', name:'Outdoor Channel', group:'Documentary', logo:'https://i.ibb.co/jZ2NVqN/outdoorch.png', url:'https://cdn-apse1-prod.tsv2.amagi.tv/linear/amg00718-outdoorchannela-outdoortvnz-samsungnz/playlist.m3u8', paid:false },
+        { id:'accu_weather', name:'AccuWeather', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/5/5d/AccuWeather_2021.svg', url:'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg00684-accuweather-accuweather-plex/playlist.m3u8', paid:false },
+        { id:'travel_xp', name:'Travel XP', group:'Documentary', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Travel%20XP.png', url:'https://travelxp-travelxp-1-eu.rakuten.wurl.tv/playlist.m3u8', paid:false },
+        { id:'insight_tv', name:'Insight TV', group:'Documentary', logo:'https://business.insight.tv/wp-content/uploads/7521/01/Insight-TV-Logo-small-150x150.png', url:'https://insighttv-samsung-us.amagi.tv/playlist.m3u8', paid:false },
+        { id:'cgtn_doc', name:'CGTN Documentary', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/CGTN_logo.svg/200px-CGTN_logo.svg.png', url:'https://english-livebkali.cgtn.com/live/doccgtn_1.m3u8', paid:false },
+        { id:'food_food', name:'Food Food', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'http://103.175.73.12:8080/live/143/143_0.m3u8', paid:false },
+
+        // ── RELIGIOUS / ISLAMIC ──
+        { id:'saudi_quran', name:'Saudi Quran', group:'Religious', logo:'https://i.ibb.co/GnfgKbs/alquran.png', url:'https://cdn-globecast.akamaized.net/live/eds/saudi_quran/hls_roku/index.m3u8', paid:false },
+        { id:'madina_live', name:'Madina Live', group:'Religious', logo:'https://images-na.ssl-images-amazon.com/images/I/71CywdrFaZL.png', url:'https://cdn-globecast.akamaized.net/live/eds/saudi_sunnah/hls_roku/index.m3u8', paid:false },
+        { id:'peace_tv_eng', name:'Peace TV English', group:'Religious', logo:'https://i.ibb.co/598TYnC/20240827-092020.png', url:'https://dzkyvlfyge.erbvr.com/PeaceTvEnglish/index.m3u8', paid:false },
+        { id:'peace_tv_urdu', name:'Peace TV Urdu', group:'Religious', logo:'https://i.ibb.co/598TYnC/20240827-092020.png', url:'https://dzkyvlfyge.erbvr.com/PeaceTvUrdu/index.m3u8', paid:false },
+        { id:'madani_tv', name:'Madani TV', group:'Religious', logo:'https://i.ibb.co/7jrjkW1/20240813-112630.png', url:'https://streaming.madanichannel.tv/static/streaming-playlists/hls/d3e49b76-ac06-4689-a641-9200445b647f/master.m3u8', paid:false },
+        { id:'al_sunnah', name:'AL Sunnah TV', group:'Religious', logo:'https://i.ibb.co/MctgDQ8/sunnah.png', url:'https://cdn-globecast.akamaized.net/live/eds/saudi_sunnah/hls_roku/index.m3u8', paid:false },
+        { id:'sharjah_quran', name:'Sharjah Quran', group:'Religious', logo:'https://i.ibb.co/2qdGPCh/Sharjahtvquran.png', url:'https://live.kwikmotion.com/sharjahtvquranlive/shqurantv.smil/playlist.m3u8', paid:false },
+        { id:'god_tv', name:'God TV', group:'Religious', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'https://hlsb-us.god.tv/GODTV/USA-480.m3u8', paid:false },
+        { id:'bahrain_quran', name:'Bahrain Quran', group:'Religious', logo:'https://i.ibb.co/cygNtwH/bahrain-quaran.png', url:'https://5c7b683162943.streamlock.net/live/ngrp:bahrainquran_all/playlist.m3u8', paid:false },
+
+        // ── FOOTBALL ──
+        { id:'bein_sports', name:'Bein Sports 1', group:'Sports', logo:'https://i.ibb.co/BfM21nC/beinhaber.png', url:'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg02873-kravemedia-mtrspt1-distrotv/playlist.m3u8', paid:false },
+        { id:'real_madrid_tv', name:'Real Madrid TV', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/200px-Real_Madrid_CF.svg.png', url:'https://rmtv.akamaized.net/hls/live/2043153/rmtv-es-web/bitrate_3.m3u8', paid:false },
+        { id:'fifa_plus', name:'FIFA+', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/FIFA_logo_without_slogan.svg/200px-FIFA_logo_without_slogan.svg.png', url:'https://37b4c228.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWZyX0ZJRkFQbHVzRnJlbmNoX0hMUw/playlist.m3u8', paid:false },
+
+        // ── DD NATIONAL (Free) ──
         { id:'dd_national', name:'DD National', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/DD_National_logo_vector.svg/200px-DD_National_logo_vector.svg.png', url:'https://ddnatlive.com/hls/dd_national/index.m3u8', paid:false },
         { id:'dd_news', name:'DD News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/DD_News_logo.svg/200px-DD_News_logo.svg.png', url:'https://ddnews.live/hls/ddnews/index.m3u8', paid:false },
         { id:'dd_india', name:'DD India', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/DD_India_logo.svg/200px-DD_India_logo.svg.png', url:'https://ddnatlive.com/hls/dd_india/index.m3u8', paid:false },
-        { id:'dd_sports', name:'DD Sports', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/DD_Sports_logo.svg/200px-DD_Sports_logo.svg.png', url:'https://ddnatlive.com/hls/dd_sports/index.m3u8', paid:false },
         { id:'dd_bharati', name:'DD Bharati', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/DD_Bharati.svg/200px-DD_Bharati.svg.png', url:'https://ddnatlive.com/hls/dd_bharati/index.m3u8', paid:false },
-        { id:'dd_kisan', name:'DD Kisan', group:'General', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/DD_Kisan_logo.svg/200px-DD_Kisan_logo.svg.png', url:'https://ddnatlive.com/hls/dd_kisan/index.m3u8', paid:false },
-        { id:'lok_sabha', name:'Lok Sabha TV', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Lok_Sabha_TV_logo.png/200px-Lok_Sabha_TV_logo.png', url:'https://ddnatlive.com/hls/loksabhatv/index.m3u8', paid:false },
-        { id:'rajya_sabha', name:'Rajya Sabha TV', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/RSTV_Logo.png/200px-RSTV_Logo.png', url:'https://ddnatlive.com/hls/rajyasabhatv/index.m3u8', paid:false },
-
-        // ── PAID — ENTERTAINMENT (URLs set via Admin Panel) ──
-        { id:'star_plus', name:'Star Plus', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Star_Plus_2020.svg/200px-Star_Plus_2020.svg.png', url:'', paid:true },
-        { id:'star_gold', name:'Star Gold', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Star_Gold_logo.svg/200px-Star_Gold_logo.svg.png', url:'', paid:true },
-        { id:'star_world', name:'Star World', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Star_World_logo.svg/200px-Star_World_logo.svg.png', url:'', paid:true },
-        { id:'star_movies', name:'Star Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'', paid:true },
-        { id:'star_vijay', name:'Star Vijay', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Vijay_TV_logo.svg/200px-Vijay_TV_logo.svg.png', url:'', paid:true },
-        { id:'sony_ent', name:'Sony Entertainment', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Sony_Entertainment_Television_%282017%29.svg/200px-Sony_Entertainment_Television_%282017%29.svg.png', url:'', paid:true },
-        { id:'sony_max', name:'Sony MAX', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/SonyMAX.svg/200px-SonyMAX.svg.png', url:'', paid:true },
-        { id:'sony_sab', name:'Sony SAB', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/SAB_TV_logo.svg/200px-SAB_TV_logo.svg.png', url:'', paid:true },
-        { id:'sony_liv', name:'Sony LIV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/59/Sony_LIV_2020.svg/200px-Sony_LIV_2020.svg.png', url:'', paid:true },
-        { id:'zee_tv', name:'Zee TV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Zee_TV.svg/200px-Zee_TV.svg.png', url:'', paid:true },
-        { id:'zee_cinema', name:'Zee Cinema', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Zee_Cinema.svg/200px-Zee_Cinema.svg.png', url:'', paid:true },
-        { id:'zee5', name:'ZEE5', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/ZEE5_logo.svg/200px-ZEE5_logo.svg.png', url:'', paid:true },
-        { id:'colors_tv', name:'Colors TV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Colors_TV_logo_2020.svg/200px-Colors_TV_logo_2020.svg.png', url:'', paid:true },
-        { id:'colors_cinema', name:'Colors Cineplex', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Colors_Cineplex_logo.svg/200px-Colors_Cineplex_logo.svg.png', url:'', paid:true },
-        { id:'and_tv', name:'&TV', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/%26TV_logo.svg/200px-%26TV_logo.svg.png', url:'', paid:true },
-        { id:'and_pictures', name:'&Pictures', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/%26pictures_logo.svg/200px-%26pictures_logo.svg.png', url:'', paid:true },
-
-        // ── PAID — NEWS ──
-        { id:'aaj_tak', name:'Aaj Tak', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3b/Aaj_Tak_logo.svg/200px-Aaj_Tak_logo.svg.png', url:'', paid:true },
-        { id:'india_today', name:'India Today', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/India_Today_logo.svg/200px-India_Today_logo.svg.png', url:'', paid:true },
-        { id:'ndtv', name:'NDTV 24x7', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/NDTV_logo_new.svg/200px-NDTV_logo_new.svg.png', url:'', paid:true },
-        { id:'republic', name:'Republic TV', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Republic_TV.png/200px-Republic_TV.png', url:'', paid:true },
-        { id:'times_now', name:'Times Now', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Times_Now_logo.png/200px-Times_Now_logo.png', url:'', paid:true },
-        { id:'news18_india', name:'News18 India', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/News18_India_logo.svg/200px-News18_India_logo.svg.png', url:'', paid:true },
-        { id:'wion', name:'WION', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/WION_logo.svg/200px-WION_logo.svg.png', url:'', paid:true },
-
-        // ── PAID — REGIONAL ──
-        { id:'sun_tv', name:'Sun TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/Sun_TV_logo.svg/200px-Sun_TV_logo.svg.png', url:'', paid:true },
-        { id:'vijay_tv', name:'Vijay TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Vijay_TV_logo.svg/200px-Vijay_TV_logo.svg.png', url:'', paid:true },
-        { id:'asianet', name:'Asianet', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Asianet_logo.svg/200px-Asianet_logo.svg.png', url:'', paid:true },
-        { id:'mazhavil', name:'Mazhavil Manorama', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Mazhavil_Manorama_logo.svg/200px-Mazhavil_Manorama_logo.svg.png', url:'', paid:true },
-        { id:'flowers_tv', name:'Flowers TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Flowers_TV_logo.png/200px-Flowers_TV_logo.png', url:'', paid:true },
-        { id:'zee_kannada', name:'Zee Kannada', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Zee_Kannada_logo.svg/200px-Zee_Kannada_logo.svg.png', url:'', paid:true },
-        { id:'etv_telugu', name:'ETV Telugu', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/ETV_Telugu_logo.svg/200px-ETV_Telugu_logo.svg.png', url:'', paid:true },
-        { id:'gemini_tv', name:'Gemini TV', group:'Regional', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Gemini_TV_logo.svg/200px-Gemini_TV_logo.svg.png', url:'', paid:true },
-
-        // ── PAID — SPORTS ──
-        { id:'star_sports1', name:'Star Sports 1', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Star_Sports_1_logo.svg/200px-Star_Sports_1_logo.svg.png', url:'', paid:true },
-        { id:'star_sports2', name:'Star Sports 2', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Star_Sports_2_logo.svg/200px-Star_Sports_2_logo.svg.png', url:'', paid:true },
-        { id:'sony_ten1', name:'Sony Ten 1', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Sony_Ten_1_logo.svg/200px-Sony_Ten_1_logo.svg.png', url:'', paid:true },
-        { id:'sony_ten2', name:'Sony Ten 2', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Sony_Ten_2_logo.svg/200px-Sony_Ten_2_logo.svg.png', url:'', paid:true },
-
-        // ── PAID — MOVIES ──
-        { id:'b4u_movies', name:'B4U Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/B4U_Movies_logo.svg/200px-B4U_Movies_logo.svg.png', url:'', paid:true },
-        { id:'b4u_kadak', name:'B4U Kadak', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/B4U_Kadak_logo.png/200px-B4U_Kadak_logo.png', url:'', paid:true },
-        { id:'romedy_now', name:'Romedy Now', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Romedy_NOW_logo.svg/200px-Romedy_NOW_logo.svg.png', url:'', paid:true },
-        { id:'hbo', name:'HBO', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/HBO_logo.svg/200px-HBO_logo.svg.png', url:'', paid:true },
-        { id:'movies_now', name:'Movies Now', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Movies_Now_logo.svg/200px-Movies_Now_logo.svg.png', url:'', paid:true },
-
-        // ── PAID — MUSIC ──
-        { id:'mtv_india', name:'MTV India', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MTV_India_Logo.svg/200px-MTV_India_Logo.svg.png', url:'', paid:true },
-        { id:'vh1_india', name:'VH1 India', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/VH1_India_logo.svg/200px-VH1_India_logo.svg.png', url:'', paid:true },
-        { id:'music_india', name:'Music India', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Music_India_logo.png/200px-Music_India_logo.png', url:'', paid:true },
-
-        // ── PAID — KIDS ──
-        { id:'cartoon_network', name:'Cartoon Network', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Cartoon_Network_2010_logo.svg/200px-Cartoon_Network_2010_logo.svg.png', url:'', paid:true },
-        { id:'nickelodeon', name:'Nickelodeon India', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/16/Previous_Nickelodeon_logo.svg/200px-Previous_Nickelodeon_logo.svg.png', url:'', paid:true },
-        { id:'disney_junior', name:'Disney Junior', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Disney_Junior_logo.svg/200px-Disney_Junior_logo.svg.png', url:'', paid:true },
-        { id:'pogo', name:'POGO', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Pogo_TV_logo.svg/200px-Pogo_TV_logo.svg.png', url:'', paid:true },
-
-        // ── PAID — DOCUMENTARY ──
-        { id:'discovery', name:'Discovery Channel', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'', paid:true },
-        { id:'natgeo', name:'National Geographic', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Natgeo_logo_b.svg/200px-Natgeo_logo_b.svg.png', url:'', paid:true },
-        { id:'animal_planet', name:'Animal Planet', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Animal_Planet_logo_2018.svg/200px-Animal_Planet_logo_2018.svg.png', url:'', paid:true },
-        { id:'history_tv', name:'History TV18', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/History_TV18_logo.png/200px-History_TV18_logo.png', url:'', paid:true },
     ];
 }
 
