@@ -866,22 +866,21 @@ const DEFAULT_FREE_TRIAL_MIN = 10;
 const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
-// ── FALLBACK STREAM URLs — Sirf IPL 2026 Hindi Channels ──
-// Channel 1: Star Sports 2 (stvlive) — Primary
-// Channel 2: Star Sports Hindi (stvlive backup)
-// Channel 3: Star Sports 1 HD
-// Channel 4: Star Sports Select 1
-// Channel 5: Star Sports Select 2
-// Channel 6: Star Sports 1 (sm-monirul)
-// Channel 7: Star Sports 2 (sm-monirul)
+// ── FALLBACK STREAM URLs — Star Sports 2 PRIORITY ──
+// ORDER: Star Sports 2 ke saare variants PEHLE, baaki baad mein
+// Ch1: Star Sports 2 (stvlive)   — PRIMARY
+// Ch2: Star Sports 2 (sm-monirul) — SS2 backup
+// Ch3: Star Sports Hindi (stvlive) — Hindi backup
+// Ch4: Star Sports 1 HD            — last resort SS1
+// Ch5: Star Sports Select 1        — only if SS2 totally dead
+// Ch6: Star Sports Select 2        — last fallback
 const FALLBACK_URLS = [
-  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',          // Ch1: Star Sports 2 (stvlive) PRIMARY
-  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',      // Ch2: Star Sports Hindi (stvlive backup)
-  'http://41.205.93.154/STARSPORTS1/index.m3u8',                        // Ch3: Star Sports 1 HD
-  'https://mflixott.com/tv/plusbox/live/StarSportsSelect1/index.m3u8',  // Ch4: Star Sports Select 1
-  'https://mflixott.com/tv/plusbox/live/StarSportsSelect2/index.m3u8',  // Ch5: Star Sports Select 2
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMQ==&e=.m3u8', // Ch6: Star Sports 1 (sm-monirul)
-  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8', // Ch7: Star Sports 2 (sm-monirul)
+  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',                                                    // Ch1: Star Sports 2 (stvlive) PRIMARY ★
+  'http://sm-monirul.top/RoarZone/play.php?id=ZWRnZTIvc3Rhci1zcG9ydHMtMg==&e=.m3u8',                             // Ch2: Star Sports 2 (sm-monirul) ★
+  'http://stvlive.net:8080/starsportshindi/tracks-v1a1/mono.m3u8',                                                // Ch3: Star Sports Hindi (stvlive)
+  'http://41.205.93.154/STARSPORTS1/index.m3u8',                                                                   // Ch4: Star Sports 1 HD
+  'https://mflixott.com/tv/plusbox/live/StarSportsSelect1/index.m3u8',                                             // Ch5: Star Sports Select 1
+  'https://mflixott.com/tv/plusbox/live/StarSportsSelect2/index.m3u8',                                             // Ch6: Star Sports Select 2
 ];
 
 let currentUrlIndex = 0;
@@ -1068,6 +1067,15 @@ function tryNextStream(){
 }
 
 function showFallbackToast(idx){
+  const CHANNEL_NAMES = [
+    '⭐ Star Sports 2 (Primary)',
+    '⭐ Star Sports 2 (Backup)',
+    '📡 Star Sports Hindi',
+    '📺 Star Sports 1 HD',
+    '🔄 Star Sports Select 1',
+    '🔄 Star Sports Select 2',
+  ];
+  const chName = CHANNEL_NAMES[idx] || ('Link ' + idx);
   let t = document.getElementById('ks-fallback-toast');
   if(!t){
     t = document.createElement('div');
@@ -1075,7 +1083,7 @@ function showFallbackToast(idx){
     t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.8rem;z-index:9999;border:1px solid rgba(229,9,20,0.4);font-family:DM Sans,sans-serif;text-align:center;';
     document.body.appendChild(t);
   }
-  t.textContent = '🔄 Link '+idx+' try ho raha hai... ('+(FALLBACK_URLS.length - idx)+' backup baaki)';
+  t.textContent = '🔄 Switching to: ' + chName + ' (' + (FALLBACK_URLS.length - idx) + ' backup baaki)';
   t.style.display='block';
   clearTimeout(t._timer);
   t._timer = setTimeout(()=>{ t.style.display='none'; }, 4000);
