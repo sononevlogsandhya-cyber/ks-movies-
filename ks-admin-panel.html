@@ -4457,25 +4457,232 @@ function sv(id, val) {
 <!-- ════════════════════════════════════════
      PENDING PAYMENTS SECTION
      ════════════════════════════════════════ -->
-<div id="pending-payments-section" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.85);backdrop-filter:blur(8px);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;">
-  <div style="background:#111111;border:1px solid rgba(255,255,255,0.1);border-radius:20px;max-width:700px;width:100%;padding:0;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,0.8)">
-    <div style="background:linear-gradient(135deg,rgba(229,9,20,0.12),transparent);padding:22px 24px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between">
-      <div>
-        <div style="font-family:'Bebas Neue',cursive;font-size:1.5rem;letter-spacing:2px">Pending Payments</div>
-        <div style="font-size:0.75rem;color:#666;margin-top:2px">Review and approve/reject user payment requests</div>
+<!-- ══════════════════════════════════════════════════════════════ -->
+<!--                 PAYMENTS HUB — 3 SERVICE SECTIONS          -->
+<!-- ══════════════════════════════════════════════════════════════ -->
+<div id="pending-payments-section" style="display:none;position:fixed;inset:0;z-index:900;background:rgba(0,0,0,0.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;">
+  <div style="background:#0e0e0e;border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:820px;width:100%;padding:0;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,0.9);margin:auto;animation:payModalIn 0.35s cubic-bezier(.34,1.56,.64,1);">
+
+    <!-- HEADER -->
+    <div style="background:linear-gradient(135deg,rgba(229,9,20,0.1),rgba(29,155,240,0.05));padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#e50914,#ff2030);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 6px 20px rgba(229,9,20,0.4);">
+          <i class="fas fa-money-bill-wave" style="color:#fff;"></i>
+        </div>
+        <div>
+          <div style="font-family:'Bebas Neue',cursive;font-size:1.55rem;letter-spacing:2px;line-height:1;">KS Payments Hub</div>
+          <div style="font-size:0.72rem;color:#555;margin-top:2px;letter-spacing:0.3px;">Real-time payment requests — Movie · Live TV · Cricket</div>
+        </div>
       </div>
-      <button onclick="closePendingPayments()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center">✕</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- Live indicator -->
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(0,200,83,0.08);border:1px solid rgba(0,200,83,0.2);border-radius:20px;padding:5px 12px;">
+          <span id="pay-live-dot" style="width:7px;height:7px;background:#00c853;border-radius:50%;animation:payLivePulse 1.5s infinite;display:inline-block;"></span>
+          <span style="font-size:0.68rem;font-weight:800;color:#00c853;text-transform:uppercase;letter-spacing:1px;">Live</span>
+        </div>
+        <button onclick="refreshAllPayments()" title="Refresh" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#888;cursor:pointer;font-size:0.88rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">
+          <i class="fas fa-rotate-right"></i>
+        </button>
+        <button onclick="closePendingPayments()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#888;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;transition:all 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#888'">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
     </div>
-    <div id="pending-list" style="padding:20px;min-height:120px;">
-      <div style="text-align:center;color:#555;padding:40px;font-size:0.9rem">Loading...</div>
+
+    <!-- SERVICE TABS -->
+    <div style="display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.07);background:#0a0a0a;padding:0 20px;">
+      <!-- Movie Tab -->
+      <button id="pay-tab-movie" onclick="switchPayTab('movie')"
+        style="display:flex;align-items:center;gap:8px;padding:14px 20px;background:transparent;border:none;border-bottom:2px solid #e50914;color:#fff;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:700;transition:all 0.2s;position:relative;margin-bottom:-1px;">
+        <i class="fas fa-film" style="color:#e50914;"></i>
+        KS Movie
+        <span id="pay-badge-movie" style="background:#e50914;color:#fff;border-radius:10px;font-size:0.6rem;font-weight:900;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;">0</span>
+      </button>
+      <!-- Live TV Tab -->
+      <button id="pay-tab-livetv" onclick="switchPayTab('livetv')"
+        style="display:flex;align-items:center;gap:8px;padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#666;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:700;transition:all 0.2s;margin-bottom:-1px;">
+        <i class="fas fa-tv" style="color:#1D9BF0;"></i>
+        KS Live TV
+        <span id="pay-badge-livetv" style="background:#1D9BF0;color:#fff;border-radius:10px;font-size:0.6rem;font-weight:900;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;">0</span>
+      </button>
+      <!-- Cricket Tab -->
+      <button id="pay-tab-cricket" onclick="switchPayTab('cricket')"
+        style="display:flex;align-items:center;gap:8px;padding:14px 20px;background:transparent;border:none;border-bottom:2px solid transparent;color:#666;cursor:pointer;font-family:inherit;font-size:0.88rem;font-weight:700;transition:all 0.2s;margin-bottom:-1px;">
+        <span style="font-size:1rem;">🏏</span>
+        KS Cricket
+        <span id="pay-badge-cricket" style="background:#ff6200;color:#fff;border-radius:10px;font-size:0.6rem;font-weight:900;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;">0</span>
+      </button>
     </div>
+
+    <!-- SECTION: KS MOVIE -->
+    <div id="pay-section-movie" style="display:block;">
+      <div style="padding:16px 20px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div style="width:32px;height:32px;background:rgba(229,9,20,0.1);border:1px solid rgba(229,9,20,0.25);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#e50914;font-size:0.85rem;flex-shrink:0;">
+          <i class="fas fa-film"></i>
+        </div>
+        <div>
+          <div style="font-size:0.88rem;font-weight:800;color:#fff;">KS Movie Payments</div>
+          <div style="font-size:0.7rem;color:#555;">Movie subscription requests — approve karo plan activate hoga</div>
+        </div>
+        <div id="pay-status-movie" style="margin-left:auto;font-size:0.7rem;color:#555;"></div>
+      </div>
+      <div id="pay-list-movie" style="padding:16px 20px;min-height:100px;max-height:420px;overflow-y:auto;">
+        <div class="pay-loading-state"><i class="fas fa-spinner fa-spin"></i> Loading movie payments...</div>
+      </div>
+    </div>
+
+    <!-- SECTION: KS LIVE TV -->
+    <div id="pay-section-livetv" style="display:none;">
+      <div style="padding:16px 20px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div style="width:32px;height:32px;background:rgba(29,155,240,0.1);border:1px solid rgba(29,155,240,0.25);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#1D9BF0;font-size:0.85rem;flex-shrink:0;">
+          <i class="fas fa-tv"></i>
+        </div>
+        <div>
+          <div style="font-size:0.88rem;font-weight:800;color:#fff;">KS Live TV Payments</div>
+          <div style="font-size:0.7rem;color:#555;">Live TV subscription requests — approve karo access milega</div>
+        </div>
+        <div id="pay-status-livetv" style="margin-left:auto;font-size:0.7rem;color:#555;"></div>
+      </div>
+      <div id="pay-list-livetv" style="padding:16px 20px;min-height:100px;max-height:420px;overflow-y:auto;">
+        <div class="pay-loading-state"><i class="fas fa-spinner fa-spin"></i> Loading Live TV payments...</div>
+      </div>
+    </div>
+
+    <!-- SECTION: KS CRICKET -->
+    <div id="pay-section-cricket" style="display:none;">
+      <div style="padding:16px 20px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <div style="width:32px;height:32px;background:rgba(255,98,0,0.1);border:1px solid rgba(255,98,0,0.25);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1rem;flex-shrink:0;">
+          🏏
+        </div>
+        <div>
+          <div style="font-size:0.88rem;font-weight:800;color:#fff;">KS Cricket Payments</div>
+          <div style="font-size:0.7rem;color:#555;">IPL/Cricket subscription requests — approve karo match dekhne milega</div>
+        </div>
+        <div id="pay-status-cricket" style="margin-left:auto;font-size:0.7rem;color:#555;"></div>
+      </div>
+      <div id="pay-list-cricket" style="padding:16px 20px;min-height:100px;max-height:420px;overflow-y:auto;">
+        <div class="pay-loading-state"><i class="fas fa-spinner fa-spin"></i> Loading Cricket payments...</div>
+      </div>
+    </div>
+
   </div>
 </div>
+
+<style>
+@keyframes payModalIn {
+  from { opacity:0; transform:scale(0.93) translateY(24px); }
+  to   { opacity:1; transform:none; }
+}
+@keyframes payLivePulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(0,200,83,0.6); }
+  50%      { box-shadow:0 0 0 5px rgba(0,200,83,0); }
+}
+@keyframes payCardIn {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:none; }
+}
+.pay-loading-state {
+  text-align:center;
+  color:#444;
+  padding:40px 20px;
+  font-size:0.85rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+.pay-empty-state {
+  text-align:center;
+  color:#444;
+  padding:44px 20px;
+  font-size:0.85rem;
+}
+.pay-empty-state i { font-size:2rem; display:block; margin-bottom:10px; opacity:0.3; }
+.pay-card {
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:10px;
+  animation:payCardIn 0.3s ease both;
+  transition:border-color 0.2s;
+}
+.pay-card:hover { border-color:rgba(255,255,255,0.13); }
+.pay-card.movie-card  { border-left:3px solid #e50914; }
+.pay-card.livetv-card { border-left:3px solid #1D9BF0; }
+.pay-card.cricket-card{ border-left:3px solid #ff6200; }
+.pay-utr-box {
+  background:rgba(255,255,255,0.03);
+  border-radius:8px;
+  padding:8px 12px;
+  margin-top:8px;
+}
+.pay-utr-label {
+  font-size:0.62rem;
+  color:#444;
+  text-transform:uppercase;
+  letter-spacing:0.5px;
+  margin-bottom:3px;
+}
+.pay-utr-val {
+  font-family:monospace;
+  font-size:0.9rem;
+  color:#ddd;
+  letter-spacing:1px;
+  word-break:break-all;
+}
+.pay-approve-btn {
+  background:linear-gradient(135deg,#1b5e20,#00c853);
+  color:#fff;
+  border:none;
+  padding:9px 16px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:0.78rem;
+  cursor:pointer;
+  font-family:inherit;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+  transition:all 0.2s;
+  flex-shrink:0;
+}
+.pay-approve-btn:hover { box-shadow:0 4px 14px rgba(0,200,83,0.35); transform:translateY(-1px); }
+.pay-reject-btn {
+  background:rgba(229,9,20,0.1);
+  color:#e50914;
+  border:1px solid rgba(229,9,20,0.3);
+  padding:9px 16px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:0.78rem;
+  cursor:pointer;
+  font-family:inherit;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+  transition:all 0.2s;
+  flex-shrink:0;
+}
+.pay-reject-btn:hover { background:rgba(229,9,20,0.18); }
+
+/* Tab active states */
+#pay-tab-movie[data-active="true"]   { color:#fff; border-bottom-color:#e50914; }
+#pay-tab-livetv[data-active="true"]  { color:#fff; border-bottom-color:#1D9BF0; }
+#pay-tab-cricket[data-active="true"] { color:#fff; border-bottom-color:#ff6200; }
+</style>
 
 <script>
 // Close edit modal on backdrop click
 document.getElementById('edit-modal').addEventListener('click', function(e) {
   if (e.target === this) closeEditModal();
+});
+
+// Close payments modal on backdrop click
+document.getElementById('pending-payments-section').addEventListener('click', function(e) {
+  if (e.target === this) closePendingPayments();
 });
 
 // Poster preview debounce for edit modal
@@ -4866,138 +5073,309 @@ async function deleteKSMovie(id) {
   });
 
   // ════════════════════════════════════════════════════════════
-  // PENDING PAYMENTS — Admin approve/reject
+  //  KS PAYMENTS HUB — 3 SERVICES: Movie · Live TV · Cricket
+  //  Real-time Firebase listeners + UTR auto-verification
   // ════════════════════════════════════════════════════════════
 
   let pendingPaymentsCount = 0;
+  let activePayTab = 'movie';
 
+  // ── Firebase real-time listeners (kept alive while modal open) ──
+  let payListeners = { movie: null, livetv: null, cricket: null };
+
+  // ── Cached counts per service ──
+  let payCounts = { movie: 0, livetv: 0, cricket: 0 };
+
+  // ── PLAN CONFIG ──
+  const PLAN_CONFIG = {
+    basic:    { badge:'silver', expiryDays:30  },
+    standard: { badge:'blue',   expiryDays:180 },
+    premium:  { badge:'gold',   expiryDays:365 },
+    // Cricket / LiveTV specific
+    cricket_daily:   { badge:'bronze', expiryDays:1   },
+    cricket_monthly: { badge:'silver', expiryDays:30  },
+    cricket_season:  { badge:'gold',   expiryDays:120 },
+    livetv_basic:    { badge:'silver', expiryDays:30  },
+    livetv_premium:  { badge:'gold',   expiryDays:365 }
+  };
+
+  // ─────────────────────────────────────────────────────────────
   function openPendingPayments() {
     document.getElementById('pending-payments-section').style.display = 'flex';
-    loadPendingPayments();
+    switchPayTab(activePayTab);
+    attachPaymentListeners();
   }
 
   function closePendingPayments() {
     document.getElementById('pending-payments-section').style.display = 'none';
+    detachPaymentListeners();
   }
 
-  async function loadPendingPayments() {
-    const listEl = document.getElementById('pending-list');
-    listEl.innerHTML = '<div style="text-align:center;color:#555;padding:40px">Loading...</div>';
-    try {
-      const snap = await DB.ref('paymentRequests').orderByChild('status').equalTo('pending').once('value');
-      const data = snap.val() || {};
-      const items = Object.entries(data).map(([key, val]) => ({ key, ...val }))
-        .sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+  function refreshAllPayments() {
+    detachPaymentListeners();
+    attachPaymentListeners();
+    showToast('🔄 Payments refresh ho rahe hain...', 'info');
+  }
 
-      pendingPaymentsCount = items.length;
-      updatePendingBadge();
+  // ── TAB SWITCHING ──────────────────────────────────────────────
+  function switchPayTab(tab) {
+    activePayTab = tab;
+    const tabs = ['movie', 'livetv', 'cricket'];
+    const colors = { movie:'#e50914', livetv:'#1D9BF0', cricket:'#ff6200' };
 
-      if (items.length === 0) {
-        listEl.innerHTML = '<div style="text-align:center;color:#555;padding:40px;font-size:0.9rem">✅ No pending payments</div>';
-        return;
+    tabs.forEach(t => {
+      const tabBtn = document.getElementById('pay-tab-' + t);
+      const section = document.getElementById('pay-section-' + t);
+      if (!tabBtn || !section) return;
+
+      if (t === tab) {
+        tabBtn.style.color = '#fff';
+        tabBtn.style.borderBottomColor = colors[t];
+        tabBtn.dataset.active = 'true';
+        section.style.display = 'block';
+      } else {
+        tabBtn.style.color = '#555';
+        tabBtn.style.borderBottomColor = 'transparent';
+        tabBtn.dataset.active = 'false';
+        section.style.display = 'none';
+      }
+    });
+  }
+
+  // ── REAL-TIME LISTENERS ───────────────────────────────────────
+  function attachPaymentListeners() {
+    const services = ['movie', 'livetv', 'cricket'];
+    const firebasePaths = {
+      movie:   'paymentRequests',           // legacy + new movie payments
+      livetv:  'paymentRequestsLiveTV',     // KS Live TV payments
+      cricket: 'paymentRequestsCricket'     // KS Cricket payments
+    };
+
+    services.forEach(svc => {
+      const listEl  = document.getElementById('pay-list-' + svc);
+      const statusEl = document.getElementById('pay-status-' + svc);
+      const badgeEl = document.getElementById('pay-badge-' + svc);
+
+      if (listEl) listEl.innerHTML = '<div class="pay-loading-state"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+
+      // Detach old listener first
+      if (payListeners[svc]) {
+        DB.ref(firebasePaths[svc]).off('value', payListeners[svc]);
       }
 
-      listEl.innerHTML = items.map(item => {
-        const dt = item.submittedAt ? new Date(item.submittedAt).toLocaleString('en-IN') : '—';
-        const planColor = item.planKey === 'premium' ? '#FFD700' : item.planKey === 'standard' ? '#1D9BF0' : '#888';
-        return `<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:16px;margin-bottom:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-            <div style="flex:1">
-              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-                <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#e50914,#ff6b35);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;flex-shrink:0">${(item.name||'U')[0].toUpperCase()}</div>
-                <div>
-                  <div style="font-weight:700;font-size:0.9rem">${item.name || '—'}</div>
-                  <div style="font-size:0.75rem;color:#666">${item.email || '—'}</div>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-                <span style="background:rgba(${planColor==='#FFD700'?'245,197,24':'planColor==='#1D9BF0'?'29,155,240':'136,136,136'},0.1);color:${planColor};border:1px solid ${planColor}33;padding:2px 10px;border-radius:10px;font-size:0.72rem;font-weight:800">${item.planName||'—'}</span>
-                <span style="color:#e50914;font-weight:800;font-family:monospace;font-size:0.9rem">₹${item.amount||0}</span>
-                <span style="color:#666;font-size:0.75rem">${item.duration||'—'}</span>
-              </div>
-              <div style="margin-top:8px;background:rgba(255,255,255,0.03);border-radius:8px;padding:8px 10px">
-                <div style="font-size:0.68rem;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">UTR / Transaction ID</div>
-                <div style="font-family:monospace;font-size:0.88rem;color:#ddd;letter-spacing:1px">${item.utr||'—'}</div>
-              </div>
-              <div style="font-size:0.72rem;color:#555;margin-top:6px">📅 ${dt}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0">
-              <button onclick="approvePayment('${item.key}','${item.uid}','${item.planKey}')"
-                style="background:linear-gradient(135deg,#1b5e20,#00c853);color:#fff;border:none;padding:9px 18px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;white-space:nowrap">
-                <i class="fas fa-check"></i> Approve
-              </button>
-              <button onclick="rejectPayment('${item.key}','${item.uid}')"
-                style="background:rgba(229,9,20,0.12);color:#e50914;border:1px solid rgba(229,9,20,0.3);padding:9px 18px;border-radius:8px;font-weight:700;font-size:0.8rem;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;white-space:nowrap">
-                <i class="fas fa-xmark"></i> Reject
-              </button>
-            </div>
-          </div>
-        </div>`;
-      }).join('');
-    } catch(err) {
-      listEl.innerHTML = '<div style="color:#e50914;padding:20px;text-align:center">Error: ' + err.message + '</div>';
-    }
+      payListeners[svc] = DB.ref(firebasePaths[svc])
+        .orderByChild('status').equalTo('pending')
+        .on('value', snap => {
+          const data = snap.val() || {};
+          const items = Object.entries(data)
+            .map(([key, val]) => ({ key, ...val }))
+            .sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+
+          payCounts[svc] = items.length;
+
+          // Update service badge
+          if (badgeEl) badgeEl.textContent = items.length;
+
+          // Update last-updated status
+          if (statusEl) {
+            statusEl.textContent = items.length > 0
+              ? `⏳ ${items.length} pending`
+              : '✅ Sab clear';
+            statusEl.style.color = items.length > 0 ? '#ff9800' : '#00c853';
+          }
+
+          // Render cards
+          if (listEl) {
+            if (items.length === 0) {
+              listEl.innerHTML = `<div class="pay-empty-state">
+                <i class="fas fa-circle-check" style="color:#00c853;opacity:0.6;"></i>
+                Koi pending payment nahi hai<br><span style="font-size:0.75rem;color:#333;margin-top:6px;display:block;">Jab user UTR dalega, yahan real-time dikhega ⚡</span>
+              </div>`;
+            } else {
+              listEl.innerHTML = items.map((item, idx) =>
+                renderPayCard(item, svc, idx)
+              ).join('');
+            }
+          }
+
+          // Update global pending badge
+          pendingPaymentsCount = payCounts.movie + payCounts.livetv + payCounts.cricket;
+          updatePendingBadge();
+        }, err => {
+          if (listEl) listEl.innerHTML = `<div style="color:#e50914;padding:20px;text-align:center;font-size:0.85rem">⚠️ Error: ${err.message}</div>`;
+        });
+    });
   }
 
-  async function approvePayment(reqKey, uid, planKey) {
-    if (!confirm('Approve this payment and activate ' + planKey + ' plan?')) return;
+  function detachPaymentListeners() {
+    const firebasePaths = {
+      movie:   'paymentRequests',
+      livetv:  'paymentRequestsLiveTV',
+      cricket: 'paymentRequestsCricket'
+    };
+    Object.entries(payListeners).forEach(([svc, listener]) => {
+      if (listener) {
+        DB.ref(firebasePaths[svc]).off('value', listener);
+        payListeners[svc] = null;
+      }
+    });
+  }
+
+  // ── CARD RENDERER ─────────────────────────────────────────────
+  function renderPayCard(item, svc, idx) {
+    const dt = item.submittedAt ? new Date(item.submittedAt).toLocaleString('en-IN') : '—';
+    const planKey = item.planKey || 'basic';
+    const planColorMap = {
+      premium:'#FFD700', standard:'#1D9BF0', basic:'#aaa',
+      cricket_season:'#FFD700', cricket_monthly:'#1D9BF0', cricket_daily:'#00c853',
+      livetv_premium:'#FFD700', livetv_basic:'#1D9BF0'
+    };
+    const planColor = planColorMap[planKey] || '#aaa';
+    const svcAccent = { movie:'#e50914', livetv:'#1D9BF0', cricket:'#ff6200' }[svc];
+
+    const initial = ((item.name || 'U')[0]).toUpperCase();
+    const utrSafe = (item.utr || '').replace(/'/g, '\\\'');
+    const nameSafe = (item.name || '—').replace(/'/g, '\\\'');
+    const emailSafe = (item.email || '—').replace(/'/g, '\\\'');
+
+    return `
+    <div class="pay-card ${svc}-card" style="animation-delay:${idx * 0.05}s">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <!-- User info -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,${svcAccent},${svcAccent}88);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.9rem;flex-shrink:0;color:#fff;">${initial}</div>
+            <div style="min-width:0;">
+              <div style="font-weight:700;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.name || '—'}</div>
+              <div style="font-size:0.72rem;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.email || '—'}</div>
+            </div>
+            <!-- NEW badge -->
+            <span style="margin-left:auto;background:rgba(255,152,0,0.12);color:#ff9800;border:1px solid rgba(255,152,0,0.3);border-radius:6px;padding:2px 8px;font-size:0.6rem;font-weight:900;letter-spacing:0.5px;white-space:nowrap;flex-shrink:0;">PENDING</span>
+          </div>
+
+          <!-- Plan + amount row -->
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="background:rgba(128,128,128,0.1);color:${planColor};border:1px solid ${planColor}33;padding:3px 10px;border-radius:10px;font-size:0.7rem;font-weight:800;letter-spacing:0.3px;">
+              ${item.planName || planKey}
+            </span>
+            <span style="color:${svcAccent};font-weight:900;font-family:monospace;font-size:1rem;">₹${item.amount || 0}</span>
+            ${item.duration ? `<span style="color:#555;font-size:0.72rem;">${item.duration}</span>` : ''}
+          </div>
+
+          <!-- UTR box -->
+          <div class="pay-utr-box">
+            <div class="pay-utr-label">UTR / Transaction ID</div>
+            <div class="pay-utr-val">${item.utr || '—'}</div>
+          </div>
+
+          <!-- Timestamp -->
+          <div style="font-size:0.68rem;color:#444;margin-top:8px;display:flex;align-items:center;gap:5px;">
+            <i class="fas fa-clock" style="font-size:0.6rem;"></i>
+            ${dt}
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;padding-top:2px;">
+          <button class="pay-approve-btn" onclick="approvePayment('${item.key}','${item.uid || ''}','${planKey}','${svc}')">
+            <i class="fas fa-check"></i> Approve
+          </button>
+          <button class="pay-reject-btn" onclick="rejectPayment('${item.key}','${item.uid || ''}','${svc}')">
+            <i class="fas fa-xmark"></i> Reject
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  // ── APPROVE PAYMENT ───────────────────────────────────────────
+  async function approvePayment(reqKey, uid, planKey, svc) {
+    svc = svc || 'movie';
+    if (!confirm('Approve karna chahte ho? ' + planKey + ' plan activate ho jayega.')) return;
+
+    const firebasePaths = {
+      movie:   'paymentRequests',
+      livetv:  'paymentRequestsLiveTV',
+      cricket: 'paymentRequestsCricket'
+    };
+    const dbPath = firebasePaths[svc] || 'paymentRequests';
+
     try {
-      const PLAN_CONFIG = {
-        basic:    { badge:'silver', months:1,  expiryDays:30   },
-        standard: { badge:'blue',   months:6,  expiryDays:180  },
-        premium:  { badge:'gold',   months:12, expiryDays:365  }
-      };
       const cfg = PLAN_CONFIG[planKey] || PLAN_CONFIG.basic;
       const now = Date.now();
       const expiresAt = now + (cfg.expiryDays * 24 * 60 * 60 * 1000);
       const expiryDate = new Date(expiresAt).toLocaleDateString('en-IN');
 
-      // Update user plan
-      await DB.ref('users/' + uid).update({
-        plan:              planKey,
-        badge:             cfg.badge,
+      const updateData = {
         subscriptionActive: true,
-        isVerified:        true,
-        planActivatedAt:   now,
-        planExpiresAt:     expiresAt,
-        expiryDate:        expiryDate,
-        badgeGrantedAt:    now,
-        status:            'approved',
-        pendingPlan:       null,
-        pendingUTR:        null,
-        justActivated:     true  // ← triggers real-time listener in user.html
-      });
+        isVerified:         true,
+        planActivatedAt:    now,
+        planExpiresAt:      expiresAt,
+        expiryDate:         expiryDate,
+        badgeGrantedAt:     now,
+        status:             'approved',
+        pendingPlan:        null,
+        pendingUTR:         null,
+        justActivated:      true
+      };
 
-      // Mark request as approved
-      await DB.ref('paymentRequests/' + reqKey).update({
+      // Service-specific fields
+      if (svc === 'movie') {
+        updateData.plan  = planKey;
+        updateData.badge = cfg.badge;
+      } else if (svc === 'livetv') {
+        updateData.liveTVPlan      = planKey;
+        updateData.liveTVActive    = true;
+        updateData.liveTVExpiresAt = expiresAt;
+        updateData.badge           = cfg.badge;
+      } else if (svc === 'cricket') {
+        updateData.cricketPlan      = planKey;
+        updateData.cricketActive    = true;
+        updateData.cricketExpiresAt = expiresAt;
+      }
+
+      if (uid) await DB.ref('users/' + uid).update(updateData);
+
+      await DB.ref(dbPath + '/' + reqKey).update({
         status:     'approved',
         approvedAt: now,
         approvedBy: (AUTH.currentUser || {}).email || 'admin'
       });
 
-      showToast('✅ Payment approved! ' + planKey + ' plan activated.', 'success');
-      loadPendingPayments();
+      const svcName = { movie:'Movie', livetv:'Live TV', cricket:'Cricket' }[svc] || svc;
+      showToast('✅ Approve ho gaya! KS ' + svcName + ' — ' + planKey + ' plan active.', 'success');
       fetchUsers();
     } catch(err) {
       showToast('Error: ' + err.message, 'error');
     }
   }
 
-  async function rejectPayment(reqKey, uid) {
-    const reason = prompt('Rejection reason (shown to user):') || 'UTR not verified';
+  // ── REJECT PAYMENT ────────────────────────────────────────────
+  async function rejectPayment(reqKey, uid, svc) {
+    svc = svc || 'movie';
+    const reason = prompt('Rejection reason (user ko dikhega):') || 'UTR verify nahi hua';
     if (reason === null) return;
+
+    const firebasePaths = {
+      movie:   'paymentRequests',
+      livetv:  'paymentRequestsLiveTV',
+      cricket: 'paymentRequestsCricket'
+    };
+    const dbPath = firebasePaths[svc] || 'paymentRequests';
+
     try {
-      await DB.ref('paymentRequests/' + reqKey).update({
+      await DB.ref(dbPath + '/' + reqKey).update({
         status:     'rejected',
         rejectedAt: Date.now(),
         reason:     reason
       });
-      await DB.ref('users/' + uid).update({
-        pendingPlan: null,
-        pendingUTR:  null
-      });
-      showToast('Payment rejected.', 'warning');
-      loadPendingPayments();
+      if (uid) {
+        await DB.ref('users/' + uid).update({
+          pendingPlan: null,
+          pendingUTR:  null
+        });
+      }
+      showToast('Payment reject ho gaya.', 'warning');
     } catch(err) {
       showToast('Error: ' + err.message, 'error');
     }
@@ -5014,19 +5392,24 @@ async function deleteKSMovie(id) {
     }
   }
 
-  // Poll for new pending payments every 15s
+  // ── BACKGROUND POLLER — header badge update every 20s ─────────
   function startPendingPoller() {
     setInterval(async () => {
       try {
-        const snap = await DB.ref('paymentRequests').orderByChild('status').equalTo('pending').once('value');
-        const cnt = snap.numChildren ? snap.numChildren() : Object.keys(snap.val() || {}).length;
-        if (cnt !== pendingPaymentsCount) {
-          pendingPaymentsCount = cnt;
+        // Poll all 3 paths quickly
+        const paths = ['paymentRequests','paymentRequestsLiveTV','paymentRequestsCricket'];
+        let total = 0;
+        for (const p of paths) {
+          const snap = await DB.ref(p).orderByChild('status').equalTo('pending').once('value');
+          total += Object.keys(snap.val() || {}).length;
+        }
+        if (total !== pendingPaymentsCount) {
+          pendingPaymentsCount = total;
           updatePendingBadge();
-          if (cnt > 0) showToast('💰 ' + cnt + ' payment(s) pending review!', 'info');
+          if (total > 0) showToast('💰 ' + total + ' payment(s) pending review!', 'info');
         }
       } catch(e){}
-    }, 15000);
+    }, 20000);
   }
 
   // Fetch Users for Table — reads from Firebase
@@ -5331,11 +5714,16 @@ async function deleteKSMovie(id) {
 
   fetchUsers();
   startPendingPoller();
-  // Initial pending count
+  // Initial pending count — all 3 services
   (async () => {
     try {
-      const snap = await DB.ref('paymentRequests').orderByChild('status').equalTo('pending').once('value');
-      pendingPaymentsCount = Object.keys(snap.val() || {}).length;
+      const paths = ['paymentRequests','paymentRequestsLiveTV','paymentRequestsCricket'];
+      let total = 0;
+      for (const p of paths) {
+        const snap = await DB.ref(p).orderByChild('status').equalTo('pending').once('value');
+        total += Object.keys(snap.val() || {}).length;
+      }
+      pendingPaymentsCount = total;
       updatePendingBadge();
     } catch(e){}
   })();
