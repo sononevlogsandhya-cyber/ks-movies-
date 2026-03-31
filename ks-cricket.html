@@ -862,13 +862,38 @@ if(!window._ksFirebaseApp){
 }
 
 // ── CONSTANTS (defaults — overridden by Firebase) ──
-const DEFAULT_STREAM_URL = 'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8';
 const DEFAULT_FREE_TRIAL_MIN = 10;
 const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Cricket';
 
-// ── STATE ──
-let STREAM_URL = DEFAULT_STREAM_URL;
+// ── FALLBACK STREAM URLs (auto-tries next if current fails) ──
+const FALLBACK_URLS = [
+  // IPL 2026 - Primary
+  'http://stvlive.net:8080/sonyten5/index.m3u8',
+  'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8',
+  // Sony Sports
+  'https://ottbanglaplatform.com/tv/toffee/live.php?id=sony_sports_1_hd&e=.m3u8',
+  'https://ottbanglaplatform.com/tv/toffee/live.php?id=sony_sports_2_hd&e=.m3u8',
+  'https://ottbanglaplatform.com/tv/toffee/live.php?id=sony_sports_5_hd&e=.m3u8',
+  'http://103.229.254.25:7001/play/a0ef/index.m3u8',
+  // Star Sports
+  'http://41.205.93.154/STARSPORTS1/index.m3u8',
+  'https://mflixott.com/tv/plusbox/live/StarSportsSelect1/index.m3u8',
+  'https://mflixott.com/tv/plusbox/live/StarSportsSelect2/index.m3u8',
+  // Sony Ten Cricket
+  'https://ottbanglaplatform.com/tv/toffee/live.php?id=ten_cricket&e=.m3u8',
+  // T Sports
+  'https://mflixott.com/tv/plusbox/live/TSports/index.m3u8',
+  'https://mflixott.com/tv/plusbox/live/TSportsHD/index.m3u8',
+  // DD Sports
+  'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index.m3u8',
+  'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index_3.m3u8',
+  // PSL Fallback
+  'https://psl.bigbaat.app/out/v1/0ef369b90c7b4025b76621e46ee5fb70/index.m3u8',
+];
+
+let currentUrlIndex = 0;
+let STREAM_URL = FALLBACK_URLS[0];
 let FREE_TRIAL_SEC = DEFAULT_FREE_TRIAL_MIN * 60;
 let ADS = [
   'https://www.profitableratecpm.com/q8kkfu6p5?key=c7e57b4f2f5e638dd9c97ba5a4f62b00',
@@ -940,10 +965,12 @@ async function loadFirebaseConfig(){
       window._ksDB.ref('cricket/ads').once('value'),
       window._ksDB.ref('cricket/freeTrialMinutes').once('value'),
     ]);
-    // Stream URL override
+    // Stream URL override — insert at front of fallback list
     const fbUrl = streamSnap.val();
     if(fbUrl && typeof fbUrl === 'string' && fbUrl.trim()){
+      FALLBACK_URLS.unshift(fbUrl.trim());
       STREAM_URL = fbUrl.trim();
+      currentUrlIndex = 0;
     }
     // Ads override
     const fbAds = adsSnap.val();
@@ -1025,7 +1052,41 @@ function closeAd(){
   startHLS();
 }
 
+// ── AUTO FALLBACK: try next URL if current fails ──
+function tryNextStream(){
+  currentUrlIndex++;
+  if(currentUrlIndex >= FALLBACK_URLS.length){
+    // All URLs exhausted
+    hideSpinner();
+    showError();
+    return;
+  }
+  STREAM_URL = FALLBACK_URLS[currentUrlIndex];
+  console.log('[KS Cricket] Trying fallback URL '+ currentUrlIndex +': '+ STREAM_URL);
+  // Show "Trying backup..." toast
+  showFallbackToast(currentUrlIndex);
+  startHLS();
+}
+
+function showFallbackToast(idx){
+  let t = document.getElementById('ks-fallback-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'ks-fallback-toast';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.92);color:#fff;padding:10px 20px;border-radius:20px;font-size:0.8rem;z-index:9999;border:1px solid rgba(229,9,20,0.4);font-family:DM Sans,sans-serif;text-align:center;';
+    document.body.appendChild(t);
+  }
+  t.textContent = '🔄 Link '+idx+' try ho raha hai... ('+(FALLBACK_URLS.length - idx)+' backup baaki)';
+  t.style.display='block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.display='none'; }, 4000);
+}
+
 function startHLS(){
+  // Destroy previous instance
+  if(hlsInst){ try{ hlsInst.destroy(); }catch(e){} hlsInst=null; }
+  videoEl.removeAttribute('src');
+
   if(Hls.isSupported()){
     hlsInst=new Hls({
       enableWorker:true,
@@ -1036,6 +1097,9 @@ function startHLS(){
     hlsInst.attachMedia(videoEl);
     hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
       hideSpinner();
+      // Hide fallback toast on success
+      const t=document.getElementById('ks-fallback-toast');
+      if(t) t.style.display='none';
       videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
       isPlaying=true; updatePlayIcon();
       startLiveTimer();
@@ -1043,7 +1107,7 @@ function startHLS(){
       if(!isPremium) startFreeTrial();
     });
     hlsInst.on(Hls.Events.ERROR,(e,d)=>{
-      if(d.fatal){ hideSpinner(); showError(); }
+      if(d.fatal){ tryNextStream(); }
     });
   } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
     videoEl.src=STREAM_URL;
@@ -1054,7 +1118,7 @@ function startHLS(){
       startLiveTimer();
       if(!isPremium) startFreeTrial();
     });
-    videoEl.addEventListener('error',()=>{ hideSpinner(); showError(); });
+    videoEl.addEventListener('error',()=>{ tryNextStream(); });
   } else {
     showError();
   }
@@ -1131,9 +1195,12 @@ function startBlockCountdown(){
 
 function retryPlayer(){
   errScr.classList.remove('visible');
-  if(hlsInst){ hlsInst.destroy(); hlsInst=null; }
+  if(hlsInst){ try{ hlsInst.destroy(); }catch(e){} hlsInst=null; }
+  // Reset to first URL and try again from scratch
+  currentUrlIndex = 0;
+  STREAM_URL = FALLBACK_URLS[0];
   showSpinner();
-  setTimeout(startHLS,800);
+  setTimeout(startHLS, 800);
 }
 
 // ── LIVE TIMER ──
