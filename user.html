@@ -3994,7 +3994,7 @@ function openPaymentModal(planKey) {
   // Redirect to KS Pay page with plan info
   var planMap = { basic: '50', standard: '299', premium: '500' };
   var price = planMap[planKey] || planMap['standard'];
-  window.location.href = 'kspay.html?plan=' + planKey + '&price=' + price;
+  window.location.href = 'kspay.html?plan=' + planKey + '&price=' + price + '&source=movies';
 }
 
 
