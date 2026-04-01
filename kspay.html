@@ -7,6 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #060608; color: white; font-family: 'Inter', sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -358,6 +362,32 @@
 const MERCHANT_UPI = 'sonone.nitesh1@ybl';
 const MERCHANT_NAME = 'KS Movies';
 
+// ========================
+// FIREBASE INIT
+// ========================
+const firebaseConfig = {
+    apiKey: "AIzaSyBNyfzP26mSnB0qsm24zIeTM2K9sVBV1zc",
+    authDomain: "ks-movies-98e3e.firebaseapp.com",
+    databaseURL: "https://ks-movies-98e3e-default-rtdb.firebaseio.com",
+    projectId: "ks-movies-98e3e",
+    storageBucket: "ks-movies-98e3e.firebasestorage.app",
+    messagingSenderId: "392323800373",
+    appId: "1:392323800373:web:b289cf81f4c0232d66007c"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const DB  = firebase.database();
+const AUTH = firebase.auth();
+
+let currentUser = null;
+AUTH.onAuthStateChanged(u => { currentUser = u; });
+
+// Admin panel Firebase paths (must match ks-admin-panel.html)
+const PAY_PATHS = {
+    movies:  'paymentRequests',        // KS Movies plans
+    livetv:  'paymentRequestsLiveTV',  // KS Live TV plans
+    cricket: 'paymentRequestsCricket', // KS Cricket plans
+};
+
 // Plans for KS Movies (movies/user.html source)
 const PLANS_MOVIES = [
     { id: 'basic',    name: 'Basic',    price: 50,  desc: '720p HD • 1 Device' },
@@ -585,7 +615,7 @@ async function startVerify() {
     await sleep(400);
     document.getElementById('verifyingOverlay').classList.remove('show');
 
-    showSuccess(utr);
+    await showSuccess(utr);
 }
 
 function renderSteps(activeIdx) {
@@ -603,28 +633,67 @@ function renderSteps(activeIdx) {
 }
 
 // ========================
-// SUCCESS
+// SUCCESS + FIREBASE SAVE
 // ========================
-function showSuccess(utr) {
-    // Receipt
+async function showSuccess(utr) {
+    const now = Date.now();
+    const urlParams = new URLSearchParams(window.location.search);
+    const source = urlParams.get('source') || 'movies'; // 'movies' | 'livetv' | 'cricket'
+
+    // Pick correct Firebase path (admin panel reads from these)
+    const dbPath = PAY_PATHS[source] || PAY_PATHS.movies;
+
+    const pendingData = {
+        utr:         utr,
+        planKey:     selectedPlan.id,
+        planName:    selectedPlan.name,
+        amount:      selectedPlan.price,
+        source:      source,
+        submittedAt: now,
+        status:      'pending',
+        uid:         currentUser ? currentUser.uid   : null,
+        email:       currentUser ? (currentUser.email || 'guest') : 'guest',
+        name:        currentUser ? (currentUser.displayName || currentUser.email?.split('@')[0] || 'User') : 'Guest',
+    };
+
+    // ── Save to admin-panel-readable path ──
+    try {
+        await DB.ref(dbPath + '/' + utr).set(pendingData);
+        console.log('[KS Pay] Saved to Firebase:', dbPath + '/' + utr);
+    } catch(e) {
+        console.warn('[KS Pay] Firebase save failed:', e.message);
+    }
+
+    // ── Also mark user record as pending ──
+    if (currentUser) {
+        try {
+            await DB.ref('users/' + currentUser.uid).update({
+                pendingPlan:     selectedPlan.id,
+                pendingPlanName: selectedPlan.name,
+                pendingUTR:      utr,
+                pendingAmount:   selectedPlan.price,
+                pendingSource:   source,
+                pendingAt:       now,
+            });
+        } catch(e) {
+            console.warn('[KS Pay] User update failed:', e.message);
+        }
+    }
+
+    // ── Receipt UI ──
     const receipt = document.getElementById('receiptBox');
-    const now = new Date();
+    const nowDate = new Date();
     receipt.innerHTML = `
         <div class="receipt-row"><span class="receipt-label">Amount Paid</span><span class="receipt-val">₹${selectedPlan.price}</span></div>
         <div class="receipt-row"><span class="receipt-label">UTR Reference</span><span class="receipt-val">${utr}</span></div>
         <div class="receipt-row"><span class="receipt-label">Plan</span><span class="receipt-val">${selectedPlan.name}</span></div>
-        <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${now.toLocaleDateString('en-IN')}</span></div>
-        <div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-val green">✓ APPROVED</span></div>
+        <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${nowDate.toLocaleDateString('en-IN')}</span></div>
+        <div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-val" style="color:#facc15;">⏳ Pending Approval</span></div>
+        <div class="receipt-row" style="margin-top:4px;"><span style="font-size:0.62rem;color:#444;line-height:1.6;">15–30 min mein admin approve karega.<br>Problem? WhatsApp: +91 95614 09361</span></div>
     `;
 
-    // Show overlay
-    const overlay = document.getElementById('successOverlay');
-    overlay.classList.add('show');
-
-    // Confetti burst
+    document.getElementById('successOverlay').classList.add('show');
     spawnConfetti();
-
-    // Play success sound
     playSuccessSound();
 }
 
