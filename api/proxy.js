@@ -20,62 +20,70 @@ module.exports = async function handler(req,res){
 
   if(!isAllowed(t.hostname)){res.status(403).json({error:'blocked'});return;}
 
-  // .ts segments = DIRECT REDIRECT (browser fetches straight from stream server)
-  // Sirf m3u8 manifest proxy se - segments bilkul direct!
-  const isSegment=t.pathname.endsWith('.ts')||t.pathname.endsWith('.aac')||t.pathname.endsWith('.mp4');
-  if(isSegment){
-    res.setHeader('Access-Control-Allow-Origin','*');
-    res.writeHead(302,{'Location':decodeURIComponent(rawUrl)});
-    res.end();
-    return;
-  }
-
   const lib=t.protocol==='https:'?https:http;
   const opts={
     hostname:t.hostname,
     port:t.port||(t.protocol==='https:'?443:80),
     path:t.pathname+t.search,
     method:'GET',
-    headers:{'User-Agent':'Mozilla/5.0','Accept':'*/*','Accept-Encoding':'identity','Connection':'keep-alive'},
-    timeout:10000,
+    headers:{
+      'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Accept':'*/*',
+      'Accept-Encoding':'identity',
+      'Connection':'keep-alive',
+    },
+    timeout:20000,
   };
+
+  const isM3U8=t.pathname.endsWith('.m3u8');
 
   return new Promise(resolve=>{
     const pr=lib.request(opts,sr=>{
-      if(sr.headers['content-type']) res.setHeader('Content-Type',sr.headers['content-type']);
+      // Forward headers
+      if(sr.headers['content-type'])   res.setHeader('Content-Type',sr.headers['content-type']);
+      if(sr.headers['content-length']) res.setHeader('Content-Length',sr.headers['content-length']);
       res.setHeader('Cache-Control','no-cache,no-store');
+      res.setHeader('Access-Control-Allow-Origin','*');
       res.status(sr.statusCode);
 
-      let body='';
-      sr.setEncoding('utf8');
-      sr.on('data',c=>body+=c);
-      sr.on('end',()=>{
-        const base=t.protocol+'//'+t.hostname+(t.port?':'+t.port:'')+t.pathname.replace(/\/[^\/]*$/,'/');
-
-        const out=body.split('\n').map(line=>{
-          line=line.trimEnd();
-          if(!line||line.startsWith('#')) return line;
-
-          // Resolve to full URL
-          let full;
-          if(line.startsWith('http://')||line.startsWith('https://')) full=line;
-          else if(line.startsWith('/')) full=t.protocol+'//'+t.hostname+(t.port?':'+t.port:'')+line;
-          else full=base+line;
-
-          // Sub-playlist → proxy se
-          if(full.includes('.m3u8')) return '/api/proxy?url='+encodeURIComponent(full);
-
-          // Segments → DIRECT (no Vercel bandwidth, no buffering!)
-          return full;
-        }).join('\n');
-
-        res.end(out);
-        resolve();
-      });
-      sr.on('error',()=>{res.end();resolve();});
+      if(isM3U8){
+        // M3U8 — rewrite segment URLs to go through proxy
+        let body='';
+        sr.setEncoding('utf8');
+        sr.on('data',c=>body+=c);
+        sr.on('end',()=>{
+          const base=t.protocol+'//'+t.hostname+(t.port?':'+t.port:'')+t.pathname.replace(/\/[^\/]*$/,'/');
+          const out=body.split('\n').map(line=>{
+            line=line.trimEnd();
+            if(!line||line.startsWith('#')) return line;
+            let full;
+            if(line.startsWith('http://')||line.startsWith('https://')) full=line;
+            else if(line.startsWith('/')) full=t.protocol+'//'+t.hostname+(t.port?':'+t.port:'')+line;
+            else full=base+line;
+            return '/api/proxy?url='+encodeURIComponent(full);
+          }).join('\n');
+          res.end(out);
+          resolve();
+        });
+        sr.on('error',()=>{res.end();resolve();});
+      } else {
+        // Binary segment — pipe directly with no buffering
+        res.setHeader('Content-Type','video/mp2t');
+        sr.pipe(res,{end:true});
+        sr.on('end',resolve);
+        sr.on('error',()=>{try{res.end();}catch(e){}resolve();});
+      }
     });
-    pr.on('timeout',()=>{pr.destroy();if(!res.headersSent)res.status(504).end();resolve();});
-    pr.on('error',e=>{if(!res.headersSent)res.status(502).json({error:e.message});resolve();});
+
+    pr.on('timeout',()=>{
+      pr.destroy();
+      if(!res.headersSent) res.status(504).end();
+      resolve();
+    });
+    pr.on('error',e=>{
+      if(!res.headersSent) res.status(502).json({error:e.message});
+      resolve();
+    });
     pr.end();
   });
 };
