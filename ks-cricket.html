@@ -591,7 +591,8 @@ footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;colo
         <div id="error-screen">
           <i class="fa-solid fa-circle-exclamation"></i>
           <h3>Stream Error</h3>
-          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:8px;">Live stream connect nahi ho pa raha. Retry karo.</p>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:4px;">Stream load nahi hui. Sab proxies try ho gaye.</p>
+          <p style="color:#555;font-size:0.75rem;margin-bottom:8px;">Admin se stream URL check karwao ya thodi der baad retry karo.</p>
           <button class="err-retry" onclick="retryPlayer()">🔄 Retry</button>
         </div>
 
@@ -1031,38 +1032,110 @@ function closeAd(){
 }
 
 function startHLS(){
-  if(Hls.isSupported()){
-    hlsInst=new Hls({
-      enableWorker:true,
-      lowLatencyMode:true,
-      backBufferLength:30,
-    });
-    hlsInst.loadSource(STREAM_URL);
-    hlsInst.attachMedia(videoEl);
-    hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
-      hideSpinner();
-      videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
-      isPlaying=true; updatePlayIcon();
-      startLiveTimer();
-      startWatermark();
-      if(!isPremium) startFreeTrial();
-    });
-    hlsInst.on(Hls.Events.ERROR,(e,d)=>{
-      if(d.fatal){ hideSpinner(); showError(); }
-    });
-  } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
-    videoEl.src=STREAM_URL;
-    videoEl.addEventListener('loadedmetadata',()=>{
-      hideSpinner();
-      videoEl.play().catch(()=>{});
-      isPlaying=true; updatePlayIcon();
-      startLiveTimer();
-      if(!isPremium) startFreeTrial();
-    });
-    videoEl.addEventListener('error',()=>{ hideSpinner(); showError(); });
-  } else {
-    showError();
+  // ── ROBUST HLS ENGINE (CORS-proxy retry) ──
+  const CORS_PROXIES = [
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url=',
+    'https://thingproxy.freeboard.io/fetch/',
+    'https://cors-anywhere.herokuapp.com/',
+  ];
+
+  const MAX_TRIES = CORS_PROXIES.length + 1; // direct + each proxy
+
+  function tryHLS(url, proxyIdx){
+    if(hlsInst){
+      try{ hlsInst.stopLoad(); hlsInst.detachMedia(); hlsInst.destroy(); }catch(e){}
+      hlsInst = null;
+    }
+
+    // Build final URL
+    let finalUrl = url;
+    if(proxyIdx > 0 && proxyIdx <= CORS_PROXIES.length){
+      finalUrl = CORS_PROXIES[proxyIdx-1] + encodeURIComponent(url);
+      console.log('[KS Cricket] Trying proxy:', CORS_PROXIES[proxyIdx-1]);
+    } else {
+      console.log('[KS Cricket] Trying direct...');
+    }
+
+    if(Hls.isSupported()){
+      const hlsCfg = {
+        enableWorker: true,
+        lowLatencyMode: true,
+        backBufferLength: 30,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferHole: 2.0,
+        nudgeMaxRetry: 10,
+        startFragPrefetch: true,
+        manifestLoadingTimeOut: 15000,
+        manifestLoadingMaxRetry: 3,
+        manifestLoadingRetryDelay: 1500,
+        levelLoadingTimeOut: 15000,
+        levelLoadingMaxRetry: 3,
+        fragLoadingTimeOut: 25000,
+        fragLoadingMaxRetry: 5,
+        xhrSetup: function(xhr){ xhr.withCredentials = false; },
+      };
+      hlsInst = new Hls(hlsCfg);
+      hlsInst.loadSource(finalUrl);
+      hlsInst.attachMedia(videoEl);
+
+      hlsInst.on(Hls.Events.MANIFEST_PARSED, ()=>{
+        hideSpinner();
+        videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
+        isPlaying=true; updatePlayIcon();
+        startLiveTimer();
+        startWatermark();
+        if(!isPremium) startFreeTrial();
+
+        // Stall watchdog
+        let lastTime=-1, stallCount=0;
+        if(window._ksStallWd) clearInterval(window._ksStallWd);
+        window._ksStallWd = setInterval(()=>{
+          if(!hlsInst||videoEl.paused||videoEl.ended) return;
+          if(videoEl.currentTime===lastTime && !videoEl.paused){
+            stallCount++;
+            if(stallCount>=8){ stallCount=0; try{ hlsInst.startLoad(); videoEl.play().catch(()=>{}); }catch(e){} }
+          } else { stallCount=0; }
+          lastTime=videoEl.currentTime;
+        },1000);
+      });
+
+      hlsInst.on(Hls.Events.ERROR, (e, d)=>{
+        if(!d.fatal){
+          if(d.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR||
+             d.details===Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL){
+            try{ hlsInst.startLoad(); }catch(x){}
+          }
+          return;
+        }
+        // Fatal — try next proxy
+        console.warn('[KS Cricket] Fatal HLS error, proxyIdx='+proxyIdx, d.details);
+        const next = proxyIdx + 1;
+        if(next <= CORS_PROXIES.length){
+          setTimeout(()=> tryHLS(url, next), 1500);
+        } else {
+          hideSpinner(); showError();
+        }
+      });
+
+    } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
+      // Safari native HLS
+      videoEl.src = finalUrl;
+      videoEl.addEventListener('loadedmetadata',()=>{
+        hideSpinner();
+        videoEl.play().catch(()=>{});
+        isPlaying=true; updatePlayIcon();
+        startLiveTimer();
+        if(!isPremium) startFreeTrial();
+      },{once:true});
+      videoEl.addEventListener('error',()=>{ hideSpinner(); showError(); },{once:true});
+    } else {
+      showError();
+    }
   }
+
+  tryHLS(STREAM_URL, 0);
 }
 
 // ── FREE TRIAL ──
@@ -1345,22 +1418,45 @@ async function startVerify(){
   document.getElementById('step-'+(VERIFY_STEPS.length-1)).className='step-item done';
   await sleep(400);
   ov.classList.remove('show');
-  activatePlan(utr);
+  await activatePlan(utr);
 }
 
-function activatePlan(utr){
-  // Set 65-day expiry
-  const expiry=Date.now()+(65*24*60*60*1000);
-  localStorage.setItem('ks_ipl_expiry',expiry.toString());
-  isPremium=true;
+async function activatePlan(utr){
+  const now = Date.now();
 
-  const now=new Date();
+  // ── Save to Firebase → admin panel reads 'paymentRequestsCricket' ──
+  const cricketUser = typeof firebase !== 'undefined' && firebase.auth().currentUser;
+  const pendingData = {
+    utr:         utr,
+    planKey:     'ipl_special',
+    planName:    'IPL Special (65 Days)',
+    amount:      59,
+    source:      'cricket',
+    submittedAt: now,
+    status:      'pending',
+    uid:         cricketUser ? cricketUser.uid   : null,
+    email:       cricketUser ? (cricketUser.email || 'guest') : 'guest',
+    name:        cricketUser ? (cricketUser.displayName || cricketUser.email?.split('@')[0] || 'User') : 'Cricket User',
+  };
+  try {
+    await CRICKET_DB.ref('paymentRequestsCricket/' + utr).set(pendingData);
+    console.log('[KS Cricket] Payment request saved to Firebase');
+  } catch(e) {
+    console.warn('[KS Cricket] Firebase save failed:', e.message);
+  }
+
+  // ── Also set local expiry so user can watch while admin approves ──
+  const expiry = now + (65*24*60*60*1000);
+  localStorage.setItem('ks_ipl_expiry', expiry.toString());
+  isPremium = true;
+
+  const nowDate = new Date();
   document.getElementById('receiptBox').innerHTML=`
     <div class="receipt-row"><span class="receipt-label">Amount Paid</span><span class="receipt-val">₹59</span></div>
     <div class="receipt-row"><span class="receipt-label">UTR Reference</span><span class="receipt-val">${utr}</span></div>
     <div class="receipt-row"><span class="receipt-label">Plan</span><span class="receipt-val">IPL Special (2 months)</span></div>
     <div class="receipt-row"><span class="receipt-label">Coverage</span><span class="receipt-val">65 Din — Full IPL 2026</span></div>
-    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${now.toLocaleDateString('en-IN')}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${nowDate.toLocaleDateString('en-IN')}</span></div>
     <div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-val green">✓ ACTIVATED</span></div>
   `;
   document.getElementById('successOverlay').classList.add('show');
