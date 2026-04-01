@@ -2,112 +2,68 @@ const http  = require('http');
 const https = require('https');
 const { URL } = require('url');
 
-const ALLOWED_DOMAINS = [
-  'ptu.ridsys.in',
-  'stvlive.net',
-];
+const ALLOWED_DOMAINS = ['ptu.ridsys.in','stvlive.net'];
 
-function isAllowed(hostname) {
-  return ALLOWED_DOMAINS.some(d => hostname === d || hostname.endsWith('.' + d));
-}
+function isAllowed(h){return ALLOWED_DOMAINS.some(d=>h===d||h.endsWith('.'+d));}
 
-module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', '*');
+module.exports = async function handler(req,res){
+  res.setHeader('Access-Control-Allow-Origin','*');
+  res.setHeader('Access-Control-Allow-Methods','GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','*');
+  if(req.method==='OPTIONS'){res.status(200).end();return;}
 
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+  const rawUrl=req.query.url;
+  if(!rawUrl){res.status(400).json({error:'url missing'});return;}
 
-  const rawUrl = req.query.url;
-  if (!rawUrl) { res.status(400).json({ error: 'url param missing' }); return; }
+  let t;
+  try{t=new URL(decodeURIComponent(rawUrl));}
+  catch(e){res.status(400).json({error:'bad url'});return;}
 
-  let targetUrl;
-  try { targetUrl = new URL(decodeURIComponent(rawUrl)); }
-  catch(e) { res.status(400).json({ error: 'Invalid URL' }); return; }
+  if(!isAllowed(t.hostname)){res.status(403).json({error:'blocked'});return;}
 
-  if (!isAllowed(targetUrl.hostname)) {
-    res.status(403).json({ error: 'Domain not allowed: ' + targetUrl.hostname });
-    return;
-  }
-
-  const lib = targetUrl.protocol === 'https:' ? https : http;
-  const options = {
-    hostname: targetUrl.hostname,
-    port:     targetUrl.port || (targetUrl.protocol === 'https:' ? 443 : 80),
-    path:     targetUrl.pathname + targetUrl.search,
-    method:   'GET',
-    headers: {
-      'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Accept':          '*/*',
-      'Accept-Encoding': 'identity',
-      'Connection':      'keep-alive',
-    },
-    timeout: 15000,
+  const lib=t.protocol==='https:'?https:http;
+  const opts={
+    hostname:t.hostname,
+    port:t.port||(t.protocol==='https:'?443:80),
+    path:t.pathname+t.search,
+    method:'GET',
+    headers:{'User-Agent':'Mozilla/5.0','Accept':'*/*','Accept-Encoding':'identity'},
+    timeout:15000
   };
 
-  return new Promise((resolve) => {
-    const proxyReq = lib.request(options, (proxyRes) => {
-      const contentType = proxyRes.headers['content-type'] || '';
-      const isM3U8 = rawUrl.includes('.m3u8') || contentType.includes('mpegurl');
+  return new Promise(resolve=>{
+    const pr=lib.request(opts,sr=>{
+      const ct=sr.headers['content-type']||'';
+      const isM3U8=rawUrl.includes('.m3u8')||ct.includes('mpegurl');
+      if(sr.headers['content-type']) res.setHeader('Content-Type',sr.headers['content-type']);
+      res.setHeader('Cache-Control','no-cache');
+      res.status(sr.statusCode);
 
-      if (proxyRes.headers['content-type'])   res.setHeader('Content-Type', proxyRes.headers['content-type']);
-      if (proxyRes.headers['content-length']) res.setHeader('Content-Length', proxyRes.headers['content-length']);
-      res.setHeader('Cache-Control', 'no-cache, no-store');
-      res.status(proxyRes.statusCode);
-
-      if (isM3U8) {
-        let body = '';
-        proxyRes.setEncoding('utf8');
-        proxyRes.on('data', chunk => body += chunk);
-        proxyRes.on('end', () => {
-          const base = targetUrl.protocol + '//' + targetUrl.hostname +
-                       (targetUrl.port ? ':' + targetUrl.port : '') +
-                       targetUrl.pathname.replace(/\/[^\/]*$/, '/');
-
-          const rewritten = body.split('\n').map(line => {
-            line = line.trimEnd();
-            if (!line || line.startsWith('#')) return line;
-            if (line.startsWith('http://') || line.startsWith('https://'))
-              return '/api/proxy?url=' + encodeURIComponent(line);
-            if (!line.startsWith('/'))
-              return '/api/proxy?url=' + encodeURIComponent(base + line);
-            const abs = targetUrl.protocol + '//' + targetUrl.hostname +
-                        (targetUrl.port ? ':' + targetUrl.port : '') + line;
-            return '/api/proxy?url=' + encodeURIComponent(abs);
+      if(isM3U8){
+        let body='';
+        sr.setEncoding('utf8');
+        sr.on('data',c=>body+=c);
+        sr.on('end',()=>{
+          const base=t.protocol+'//'+t.hostname+(t.port?':'+t.port:'')+t.pathname.replace(/\/[^\/]*$/,'/');
+          const out=body.split('\n').map(line=>{
+            line=line.trimEnd();
+            if(!line||line.startsWith('#'))return line;
+            if(line.startsWith('http://')||line.startsWith('https://'))
+              return '/api/proxy?url='+encodeURIComponent(line);
+            if(!line.startsWith('/'))
+              return '/api/proxy?url='+encodeURIComponent(base+line);
+            return '/api/proxy?url='+encodeURIComponent(t.protocol+'//'+t.hostname+(t.port?':'+t.port:'')+line);
           }).join('\n');
-
-          res.end(rewritten);
-          resolve();
+          res.end(out);resolve();
         });
       } else {
-        proxyRes.pipe(res);
-        proxyRes.on('end', resolve);
-        proxyRes.on('error', () => { res.end(); resolve(); });
+        sr.pipe(res);
+        sr.on('end',resolve);
+        sr.on('error',()=>{res.end();resolve();});
       }
     });
-
-    proxyReq.on('timeout', () => {
-      proxyReq.destroy();
-      if (!res.headersSent) res.status(504).json({ error: 'Upstream timeout' });
-      resolve();
-    });
-
-    proxyReq.on('error', (err) => {
-      if (!res.headersSent) res.status(502).json({ error: 'Upstream error: ' + err.message });
-      resolve();
-    });
-
-    proxyReq.end();
+    pr.on('timeout',()=>{pr.destroy();if(!res.headersSent)res.status(504).end();resolve();});
+    pr.on('error',e=>{if(!res.headersSent)res.status(502).json({error:e.message});resolve();});
+    pr.end();
   });
 };
-```
-
-**Steps:**
-1. `ks-movies-` repo → **Add file → Create new file**
-2. Name: `api/proxy.js`
-3. Upar wala poora code paste karo
-4. **Commit new file** ✅
-
-Commit hone ke baad Vercel auto deploy karega — phir yeh URL test karo:
-```
-https://ks-movies.vercel.app/api/proxy?url=http%3A%2F%2Fptu.ridsys.in%2Friptv%2Flive%2FSTAR_SPORTS_1_HD%2Findex.m3u8
