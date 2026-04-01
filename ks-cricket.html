@@ -875,7 +875,8 @@ if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
 const CRICKET_DB = firebase.database();
 
 // ── DEFAULT VALUES (fallback if Firebase empty) ──
-const DEFAULT_STREAM_URL  = 'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8';
+const DEFAULT_STREAM_URL  = 'http://ptu.ridsys.in/riptv/live/STAR_SPORTS_1_HD/index.m3u8';
+const FALLBACK_STREAM_URL = 'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8';
 const DEFAULT_ADS = [
   'https://www.profitableratecpm.com/q8kkfu6p5?key=c7e57b4f2f5e638dd9c97ba5a4f62b00',
 ];
@@ -1031,58 +1032,61 @@ function closeAd(){
 }
 
 function startHLS(){
-  // ── CORS Proxy list (fallback chain for cross-origin streams) ──
-  const CORS_PROXIES=[
-    'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url=',
-    'https://thingproxy.freeboard.io/fetch/',
-    'https://cors-anywhere.herokuapp.com/',
-  ];
+  // ── URL chain: primary first, then fallback (no CORS proxies — they add lag) ──
+  const URL_CHAIN = [STREAM_URL];
+  if(STREAM_URL !== FALLBACK_STREAM_URL) URL_CHAIN.push(FALLBACK_STREAM_URL);
 
-  function tryHLS(url, proxyIdx){
-    // Destroy old instance
+  let urlIdx = 0;
+
+  function destroyHls(){
+    if(window._ksStallWd){ clearInterval(window._ksStallWd); window._ksStallWd=null; }
     if(hlsInst){
       try{ hlsInst.stopLoad(); hlsInst.detachMedia(); hlsInst.destroy(); }catch(e){}
       hlsInst=null;
     }
-    // Build URL (direct first, then each proxy)
-    let finalUrl = url;
-    if(proxyIdx>0 && proxyIdx<=CORS_PROXIES.length){
-      finalUrl = CORS_PROXIES[proxyIdx-1] + encodeURIComponent(url);
-    }
-    console.log('[KS Cricket] HLS attempt proxyIdx='+proxyIdx, finalUrl);
+  }
+
+  function tryURL(idx){
+    destroyHls();
+    const url = URL_CHAIN[idx];
+    console.log('[KS] Trying URL['+idx+']:', url);
 
     if(Hls.isSupported()){
-      hlsInst=new Hls({
-        enableWorker:           true,
-        lowLatencyMode:         false,   // OFF — prevents constant rebuffering on non-LL streams
-        backBufferLength:       60,      // keep 60s in back-buffer for recovery
-        maxBufferLength:        45,      // buffer 45s ahead
-        maxMaxBufferLength:     90,
-        maxBufferSize:          60*1000*1000, // 60 MB
-        maxBufferHole:          2.5,
-        highBufferWatchdogPeriod: 4,
-        nudgeMaxRetry:          15,
-        nudgeOffset:            0.3,
-        startFragPrefetch:      true,
-        liveSyncDurationCount:  4,       // stay 4 segments behind live edge (reduces gaps)
-        liveMaxLatencyDurationCount: 10,
-        manifestLoadingTimeOut:  20000,
-        manifestLoadingMaxRetry: 5,
-        manifestLoadingRetryDelay: 2000,
-        levelLoadingTimeOut:     20000,
-        levelLoadingMaxRetry:    5,
-        levelLoadingRetryDelay:  2000,
-        fragLoadingTimeOut:      30000,
-        fragLoadingMaxRetry:     8,
-        fragLoadingRetryDelay:   1500,
+      hlsInst = new Hls({
+        enableWorker:               true,
+        // ── Buffer: keep it SMALL for live — less buffering = faster start ──
+        maxBufferLength:            8,        // buffer only 8s ahead (was 45 — too much!)
+        maxMaxBufferLength:         20,
+        backBufferLength:           10,
+        maxBufferSize:              20*1000*1000, // 20 MB max
+        maxBufferHole:              0.5,
+        // ── Live sync: stick close to live edge ──
+        liveSyncDurationCount:      2,        // 2 segments behind live edge
+        liveMaxLatencyDurationCount:5,
+        // ── Stall recovery ──
+        highBufferWatchdogPeriod:   2,
+        nudgeMaxRetry:              10,
+        nudgeOffset:                0.2,
+        // ── Loading timeouts: faster fail so we can switch to fallback ──
+        manifestLoadingTimeOut:     10000,
+        manifestLoadingMaxRetry:    2,
+        manifestLoadingRetryDelay:  1000,
+        levelLoadingTimeOut:        10000,
+        levelLoadingMaxRetry:       2,
+        levelLoadingRetryDelay:     1000,
+        fragLoadingTimeOut:         15000,
+        fragLoadingMaxRetry:        4,
+        fragLoadingRetryDelay:      1000,
+        // ── Prefetch next frag for smoother play ──
+        startFragPrefetch:          true,
+        lowLatencyMode:             false,
         xhrSetup: function(xhr){ xhr.withCredentials=false; },
       });
 
-      hlsInst.loadSource(finalUrl);
+      hlsInst.loadSource(url);
       hlsInst.attachMedia(videoEl);
 
-      hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
+      hlsInst.on(Hls.Events.MANIFEST_PARSED, ()=>{
         hideSpinner();
         videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
         isPlaying=true; updatePlayIcon();
@@ -1090,38 +1094,43 @@ function startHLS(){
         startWatermark();
         if(!isPremium) startFreeTrial();
 
-        // ── Anti-stall watchdog ──
+        // ── Anti-stall watchdog: detect frozen video and recover ──
         let lastTime=-1, stallCount=0;
-        if(window._ksStallWd) clearInterval(window._ksStallWd);
-        window._ksStallWd=setInterval(()=>{
-          if(!hlsInst||videoEl.paused||videoEl.ended) return;
-          if(videoEl.currentTime===lastTime){
+        window._ksStallWd = setInterval(()=>{
+          if(!hlsInst || videoEl.paused || videoEl.ended) return;
+          if(videoEl.currentTime === lastTime){
             stallCount++;
-            if(stallCount>=6){
+            if(stallCount >= 4){ // 4 seconds frozen → recover
               stallCount=0;
-              console.warn('[KS Cricket] Stall — recovering...');
-              try{ hlsInst.startLoad(); videoEl.play().catch(()=>{}); }catch(e){}
+              console.warn('[KS] Stall detected — recovering...');
+              try{
+                hlsInst.stopLoad();
+                hlsInst.startLoad(-1); // jump to live edge
+                videoEl.play().catch(()=>{});
+              }catch(e){}
             }
-          } else { stallCount=0; }
-          lastTime=videoEl.currentTime;
-        },1000);
+          } else {
+            stallCount=0;
+          }
+          lastTime = videoEl.currentTime;
+        }, 1000);
       });
 
-      hlsInst.on(Hls.Events.ERROR,(e,d)=>{
+      hlsInst.on(Hls.Events.ERROR, (e, d)=>{
         if(!d.fatal){
-          // Non-fatal: try to nudge buffer
-          if(d.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR||
-             d.details===Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL||
-             d.details===Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE){
-            try{ hlsInst.startLoad(); }catch(x){}
+          // Non-fatal buffer stalls: jump to live edge instead of nudging
+          if(d.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+             d.details === Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL){
+            try{ hlsInst.stopLoad(); hlsInst.startLoad(-1); }catch(x){}
           }
           return;
         }
-        // Fatal → try next proxy
-        console.warn('[KS Cricket] Fatal error proxyIdx='+proxyIdx+' details='+d.details);
-        const next=proxyIdx+1;
-        if(next<=CORS_PROXIES.length){
-          setTimeout(()=>tryHLS(url, next), 1500);
+        // Fatal error → try next URL in chain
+        console.warn('[KS] Fatal error on URL['+idx+']:', d.type, d.details);
+        const next = idx+1;
+        if(next < URL_CHAIN.length){
+          showToast('Stream switch ho raha hai... ek second ruko');
+          setTimeout(()=>tryURL(next), 1500);
         } else {
           hideSpinner(); showError();
         }
@@ -1129,21 +1138,29 @@ function startHLS(){
 
     } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
       // Safari native HLS
-      videoEl.src=finalUrl;
+      videoEl.src = url;
       videoEl.addEventListener('loadedmetadata',()=>{
         hideSpinner();
         videoEl.play().catch(()=>{});
         isPlaying=true; updatePlayIcon();
-        startLiveTimer();
+        startLiveTimer(); startWatermark();
         if(!isPremium) startFreeTrial();
       },{once:true});
-      videoEl.addEventListener('error',()=>{ hideSpinner(); showError(); },{once:true});
+      videoEl.addEventListener('error',()=>{
+        const next = idx+1;
+        if(next < URL_CHAIN.length){
+          showToast('Stream switch ho raha hai...');
+          setTimeout(()=>tryURL(next), 1500);
+        } else {
+          hideSpinner(); showError();
+        }
+      },{once:true});
     } else {
       showError();
     }
   }
 
-  tryHLS(STREAM_URL, 0);
+  tryURL(0);
 }
 
 // ── FREE TRIAL ──
