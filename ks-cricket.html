@@ -591,8 +591,7 @@ footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;colo
         <div id="error-screen">
           <i class="fa-solid fa-circle-exclamation"></i>
           <h3>Stream Error</h3>
-          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:4px;">Stream load nahi hui. Sab proxies try ho gaye.</p>
-          <p style="color:#555;font-size:0.75rem;margin-bottom:8px;">Admin se stream URL check karwao ya thodi der baad retry karo.</p>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:8px;">Live stream connect nahi ho pa raha. Retry karo.</p>
           <button class="err-retry" onclick="retryPlayer()">🔄 Retry</button>
         </div>
 
@@ -1032,55 +1031,58 @@ function closeAd(){
 }
 
 function startHLS(){
-  // ── ROBUST HLS ENGINE (CORS-proxy retry) ──
-  const CORS_PROXIES = [
+  // ── CORS Proxy list (fallback chain for cross-origin streams) ──
+  const CORS_PROXIES=[
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
     'https://thingproxy.freeboard.io/fetch/',
     'https://cors-anywhere.herokuapp.com/',
   ];
 
-  const MAX_TRIES = CORS_PROXIES.length + 1; // direct + each proxy
-
   function tryHLS(url, proxyIdx){
+    // Destroy old instance
     if(hlsInst){
       try{ hlsInst.stopLoad(); hlsInst.detachMedia(); hlsInst.destroy(); }catch(e){}
-      hlsInst = null;
+      hlsInst=null;
     }
-
-    // Build final URL
+    // Build URL (direct first, then each proxy)
     let finalUrl = url;
-    if(proxyIdx > 0 && proxyIdx <= CORS_PROXIES.length){
+    if(proxyIdx>0 && proxyIdx<=CORS_PROXIES.length){
       finalUrl = CORS_PROXIES[proxyIdx-1] + encodeURIComponent(url);
-      console.log('[KS Cricket] Trying proxy:', CORS_PROXIES[proxyIdx-1]);
-    } else {
-      console.log('[KS Cricket] Trying direct...');
     }
+    console.log('[KS Cricket] HLS attempt proxyIdx='+proxyIdx, finalUrl);
 
     if(Hls.isSupported()){
-      const hlsCfg = {
-        enableWorker: true,
-        lowLatencyMode: true,
-        backBufferLength: 30,
-        maxBufferLength: 30,
-        maxMaxBufferLength: 60,
-        maxBufferHole: 2.0,
-        nudgeMaxRetry: 10,
-        startFragPrefetch: true,
-        manifestLoadingTimeOut: 15000,
-        manifestLoadingMaxRetry: 3,
-        manifestLoadingRetryDelay: 1500,
-        levelLoadingTimeOut: 15000,
-        levelLoadingMaxRetry: 3,
-        fragLoadingTimeOut: 25000,
-        fragLoadingMaxRetry: 5,
-        xhrSetup: function(xhr){ xhr.withCredentials = false; },
-      };
-      hlsInst = new Hls(hlsCfg);
+      hlsInst=new Hls({
+        enableWorker:           true,
+        lowLatencyMode:         false,   // OFF — prevents constant rebuffering on non-LL streams
+        backBufferLength:       60,      // keep 60s in back-buffer for recovery
+        maxBufferLength:        45,      // buffer 45s ahead
+        maxMaxBufferLength:     90,
+        maxBufferSize:          60*1000*1000, // 60 MB
+        maxBufferHole:          2.5,
+        highBufferWatchdogPeriod: 4,
+        nudgeMaxRetry:          15,
+        nudgeOffset:            0.3,
+        startFragPrefetch:      true,
+        liveSyncDurationCount:  4,       // stay 4 segments behind live edge (reduces gaps)
+        liveMaxLatencyDurationCount: 10,
+        manifestLoadingTimeOut:  20000,
+        manifestLoadingMaxRetry: 5,
+        manifestLoadingRetryDelay: 2000,
+        levelLoadingTimeOut:     20000,
+        levelLoadingMaxRetry:    5,
+        levelLoadingRetryDelay:  2000,
+        fragLoadingTimeOut:      30000,
+        fragLoadingMaxRetry:     8,
+        fragLoadingRetryDelay:   1500,
+        xhrSetup: function(xhr){ xhr.withCredentials=false; },
+      });
+
       hlsInst.loadSource(finalUrl);
       hlsInst.attachMedia(videoEl);
 
-      hlsInst.on(Hls.Events.MANIFEST_PARSED, ()=>{
+      hlsInst.on(Hls.Events.MANIFEST_PARSED,()=>{
         hideSpinner();
         videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
         isPlaying=true; updatePlayIcon();
@@ -1088,32 +1090,38 @@ function startHLS(){
         startWatermark();
         if(!isPremium) startFreeTrial();
 
-        // Stall watchdog
+        // ── Anti-stall watchdog ──
         let lastTime=-1, stallCount=0;
         if(window._ksStallWd) clearInterval(window._ksStallWd);
-        window._ksStallWd = setInterval(()=>{
+        window._ksStallWd=setInterval(()=>{
           if(!hlsInst||videoEl.paused||videoEl.ended) return;
-          if(videoEl.currentTime===lastTime && !videoEl.paused){
+          if(videoEl.currentTime===lastTime){
             stallCount++;
-            if(stallCount>=8){ stallCount=0; try{ hlsInst.startLoad(); videoEl.play().catch(()=>{}); }catch(e){} }
+            if(stallCount>=6){
+              stallCount=0;
+              console.warn('[KS Cricket] Stall — recovering...');
+              try{ hlsInst.startLoad(); videoEl.play().catch(()=>{}); }catch(e){}
+            }
           } else { stallCount=0; }
           lastTime=videoEl.currentTime;
         },1000);
       });
 
-      hlsInst.on(Hls.Events.ERROR, (e, d)=>{
+      hlsInst.on(Hls.Events.ERROR,(e,d)=>{
         if(!d.fatal){
+          // Non-fatal: try to nudge buffer
           if(d.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR||
-             d.details===Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL){
+             d.details===Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL||
+             d.details===Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE){
             try{ hlsInst.startLoad(); }catch(x){}
           }
           return;
         }
-        // Fatal — try next proxy
-        console.warn('[KS Cricket] Fatal HLS error, proxyIdx='+proxyIdx, d.details);
-        const next = proxyIdx + 1;
-        if(next <= CORS_PROXIES.length){
-          setTimeout(()=> tryHLS(url, next), 1500);
+        // Fatal → try next proxy
+        console.warn('[KS Cricket] Fatal error proxyIdx='+proxyIdx+' details='+d.details);
+        const next=proxyIdx+1;
+        if(next<=CORS_PROXIES.length){
+          setTimeout(()=>tryHLS(url, next), 1500);
         } else {
           hideSpinner(); showError();
         }
@@ -1121,7 +1129,7 @@ function startHLS(){
 
     } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
       // Safari native HLS
-      videoEl.src = finalUrl;
+      videoEl.src=finalUrl;
       videoEl.addEventListener('loadedmetadata',()=>{
         hideSpinner();
         videoEl.play().catch(()=>{});
@@ -1274,58 +1282,115 @@ function showSpinner(){ spinner.classList.add('active'); }
 function hideSpinner(){ spinner.classList.remove('active'); }
 function showError(){ errScr.classList.add('visible'); hideSpinner(); }
 
-// ── SCHEDULE ──
+// ── SCHEDULE — Auto-status from date + Firebase real-time override ──
+
+// Full IPL 2026 schedule (date used for auto status calculation)
 const MATCHES = [
-  { num:'M1',  teams:'RCB vs SRH',  venue:'Chinnaswamy, Bengaluru',      date:'28 Mar', time:'7:30 PM', status:'done' },
-  { num:'M2',  teams:'MI vs KKR',   venue:'Wankhede, Mumbai',            date:'29 Mar', time:'7:30 PM', status:'done' },
-  { num:'M3',  teams:'RR vs CSK',   venue:'Barsapara, Guwahati',         date:'30 Mar', time:'7:30 PM', status:'live' },
-  { num:'M4',  teams:'PBKS vs GT',  venue:'IS Bindra, Mullanpur',        date:'31 Mar', time:'7:30 PM', status:'today' },
-  { num:'M5',  teams:'LSG vs DC',   venue:'BRSABV Ekana, Lucknow',       date:'1 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M6',  teams:'KKR vs SRH',  venue:'Eden Gardens, Kolkata',       date:'2 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M7',  teams:'CSK vs PBKS', venue:'MA Chidambaram, Chennai',     date:'3 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M8',  teams:'DC vs MI',    venue:'Arun Jaitley, Delhi',         date:'4 Apr',  time:'3:30 PM', status:'upcoming' },
-  { num:'M9',  teams:'GT vs RR',    venue:'Narendra Modi, Ahmedabad',    date:'4 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M10', teams:'SRH vs LSG',  venue:'Rajiv Gandhi, Hyderabad',     date:'5 Apr',  time:'3:30 PM', status:'upcoming' },
-  { num:'M11', teams:'RCB vs CSK',  venue:'Chinnaswamy, Bengaluru',      date:'5 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M12', teams:'KKR vs PBKS', venue:'Eden Gardens, Kolkata',       date:'6 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M13', teams:'RR vs MI',    venue:'Barsapara, Guwahati',         date:'7 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M14', teams:'DC vs GT',    venue:'Arun Jaitley, Delhi',         date:'8 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M15', teams:'KKR vs LSG',  venue:'Eden Gardens, Kolkata',       date:'9 Apr',  time:'7:30 PM', status:'upcoming' },
-  { num:'M16', teams:'RR vs RCB',   venue:'Barsapara, Guwahati',         date:'10 Apr', time:'7:30 PM', status:'upcoming' },
-  { num:'M17', teams:'PBKS vs SRH', venue:'IS Bindra, Mullanpur',        date:'11 Apr', time:'3:30 PM', status:'upcoming' },
-  { num:'M18', teams:'CSK vs DC',   venue:'MA Chidambaram, Chennai',     date:'11 Apr', time:'7:30 PM', status:'upcoming' },
-  { num:'M19', teams:'LSG vs GT',   venue:'BRSABV Ekana, Lucknow',       date:'12 Apr', time:'3:30 PM', status:'upcoming' },
-  { num:'M20', teams:'MI vs RCB',   venue:'Wankhede, Mumbai',            date:'12 Apr', time:'7:30 PM', status:'upcoming' },
+  { num:'M1',  teams:'RCB vs SRH',  venue:'Chinnaswamy, Bengaluru',      dateStr:'2026-03-28', time:'7:30 PM' },
+  { num:'M2',  teams:'MI vs KKR',   venue:'Wankhede, Mumbai',            dateStr:'2026-03-29', time:'7:30 PM' },
+  { num:'M3',  teams:'RR vs CSK',   venue:'Barsapara, Guwahati',         dateStr:'2026-03-30', time:'7:30 PM' },
+  { num:'M4',  teams:'PBKS vs GT',  venue:'IS Bindra, Mullanpur',        dateStr:'2026-03-31', time:'7:30 PM' },
+  { num:'M5',  teams:'LSG vs DC',   venue:'BRSABV Ekana, Lucknow',       dateStr:'2026-04-01', time:'7:30 PM' },
+  { num:'M6',  teams:'KKR vs SRH',  venue:'Eden Gardens, Kolkata',       dateStr:'2026-04-02', time:'7:30 PM' },
+  { num:'M7',  teams:'CSK vs PBKS', venue:'MA Chidambaram, Chennai',     dateStr:'2026-04-03', time:'7:30 PM' },
+  { num:'M8',  teams:'DC vs MI',    venue:'Arun Jaitley, Delhi',         dateStr:'2026-04-04', time:'3:30 PM' },
+  { num:'M9',  teams:'GT vs RR',    venue:'Narendra Modi, Ahmedabad',    dateStr:'2026-04-04', time:'7:30 PM' },
+  { num:'M10', teams:'SRH vs LSG',  venue:'Rajiv Gandhi, Hyderabad',     dateStr:'2026-04-05', time:'3:30 PM' },
+  { num:'M11', teams:'RCB vs CSK',  venue:'Chinnaswamy, Bengaluru',      dateStr:'2026-04-05', time:'7:30 PM' },
+  { num:'M12', teams:'KKR vs PBKS', venue:'Eden Gardens, Kolkata',       dateStr:'2026-04-06', time:'7:30 PM' },
+  { num:'M13', teams:'RR vs MI',    venue:'Barsapara, Guwahati',         dateStr:'2026-04-07', time:'7:30 PM' },
+  { num:'M14', teams:'DC vs GT',    venue:'Arun Jaitley, Delhi',         dateStr:'2026-04-08', time:'7:30 PM' },
+  { num:'M15', teams:'KKR vs LSG',  venue:'Eden Gardens, Kolkata',       dateStr:'2026-04-09', time:'7:30 PM' },
+  { num:'M16', teams:'RR vs RCB',   venue:'Barsapara, Guwahati',         dateStr:'2026-04-10', time:'7:30 PM' },
+  { num:'M17', teams:'PBKS vs SRH', venue:'IS Bindra, Mullanpur',        dateStr:'2026-04-11', time:'3:30 PM' },
+  { num:'M18', teams:'CSK vs DC',   venue:'MA Chidambaram, Chennai',     dateStr:'2026-04-11', time:'7:30 PM' },
+  { num:'M19', teams:'LSG vs GT',   venue:'BRSABV Ekana, Lucknow',       dateStr:'2026-04-12', time:'3:30 PM' },
+  { num:'M20', teams:'MI vs RCB',   venue:'Wankhede, Mumbai',            dateStr:'2026-04-12', time:'7:30 PM' },
+  { num:'M21', teams:'GT vs KKR',   venue:'Narendra Modi, Ahmedabad',    dateStr:'2026-04-13', time:'7:30 PM' },
+  { num:'M22', teams:'SRH vs RR',   venue:'Rajiv Gandhi, Hyderabad',     dateStr:'2026-04-14', time:'7:30 PM' },
+  { num:'M23', teams:'PBKS vs LSG', venue:'IS Bindra, Mullanpur',        dateStr:'2026-04-15', time:'7:30 PM' },
+  { num:'M24', teams:'MI vs CSK',   venue:'Wankhede, Mumbai',            dateStr:'2026-04-16', time:'7:30 PM' },
+  { num:'M25', teams:'RCB vs DC',   venue:'Chinnaswamy, Bengaluru',      dateStr:'2026-04-17', time:'7:30 PM' },
 ];
 
-(()=>{
-  const wrap=document.getElementById('matchCards');
+// ── Auto-calculate status from current date/time ──
+function autoStatus(m){
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+  const matchDate = m.dateStr;
+  if(matchDate < todayStr) return 'done';
+  if(matchDate > todayStr) return 'upcoming';
+  // Same day — check time
+  const [hm, ampm] = m.time.split(' ');
+  let [hh, mm] = hm.split(':').map(Number);
+  if(ampm==='PM' && hh!==12) hh+=12;
+  if(ampm==='AM' && hh===12) hh=0;
+  const matchStart = new Date(matchDate);
+  matchStart.setHours(hh, mm, 0, 0);
+  const matchEnd = new Date(matchStart.getTime() + 4*60*60*1000); // match ~4hr
+  if(now >= matchStart && now <= matchEnd) return 'live';
+  if(now > matchEnd) return 'done';
+  return 'today';
+}
+
+// ── Render one match card ──
+function renderMatchCard(m, fbStatus){
+  const status = fbStatus || autoStatus(m);
+  const div = document.createElement('div');
+  div.className = 'match-card' + (status==='live' ? ' live-now' : '');
+  div.id = 'match-'+m.num;
+
+  let statusHtml='', actionHtml='';
+  const dispDate = m.dateStr.replace('2026-','').split('-').reverse().join(' ');
+  if(status==='live'){
+    statusHtml='<span class="match-status ms-live">🔴 LIVE</span>';
+    actionHtml='<button class="watch-live-btn" onclick="scrollToPlayer()">▶ Watch Now</button>';
+  } else if(status==='today'){
+    statusHtml='<span class="match-status ms-today">Today</span>';
+  } else if(status==='done'){
+    statusHtml='<span class="match-status ms-done">Done</span>';
+  } else {
+    statusHtml='<span class="match-status ms-upcoming">Upcoming</span>';
+  }
+  div.innerHTML=`
+    <div class="match-num">${m.num}</div>
+    <div class="match-teams">
+      <div class="match-vs">${m.teams}</div>
+      <div class="match-meta">${m.venue} &nbsp;·&nbsp; ${dispDate} ${m.dateStr.split('-')[0]}, ${m.time}</div>
+    </div>
+    ${statusHtml}
+    ${actionHtml}
+  `;
+  return div;
+}
+
+// ── Initial render (auto-status from date) ──
+function renderSchedule(fbOverrides){
+  const wrap = document.getElementById('matchCards');
+  wrap.innerHTML = '';
   MATCHES.forEach(m=>{
-    const div=document.createElement('div');
-    div.className='match-card'+(m.status==='live'?' live-now':'');
-    let statusHtml='', actionHtml='';
-    if(m.status==='live'){
-      statusHtml='<span class="match-status ms-live">🔴 LIVE</span>';
-      actionHtml='<button class="watch-live-btn" onclick="scrollToPlayer()">▶ Watch Now</button>';
-    } else if(m.status==='today'){
-      statusHtml='<span class="match-status ms-today">Today</span>';
-    } else if(m.status==='done'){
-      statusHtml='<span class="match-status ms-done">Done</span>';
-    } else {
-      statusHtml='<span class="match-status ms-upcoming">Upcoming</span>';
-    }
-    div.innerHTML=`
-      <div class="match-num">${m.num}</div>
-      <div class="match-teams">
-        <div class="match-vs">${m.teams}</div>
-        <div class="match-meta">${m.venue} &nbsp;·&nbsp; ${m.date}, ${m.time}</div>
-      </div>
-      ${statusHtml}
-      ${actionHtml}
-    `;
-    wrap.appendChild(div);
+    const fbStatus = fbOverrides ? fbOverrides[m.num] : null;
+    wrap.appendChild(renderMatchCard(m, fbStatus));
   });
-})();
+}
+
+// First render immediately with auto-dates
+renderSchedule(null);
+
+// ── Firebase real-time listener for schedule overrides ──
+// Admin can set cricket/schedule/M5 = "live" to force any match live
+CRICKET_DB.ref('cricket/schedule').on('value', snap=>{
+  const fbOverrides = snap.val() || {};
+  renderSchedule(fbOverrides);
+  console.log('[KS Cricket] Schedule updated from Firebase:', fbOverrides);
+});
+
+// ── Auto-refresh status every 5 minutes (date-based) ──
+setInterval(()=>{
+  CRICKET_DB.ref('cricket/schedule').once('value').then(snap=>{
+    renderSchedule(snap.val() || {});
+  });
+}, 5 * 60 * 1000);
 
 function scrollToPlayer(){
   document.getElementById('player-shell').scrollIntoView({behavior:'smooth'});
@@ -1418,45 +1483,22 @@ async function startVerify(){
   document.getElementById('step-'+(VERIFY_STEPS.length-1)).className='step-item done';
   await sleep(400);
   ov.classList.remove('show');
-  await activatePlan(utr);
+  activatePlan(utr);
 }
 
-async function activatePlan(utr){
-  const now = Date.now();
+function activatePlan(utr){
+  // Set 65-day expiry
+  const expiry=Date.now()+(65*24*60*60*1000);
+  localStorage.setItem('ks_ipl_expiry',expiry.toString());
+  isPremium=true;
 
-  // ── Save to Firebase → admin panel reads 'paymentRequestsCricket' ──
-  const cricketUser = typeof firebase !== 'undefined' && firebase.auth().currentUser;
-  const pendingData = {
-    utr:         utr,
-    planKey:     'ipl_special',
-    planName:    'IPL Special (65 Days)',
-    amount:      59,
-    source:      'cricket',
-    submittedAt: now,
-    status:      'pending',
-    uid:         cricketUser ? cricketUser.uid   : null,
-    email:       cricketUser ? (cricketUser.email || 'guest') : 'guest',
-    name:        cricketUser ? (cricketUser.displayName || cricketUser.email?.split('@')[0] || 'User') : 'Cricket User',
-  };
-  try {
-    await CRICKET_DB.ref('paymentRequestsCricket/' + utr).set(pendingData);
-    console.log('[KS Cricket] Payment request saved to Firebase');
-  } catch(e) {
-    console.warn('[KS Cricket] Firebase save failed:', e.message);
-  }
-
-  // ── Also set local expiry so user can watch while admin approves ──
-  const expiry = now + (65*24*60*60*1000);
-  localStorage.setItem('ks_ipl_expiry', expiry.toString());
-  isPremium = true;
-
-  const nowDate = new Date();
+  const now=new Date();
   document.getElementById('receiptBox').innerHTML=`
     <div class="receipt-row"><span class="receipt-label">Amount Paid</span><span class="receipt-val">₹59</span></div>
     <div class="receipt-row"><span class="receipt-label">UTR Reference</span><span class="receipt-val">${utr}</span></div>
     <div class="receipt-row"><span class="receipt-label">Plan</span><span class="receipt-val">IPL Special (2 months)</span></div>
     <div class="receipt-row"><span class="receipt-label">Coverage</span><span class="receipt-val">65 Din — Full IPL 2026</span></div>
-    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${nowDate.toLocaleDateString('en-IN')}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${now.toLocaleDateString('en-IN')}</span></div>
     <div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-val green">✓ ACTIVATED</span></div>
   `;
   document.getElementById('successOverlay').classList.add('show');
