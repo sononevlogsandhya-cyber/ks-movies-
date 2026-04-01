@@ -473,6 +473,50 @@ header{
 /* ── FOOTER ── */
 footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;color:#333;font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;margin-top:20px;}
 
+/* ── 24-HOUR BLOCKED OVERLAY ── */
+#blocked-overlay{
+  display:none;position:absolute;inset:0;z-index:45;
+  background:linear-gradient(180deg,rgba(0,0,0,0.6) 0%,rgba(0,0,0,0.98) 45%);
+  backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;flex-direction:column;
+  gap:10px;text-align:center;padding:32px 24px;
+}
+#blocked-overlay.visible{display:flex;}
+.blk-glow{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:260px;height:120px;
+  background:radial-gradient(ellipse,rgba(229,9,20,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.blk-icon{font-size:2.4rem;animation:blkShake 2s ease infinite;}
+@keyframes blkShake{0%,100%{transform:rotate(0);}10%{transform:rotate(-8deg);}20%{transform:rotate(8deg);}30%{transform:rotate(-4deg);}40%{transform:rotate(4deg);}50%{transform:rotate(0);}}
+.blk-badge{
+  background:rgba(229,9,20,0.18);border:1px solid rgba(229,9,20,0.5);
+  border-radius:20px;padding:3px 14px;
+  font-size:0.66rem;font-weight:900;color:var(--accent);letter-spacing:2px;text-transform:uppercase;
+}
+.blk-title{font-family:'Bebas Neue',cursive;font-size:1.9rem;letter-spacing:2px;line-height:1.1;margin-top:4px;}
+.blk-sub{color:rgba(255,255,255,0.5);font-size:0.82rem;line-height:1.7;max-width:260px;}
+.blk-timer-box{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:14px 24px;margin:4px 0;
+  min-width:220px;
+}
+.blk-timer-label{font-size:0.65rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.blk-timer-val{font-family:'Bebas Neue',cursive;font-size:2rem;color:var(--gold);letter-spacing:2px;line-height:1;}
+.blk-timer-hint{font-size:0.65rem;color:#444;margin-top:5px;}
+.blk-cta{
+  margin-top:6px;padding:14px 28px;
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  border:none;border-radius:12px;color:#fff;
+  font-size:0.95rem;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:all 0.2s;
+  box-shadow:0 6px 24px rgba(255,98,0,0.4);
+  width:100%;max-width:280px;
+}
+.blk-cta:hover{transform:scale(1.03);}
+.blk-note{font-size:0.65rem;color:#444;letter-spacing:0.5px;}
+
 /* ── HIDDEN ── */
 .hidden{display:none!important;}
 
@@ -560,6 +604,24 @@ footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;colo
           <button class="lock-cta" onclick="document.getElementById('pay-section').scrollIntoView({behavior:'smooth'})">
             🏏 ₹59 Mein Unlock Karo
           </button>
+        </div>
+
+        <!-- 24-HOUR BLOCKED OVERLAY -->
+        <div id="blocked-overlay">
+          <div class="blk-glow"></div>
+          <div class="blk-icon">🚫</div>
+          <div class="blk-badge">FREE TRIAL KHATAM</div>
+          <div class="blk-title">Aaj ke liye Band Ho Gaya!</div>
+          <div class="blk-sub">Aapka 10 minute ka free trial khatam ho gaya.<br>Dubara free access milega:</div>
+          <div class="blk-timer-box">
+            <div class="blk-timer-label">⏳ Unblock hoga</div>
+            <div class="blk-timer-val" id="blocked-time-left">23 hr 59 min</div>
+            <div class="blk-timer-hint">mein — ya abhi unlock karo ₹59 mein</div>
+          </div>
+          <button class="blk-cta" onclick="document.getElementById('blocked-overlay').classList.remove('visible'); document.getElementById('pay-section').scrollIntoView({behavior:'smooth'})">
+            🏏 ₹59 Mein Full IPL Unlock Karo
+          </button>
+          <div class="blk-note">✓ 65 din • ✓ Sab matches • ✓ HD Live Stream</div>
         </div>
 
         <!-- Ad Overlay -->
@@ -813,7 +875,7 @@ if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
 const CRICKET_DB = firebase.database();
 
 // ── DEFAULT VALUES (fallback if Firebase empty) ──
-const DEFAULT_STREAM_URL  = 'http://116.90.120.151:8000/play/a0hi/index.m3u8';
+const DEFAULT_STREAM_URL  = 'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8';
 const DEFAULT_ADS = [
   'https://www.profitableratecpm.com/q8kkfu6p5?key=c7e57b4f2f5e638dd9c97ba5a4f62b00',
 ];
@@ -833,7 +895,11 @@ let liveSeconds=0, liveTimer=null;
 let ADS = [...DEFAULT_ADS];
 let FREE_TRIAL_SEC = DEFAULT_FREE_TRIAL_SEC;
 
-// Check if user has IPL plan
+// ── 24-HOUR BLOCK SYSTEM ──
+// localStorage keys:
+//   ks_ipl_expiry       → premium plan expiry timestamp
+//   ks_free_block_until → timestamp jab tak free user block hai (aaj 10min khatam ke baad kal tak)
+
 function checkPremium(){
   const exp = localStorage.getItem('ks_ipl_expiry');
   if(exp && Date.now() < parseInt(exp)){
@@ -841,6 +907,31 @@ function checkPremium(){
   }
 }
 checkPremium();
+
+// Check karo kya free user abhi bhi block hai
+function isFreeUserBlocked(){
+  if(isPremium) return false;
+  const blockUntil = localStorage.getItem('ks_free_block_until');
+  if(!blockUntil) return false;
+  return Date.now() < parseInt(blockUntil);
+}
+
+// Aaj midnight ke baad kal ki midnight tak block karo (24hr window)
+function setFreeUserBlock(){
+  // Aaj ki date se kal ki end-of-day (midnight +24 hrs from NOW) tak block
+  const blockUntil = Date.now() + (24 * 60 * 60 * 1000);
+  localStorage.setItem('ks_free_block_until', blockUntil.toString());
+}
+
+// Block khatam hone mein kitna time bacha
+function blockRemainingText(){
+  const blockUntil = parseInt(localStorage.getItem('ks_free_block_until') || '0');
+  const remaining = blockUntil - Date.now();
+  if(remaining <= 0) return '0:00';
+  const h = Math.floor(remaining / 3600000);
+  const m = Math.floor((remaining % 3600000) / 60000);
+  return h + ' hr ' + m + ' min';
+}
 
 const FREE_TRIAL_SEC_DEFAULT = 600; // fallback
 let freeTrialUsed = 0, freeTrialTimer = null;
@@ -892,8 +983,11 @@ const errScr  = document.getElementById('error-screen');
 
 // ── PLAYER INIT ──
 function initPlayer(){
-  // Both free & premium users can watch
-  // Free users get 10 min trial, then premium lock appears
+  // Pehle check karo kya free user 24hr block mein hai
+  if(!isPremium && isFreeUserBlocked()){
+    showBlockedScreen();
+    return;
+  }
   showSpinner();
   showAdThenPlay();
 }
@@ -987,11 +1081,33 @@ function startFreeTrial(){
       clearInterval(freeTrialTimer);
       freeTrialTimer = null;
       badge.style.display = 'none';
+      // ── 24-HOUR BLOCK LAGAO ──
+      setFreeUserBlock();
       try{ videoEl.pause(); }catch(e){}
       isPlaying = false; updatePlayIcon();
-      document.getElementById('premium-lock').classList.add('visible');
+      // Premium lock hatao, blocked screen dikhao
+      document.getElementById('premium-lock').classList.remove('visible');
+      showBlockedScreen();
     }
   },1000);
+}
+
+// ── BLOCKED SCREEN (24hr ban popup) ──
+function showBlockedScreen(){
+  const remaining = blockRemainingText();
+  const el = document.getElementById('blocked-overlay');
+  document.getElementById('blocked-time-left').textContent = remaining;
+  el.classList.add('visible');
+  // Countdown update karte raho
+  if(window._blockCountdownTimer) clearInterval(window._blockCountdownTimer);
+  window._blockCountdownTimer = setInterval(()=>{
+    if(!isFreeUserBlocked()){
+      clearInterval(window._blockCountdownTimer);
+      el.classList.remove('visible');
+      return;
+    }
+    document.getElementById('blocked-time-left').textContent = blockRemainingText();
+  }, 60000); // minute-by-minute update
 }
 
 function retryPlayer(){
