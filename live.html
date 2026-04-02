@@ -517,17 +517,17 @@ let watchTimer = null;
 let watchSeconds = 0;
 let adTimer = null;
 let adSeconds = 0;
-let lastAdTime = 0; // seconds of total watch time since last ad
+let lastAdTime = 0;
 let selectedPlan = 'monthly';
 let heroIndex = 0;
 let heroInterval;
 let streamRetries = 0;
 
-const PAID_TIER_MINUTES = 10; // free users get 10 min on paid channels
-const AD_INTERVAL_SECONDS = 15 * 60; // ad every 15 min
-const AD_NONSKIP_SECONDS = 60; // non-skippable for 60 sec
+const PAID_TIER_MINUTES = 10;
+const AD_INTERVAL_SECONDS = 15 * 60;
+const AD_NONSKIP_SECONDS = 60;
 
-// ── PAID NETWORKS (channels with these keywords are "premium") ──
+// ── PAID NETWORKS ──────────────────────────────────────────
 const PAID_KEYWORDS = [
     'star','sony','zee','colors','&tv','sab','sun','gemini','udaya','surya',
     'vijay','asianet','mazhavil','flowers','reporters','kairali','kaumudy',
@@ -544,17 +544,19 @@ const FREE_KEYWORDS = ['doordarshan','dd national','dd india','dd news','dd spor
 
 function isChannelPaid(ch) {
     if (!ch) return false;
-    const name = (ch.name || '').toLowerCase();
-    const grp  = (ch.group || '').toLowerCase();
-    // explicitly free
+    const name = (ch.name || '').toLowerCase().trim();
+    // ✅ Admin-set type has highest priority
+    if (channelTypesFromAdmin.hasOwnProperty(name)) return channelTypesFromAdmin[name] === true;
+    // Admin-added channel's own paid flag
+    if (ch._adminAdded) return !!ch.paid;
+    // Keyword detection fallback
+    const grp = (ch.group || '').toLowerCase();
     for (const kw of FREE_KEYWORDS) { if (name.includes(kw) || grp.includes(kw)) return false; }
-    // paid networks
     for (const kw of PAID_KEYWORDS) { if (name.includes(kw)) return true; }
     return false;
 }
 
-// ── HERO ADS DATA — Firebase se load hoga ─────────────────
-// Default fallback (agar Firebase se nahi aaya)
+// ── HERO ADS ──────────────────────────────────────────────
 const HERO_ADS_DEFAULT = [
     {
         img: 'https://image.tmdb.org/t/p/original/74xTEgt7R36Fpooo50r9T25onhq.jpg',
@@ -587,8 +589,8 @@ const HERO_ADS_DEFAULT = [
 ];
 let HERO_ADS = [...HERO_ADS_DEFAULT];
 
-// Channel break ad config (Firebase se load hoga)
-let channelAdConfig = null; // { url, duration, skipAfter }
+// Channel break ad config
+let channelAdConfig = null;
 
 // ── FIREBASE LOAD: HERO ADS + CHANNEL AD ──────────────────
 async function loadLiveTVAdsFromFirebase() {
@@ -597,7 +599,6 @@ async function loadLiveTVAdsFromFirebase() {
         const data = snap.val();
         if (!data) return;
 
-        // Hero Ads
         if (Array.isArray(data.heroAds)) {
             const fbAds = data.heroAds
                 .filter(url => url && url.trim())
@@ -613,10 +614,8 @@ async function loadLiveTVAdsFromFirebase() {
             }
         }
 
-        // Channel Break Ad
         if (data.channelAd && data.channelAd.url) {
             channelAdConfig = data.channelAd;
-            // Update skip seconds from Firebase config
             if (channelAdConfig.skipAfter !== undefined) {
                 window._adSkipSeconds = channelAdConfig.skipAfter;
             }
@@ -625,9 +624,8 @@ async function loadLiveTVAdsFromFirebase() {
             }
         }
 
-        // Custom M3U URL from admin (overrides default iptv-org source)
         if (data.m3uUrl && data.m3uUrl.trim()) {
-            M3U_SOURCES.unshift(data.m3uUrl.trim()); // Add as highest priority
+            M3U_SOURCES.unshift(data.m3uUrl.trim());
             console.log('[KS LiveTV] Using admin-provided M3U URL:', data.m3uUrl);
         }
     } catch(e) {
@@ -652,34 +650,76 @@ const CATEGORY_ICONS = {
     'General': 'fa-solid fa-globe',
 };
 
-// ── CORS PROXY LIST (ordered by reliability) ──────────────
+// ── CORS PROXY LIST ────────────────────────────────────────
 const CORS_PROXIES = [
     'https://corsproxy.io/?',
     'https://api.allorigins.win/raw?url=',
-    'https://cors-anywhere.herokuapp.com/',
     'https://thingproxy.freeboard.io/fetch/',
+    'https://cors-anywhere.herokuapp.com/',
 ];
 
-// ── MULTIPLE M3U SOURCES ──────────────────────────────────
+// ── PRIMARY M3U SOURCE — India (iptv-org) ────────────────
 const M3U_SOURCES = [
-    'https://raw.githubusercontent.com/falconcasthoster/promo/refs/heads/main/nolink/master.m3u8',
     'https://iptv-org.github.io/iptv/countries/in.m3u',
     'https://raw.githubusercontent.com/iptv-org/iptv/master/streams/in.m3u',
+    'https://raw.githubusercontent.com/falconcasthoster/promo/refs/heads/main/nolink/master.m3u8',
     'https://iptv-org.github.io/iptv/languages/hin.m3u',
 ];
 
-// ── Firebase channel URL overrides (admin sets these) ─────
-// Structure in Firebase: liveTV/channelOverrides = { "star plus": "https://...", ... }
-let channelUrlOverrides = {}; // key: channel name lowercase → url
+// ── Firebase data stores ──────────────────────────────────
+let channelUrlOverrides   = {}; // { name_lower: url } — URL replacements
+let adminAddedChannels    = []; // Full channel objects added via admin
+let channelTypesFromAdmin = {}; // { name_lower: true } — premium flag
+
+// ════════════════════════════════════════════════════════
+// ✅ FIX 1: loadChannelOverridesFromFirebase — standalone
+//    Yeh function HAMESHA call hoga, protocol se independent
+//    Admin panel se jo bhi URL dala woh yahan se load hoga
+// ════════════════════════════════════════════════════════
+async function loadChannelOverridesFromFirebase() {
+    // 1. URL overrides
+    try {
+        const snap = await db.ref('liveTV/channelOverrides').once('value');
+        const overrides = snap.val();
+        if (overrides && typeof overrides === 'object') {
+            channelUrlOverrides = {};
+            Object.entries(overrides).forEach(([k, v]) => {
+                channelUrlOverrides[k.toLowerCase().trim()] = v;
+            });
+        } else { channelUrlOverrides = {}; }
+    } catch(e) { channelUrlOverrides = {}; }
+
+    // 2. Admin-added full channel objects (name + url + optional logo/group)
+    try {
+        const snap2 = await db.ref('liveTV/adminChannels').once('value');
+        const data2 = snap2.val();
+        if (data2 && typeof data2 === 'object') {
+            adminAddedChannels = Object.values(data2).map(ch => ({
+                name:  ch.name  || '',
+                url:   ch.url   || '',
+                logo:  ch.logo  || '',
+                group: ch.group || 'General',
+                paid:  !!ch.paid,
+                _adminAdded: true,
+            })).filter(ch => ch.name && ch.url);
+        } else { adminAddedChannels = []; }
+        console.log('[KS LiveTV] Admin-added channels:', adminAddedChannels.length);
+    } catch(e) { adminAddedChannels = []; }
+
+    // 3. Channel types (free / premium set from admin)
+    try {
+        const snap3 = await db.ref('liveTV/channelTypes').once('value');
+        const data3 = snap3.val();
+        channelTypesFromAdmin = (data3 && typeof data3 === 'object') ? data3 : {};
+    } catch(e) { channelTypesFromAdmin = {}; }
+}
 
 async function fetchWithProxy(url) {
-    // 1. Try direct first (sometimes works for non-CORS-restricted)
     try {
         const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
         if (resp.ok) return await resp.text();
     } catch(e) { /* try proxies */ }
 
-    // 2. Try each CORS proxy
     for (const proxy of CORS_PROXIES) {
         try {
             const proxyUrl = proxy + encodeURIComponent(url);
@@ -693,66 +733,89 @@ async function fetchWithProxy(url) {
     throw new Error('All proxies failed');
 }
 
+// ════════════════════════════════════════════════════════
+// ✅ FIX 3: fetchChannels — overrides load FIRST, always
+//    file:// protocol pe bhi overrides kaam karenge
+// ════════════════════════════════════════════════════════
 async function fetchChannels() {
-    // ── FILE:// PROTOCOL DETECT ──
-    // fetch() doesn't work on file:// — skip straight to fallback + Firebase overrides
     const isFileProtocol = window.location.protocol === 'file:';
 
-    // First load Firebase channel URL overrides (works on file:// too via Firebase SDK)
-    try {
-        const snap = await db.ref('liveTV/channelOverrides').once('value');
-        const overrides = snap.val();
-        if (overrides && typeof overrides === 'object') {
-            channelUrlOverrides = {};
-            Object.entries(overrides).forEach(([k, v]) => {
-                channelUrlOverrides[k.toLowerCase().trim()] = v;
-            });
-            console.log('[KS LiveTV] Loaded', Object.keys(channelUrlOverrides).length, 'channel URL overrides from Firebase');
-        }
-    } catch(e) { console.warn('[KS LiveTV] Could not load channel overrides:', e); }
+    // ALWAYS load Firebase data first (overrides + adminChannels + channelTypes)
+    await loadChannelOverridesFromFirebase();
+
+    let baseChannels = [];
 
     if (isFileProtocol) {
-        console.warn('[KS LiveTV] file:// protocol detected — using built-in channel list');
-        return applyChannelOverrides(getBuiltinChannels());
-    }
-
-    // Try each M3U source (only when served over http/https)
-    for (const src of M3U_SOURCES) {
-        try {
-            console.log('[KS LiveTV] Trying M3U source:', src);
-            const text = await fetchWithProxy(src);
-            const channels = parseM3U(text);
-            if (channels.length > 0) {
-                console.log('[KS LiveTV] Loaded', channels.length, 'channels from', src);
-                return applyChannelOverrides(channels);
+        baseChannels = getBuiltinChannels();
+    } else {
+        for (const src of M3U_SOURCES) {
+            try {
+                const text = await fetchWithProxy(src);
+                const parsed = parseM3U(text);
+                if (parsed.length > 0) {
+                    console.log('[KS LiveTV] Loaded', parsed.length, 'channels from', src);
+                    baseChannels = parsed;
+                    break;
+                }
+            } catch(e) {
+                console.warn('[KS LiveTV] M3U source failed:', src, e.message);
             }
-        } catch(e) {
-            console.warn('[KS LiveTV] M3U source failed:', src, e.message);
+        }
+        if (baseChannels.length === 0) {
+            console.warn('[KS LiveTV] All M3U failed — using built-in list');
+            baseChannels = getBuiltinChannels();
         }
     }
 
-    console.error('[KS LiveTV] All M3U sources failed — using built-in channel list');
-    return applyChannelOverrides(getBuiltinChannels());
+    // Apply URL overrides to existing channels
+    let channels = applyChannelOverrides(baseChannels);
+
+    // Merge admin-added channels (add only if not already in list)
+    channels = mergeAdminChannels(channels);
+
+    return channels;
 }
 
-// Apply Firebase URL overrides to channels
+// Merge admin-added channels into main list (dedup by name)
+function mergeAdminChannels(channels) {
+    if (!adminAddedChannels || adminAddedChannels.length === 0) return channels;
+    const existingNames = new Set(channels.map(c => c.name.toLowerCase().trim()));
+    const newChs = adminAddedChannels.filter(c => !existingNames.has(c.name.toLowerCase().trim()));
+    newChs.forEach(c => { c.paid = isChannelPaid(c); });
+    return [...channels, ...newChs];
+}
+
+// ════════════════════════════════════════════════════════
+// ✅ FIX 4: applyChannelOverrides — improved matching
+//    Admin panel lowercase save karta hai, yahan bhi same logic
+// ════════════════════════════════════════════════════════
 function applyChannelOverrides(channels) {
+    if (!channelUrlOverrides || Object.keys(channelUrlOverrides).length === 0) {
+        return channels;
+    }
+
     return channels.map(ch => {
-        const key = (ch.name || '').toLowerCase().trim();
-        // Exact match
-        if (channelUrlOverrides[key]) {
-            ch.url = channelUrlOverrides[key];
+        const chNameLower = (ch.name || '').toLowerCase().trim();
+
+        // 1. Exact match (e.g. "star plus" → "star plus")
+        if (channelUrlOverrides[chNameLower]) {
+            console.log('[KS LiveTV] ✅ Override EXACT match:', ch.name, '→', channelUrlOverrides[chNameLower]);
+            ch.url = channelUrlOverrides[chNameLower];
             ch._overridden = true;
             return ch;
         }
-        // Partial match (e.g. "star plus" matches "Star Plus HD (1080p)")
+
+        // 2. Partial match — admin key is substring of channel name or vice versa
         for (const [k, v] of Object.entries(channelUrlOverrides)) {
-            if (key.includes(k) || k.includes(key)) {
+            const kLower = k.toLowerCase().trim();
+            if (chNameLower.includes(kLower) || kLower.includes(chNameLower)) {
+                console.log('[KS LiveTV] ✅ Override PARTIAL match:', ch.name, '(key:', k, ')→', v);
                 ch.url = v;
                 ch._overridden = true;
                 break;
             }
         }
+
         return ch;
     });
 }
@@ -765,27 +828,19 @@ function parseM3U(text) {
         const line = lines[i].trim();
         if (line.startsWith('#EXTINF')) {
             current = {};
-            // Extract tvg-name
             const nameMatch = line.match(/tvg-name="([^"]*)"/);
             current.name = nameMatch ? nameMatch[1] : '';
-            // Display name fallback (after last comma)
             const commaIdx = line.lastIndexOf(',');
             if (!current.name && commaIdx > -1) current.name = line.slice(commaIdx+1).trim();
-            // Logo
             const logoMatch = line.match(/tvg-logo="([^"]*)"/);
             current.logo = logoMatch ? logoMatch[1] : '';
-            // Group
             const groupMatch = line.match(/group-title="([^"]*)"/);
             current.group = groupMatch ? groupMatch[1].trim() : 'General';
-            // Normalize group
             current.group = normalizeGroup(current.group);
-            // Language
             const langMatch = line.match(/tvg-language="([^"]*)"/);
             current.language = langMatch ? langMatch[1] : '';
-            // tvg-id
             const idMatch = line.match(/tvg-id="([^"]*)"/);
             current.id = idMatch ? idMatch[1] : (current.name || 'ch_' + channels.length);
-            // Paid?
             current.paid = isChannelPaid(current);
         } else if (current && line && !line.startsWith('#')) {
             current.url = line;
@@ -950,36 +1005,29 @@ function playChannel(globalIdx) {
     const ch = allChannels[globalIdx];
     if (!ch) return;
 
-    // Stop previous timers before switching channel
     clearWatchTimer();
     clearInterval(freeWatchInterval);
     freeWatchInterval = null;
 
     currentChannel = ch;
 
-    // Open player modal
     document.getElementById('player-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
 
-    // Update UI
     document.getElementById('pm-name').textContent = ch.name;
     document.getElementById('pm-cat').textContent = ch.group;
     document.getElementById('pm-detail-name').textContent = ch.name;
     document.getElementById('pm-detail-cat').textContent = ch.group;
     if (ch.logo) { document.getElementById('pm-logo-sm-img').src = ch.logo; }
 
-    // Show/hide upgrade button
     const upgradeBtn = document.getElementById('pm-upgrade-btn');
     upgradeBtn.style.display = (ch.paid && !isPremium) ? 'block' : 'none';
 
-    // Highlight in side list
     updateSideList();
 
-    // ── TIMER BAR ──
     const timerBar = document.getElementById('pm-timer-bar');
     timerBar.classList.remove('show');
 
-    // Load stream
     if (!ch.url || ch.url.trim() === '') {
         const spinner = document.getElementById('pm-spinner');
         const errEl = document.getElementById('pm-error');
@@ -993,12 +1041,10 @@ function playChannel(globalIdx) {
 
     if (!isPremium) {
         if (ch.paid) {
-            // FREE USER on PAID CHANNEL → 10 min preview then popup
             timerBar.classList.add('show');
             document.getElementById('pm-timer-fill').style.width = '100%';
             startWatchTimer();
         } else {
-            // FREE USER on FREE CHANNEL → periodic ads
             checkAdSchedule();
         }
     }
@@ -1013,10 +1059,8 @@ function loadStream(url) {
     spinner.classList.add('on');
     streamRetries = 0;
 
-    // Clear any previous stall watchdog
     if (window._stallWatchdog) { clearInterval(window._stallWatchdog); window._stallWatchdog = null; }
 
-    // Destroy previous HLS instance fully
     if (hlsInstance) {
         try { hlsInstance.stopLoad(); hlsInstance.detachMedia(); hlsInstance.destroy(); } catch(e){}
         hlsInstance = null;
@@ -1032,15 +1076,13 @@ function loadStream(url) {
         return;
     }
 
-    const MAX_RETRIES = CORS_PROXIES.length + 1; // direct + each proxy
+    const MAX_RETRIES = CORS_PROXIES.length + 1;
 
     function tryHLS(streamUrl, proxyIdx) {
         if (hlsInstance) { try { hlsInstance.stopLoad(); hlsInstance.detachMedia(); hlsInstance.destroy(); } catch(e){} hlsInstance = null; }
 
-        // If not first attempt and previous direct URL failed, try CORS proxy
         let finalUrl = streamUrl;
         if (proxyIdx > 0 && proxyIdx <= CORS_PROXIES.length) {
-            // Only proxy M3U/HLS playlists, not TS segments (HLS.js handles those internally)
             finalUrl = CORS_PROXIES[proxyIdx - 1] + encodeURIComponent(streamUrl);
             console.log('[KS LiveTV] Trying with proxy:', CORS_PROXIES[proxyIdx - 1]);
         }
@@ -1079,7 +1121,6 @@ function loadStream(url) {
             streamRetries = 0;
             video.play().catch(() => { spinner.classList.remove('on'); });
 
-            // Stall watchdog
             let lastTime = -1;
             let stallCount = 0;
             if (window._stallWatchdog) clearInterval(window._stallWatchdog);
@@ -1111,20 +1152,17 @@ function loadStream(url) {
                 return;
             }
 
-            // Fatal — try next strategy
             spinner.classList.add('on');
             streamRetries++;
 
-            // Strategy: direct → proxy1 → proxy2 → proxy3 → error
             const nextProxyIdx = proxyIdx + 1;
             if (nextProxyIdx <= CORS_PROXIES.length) {
                 console.warn(`[KS LiveTV] Direct/proxy${proxyIdx} failed — trying proxy${nextProxyIdx}...`);
                 setTimeout(() => {
                     if (!currentChannel) return;
-                    tryHLS(streamUrl, nextProxyIdx); // Always pass ORIGINAL url, not proxied
+                    tryHLS(streamUrl, nextProxyIdx);
                 }, 1500);
             } else {
-                // All proxies exhausted
                 spinner.classList.remove('on');
                 errEl.classList.add('on');
                 errEl.querySelector('p').textContent =
@@ -1134,9 +1172,8 @@ function loadStream(url) {
     }
 
     if (Hls.isSupported()) {
-        tryHLS(url, 0); // Start with direct (proxyIdx=0)
+        tryHLS(url, 0);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari native HLS
         video.src = url;
         video.addEventListener('loadedmetadata', () => {
             spinner.classList.remove('on');
@@ -1163,7 +1200,6 @@ function retryStream() {
     document.getElementById('pm-error').classList.remove('on');
     streamRetries = 0;
     loadStream(currentChannel.url);
-    // Restart timer if it was a paid channel
     if (!isPremium && currentChannel.paid) {
         document.getElementById('pm-timer-bar').classList.add('show');
         startWatchTimer();
@@ -1173,7 +1209,6 @@ function retryStream() {
 function closePlayer() {
     document.getElementById('player-modal').classList.remove('open');
     document.body.style.overflow = '';
-    // Cleanup HLS
     if (window._stallWatchdog) { clearInterval(window._stallWatchdog); window._stallWatchdog = null; }
     if (hlsInstance) { try { hlsInstance.stopLoad(); hlsInstance.detachMedia(); hlsInstance.destroy(); } catch(e){} hlsInstance = null; }
     const video = document.getElementById('pm-video');
@@ -1185,7 +1220,6 @@ function closePlayer() {
     clearInterval(freeWatchInterval);
     freeWatchInterval = null;
     currentChannel = null;
-    // Hide timer bar
     document.getElementById('pm-timer-bar').classList.remove('show');
 }
 
@@ -1200,7 +1234,6 @@ function startWatchTimer() {
     fill.style.transition = 'width 1s linear';
     timerBar.classList.add('show');
 
-    // Set timer text label
     let timerTextEl = timerBar.querySelector('.pm-timer-text');
     if (!timerTextEl) {
         timerTextEl = document.createElement('div');
@@ -1220,12 +1253,9 @@ function startWatchTimer() {
 
         if (watchSeconds >= totalSec) {
             clearWatchTimer();
-            // Pause video and show upgrade popup
             const video = document.getElementById('pm-video');
             video.pause();
-            // Show upgrade button in player
             document.getElementById('pm-upgrade-btn').style.display = 'block';
-            // Open plan popup with slight delay for UX
             setTimeout(() => openPlanPopup(true), 300);
         }
     }, 1000);
@@ -1279,7 +1309,6 @@ function startFreeWatchClock() {
 }
 
 function checkAdSchedule() {
-    // Start free watch clock if not already
     if (!freeWatchInterval) startFreeWatchClock();
 }
 
@@ -1288,11 +1317,9 @@ function showAd() {
     adShowing = true;
     adSeconds = 0;
 
-    // Pause video
     const video = document.getElementById('pm-video');
     video.pause();
 
-    // Use Firebase channel ad config if available, else fallback to ADS_DATA
     let adUrl = null;
     let adTitle = 'KS Movies Premium';
     let adSub = 'Watch all channels without interruption. Upgrade now!';
@@ -1304,7 +1331,6 @@ function showAd() {
     if (channelAdConfig && channelAdConfig.url) {
         adUrl = channelAdConfig.url;
     } else {
-        // Fallback to random from ADS_DATA
         const ad = ADS_DATA[Math.floor(Math.random() * ADS_DATA.length)];
         adUrl = ad.img;
         adTitle = ad.title;
@@ -1313,13 +1339,11 @@ function showAd() {
         adLink = ad.link;
     }
 
-    // Check if it's a video URL (mp4, webm, etc.)
     const isVideo = adUrl && /\.(mp4|webm|ogg|m3u8)(\?|$)/i.test(adUrl);
     const adImgEl = document.getElementById('ad-img');
     const adOverlay = document.getElementById('ad-overlay');
 
     if (isVideo) {
-        // Replace ad-img with video element
         adImgEl.style.display = 'none';
         let adVid = document.getElementById('ad-video-el');
         if (!adVid) {
@@ -1333,10 +1357,8 @@ function showAd() {
         adVid.src = adUrl;
         adVid.style.display = 'block';
         adVid.play().catch(()=>{});
-        // Auto dismiss when video ends
         adVid.onended = () => { clearAdTimer(); dismissAd(); };
     } else {
-        // Image ad
         adImgEl.src = adUrl;
         adImgEl.style.display = 'block';
         const adVid = document.getElementById('ad-video-el');
@@ -1349,7 +1371,6 @@ function showAd() {
     ctaEl.textContent = adCta;
     ctaEl.href = adLink;
 
-    // Reset countdown
     const totalSecs = adDuration;
     document.getElementById('ad-fill').style.width = '100%';
     document.getElementById('ad-skip-btn').classList.remove('show');
@@ -1357,7 +1378,6 @@ function showAd() {
 
     adOverlay.classList.add('on');
 
-    // Start countdown
     clearAdTimer();
     adTimer = setInterval(() => {
         adSeconds++;
@@ -1387,10 +1407,8 @@ function skipAd() {
 function dismissAd() {
     adShowing = false;
     document.getElementById('ad-overlay').classList.remove('on');
-    // Pause ad video if playing
     const adVid = document.getElementById('ad-video-el');
     if (adVid) { adVid.pause(); adVid.src = ''; }
-    // Resume channel video
     const video = document.getElementById('pm-video');
     video.play().catch(()=>{});
 }
@@ -1432,11 +1450,9 @@ function checkPremiumStatus(uid) {
             const btn = document.getElementById('nav-plan-btn');
             btn.textContent = 'PREMIUM';
             btn.className = 'nav-plan-badge premium';
-            // If player is open and was counting down, stop timer
             clearWatchTimer();
             document.getElementById('pm-timer-bar').classList.remove('show');
             document.getElementById('pm-upgrade-btn').style.display = 'none';
-            // Re-render grid to remove lock badges
             renderChannelGrid();
             updateSideList();
         }
@@ -1445,19 +1461,17 @@ function checkPremiumStatus(uid) {
 
 // ── INIT ──────────────────────────────────────────────────
 async function init() {
-    // Update loading message based on protocol
     const loadingTextEl = document.getElementById('loading-text');
     if (window.location.protocol === 'file:') {
         if (loadingTextEl) loadingTextEl.textContent = 'Connecting to Firebase…';
     }
 
-    // Safety: force-hide loading screen after 12s no matter what
     const loadingTimeout = setTimeout(() => {
         document.getElementById('loading-screen').classList.add('hide');
     }, 12000);
 
     try {
-        // 1. Load ads from Firebase (non-blocking — don't await forever)
+        // 1. Load ads from Firebase
         const adsPromise = loadLiveTVAdsFromFirebase();
         await Promise.race([adsPromise, new Promise(r => setTimeout(r, 4000))]);
         renderHero();
@@ -1467,7 +1481,7 @@ async function init() {
             if (user) checkPremiumStatus(user.uid);
         });
 
-        // 3. Fetch channels
+        // 3. Fetch channels (overrides are loaded INSIDE fetchChannels now)
         const channels = await fetchChannels();
         if (channels.length === 0) {
             allChannels = getFallbackChannels();
@@ -1485,16 +1499,83 @@ async function init() {
     renderChannelGrid();
     updateSideList();
 
-    // Hide loading
+    // ════════════════════════════════════════════════════
+    // Real-time listeners — admin changes instant reflect
+    // ════════════════════════════════════════════════════
+
+    // 1. URL overrides (existing channels ki URLs replace)
+    db.ref('liveTV/channelOverrides').on('value', snap => {
+        const overrides = snap.val();
+        const newOverrides = {};
+        if (overrides && typeof overrides === 'object') {
+            Object.entries(overrides).forEach(([k, v]) => {
+                newOverrides[k.toLowerCase().trim()] = v;
+            });
+        }
+        if (JSON.stringify(channelUrlOverrides) !== JSON.stringify(newOverrides)) {
+            channelUrlOverrides = newOverrides;
+            refreshAllChannels();
+        }
+    });
+
+    // 2. Admin-added new channels (real-time add karo)
+    db.ref('liveTV/adminChannels').on('value', snap => {
+        const data = snap.val();
+        const newAdded = data && typeof data === 'object'
+            ? Object.values(data).map(ch => ({
+                name: ch.name || '', url: ch.url || '',
+                logo: ch.logo || '', group: ch.group || 'General',
+                paid: !!ch.paid, _adminAdded: true,
+              })).filter(c => c.name && c.url)
+            : [];
+        if (JSON.stringify(adminAddedChannels) !== JSON.stringify(newAdded)) {
+            adminAddedChannels = newAdded;
+            refreshAllChannels();
+        }
+    });
+
+    // 3. Channel types (free/premium toggle from admin)
+    db.ref('liveTV/channelTypes').on('value', snap => {
+        const data = snap.val();
+        const newTypes = (data && typeof data === 'object') ? data : {};
+        if (JSON.stringify(channelTypesFromAdmin) !== JSON.stringify(newTypes)) {
+            channelTypesFromAdmin = newTypes;
+            // Re-apply paid status to all channels
+            allChannels = allChannels.map(ch => { ch.paid = isChannelPaid(ch); return ch; });
+            refilterAndRender();
+        }
+    });
+
     clearTimeout(loadingTimeout);
     setTimeout(() => {
         document.getElementById('loading-screen').classList.add('hide');
     }, 400);
 }
 
-// ── BUILT-IN CHANNEL LIST (works on file:// & when M3U fails) ──
-// These are verified working public/free-to-air streams
-// Admin can override any URL via Firebase liveTV/channelOverrides
+// ── REFRESH HELPERS ──────────────────────────────────────
+function refilterAndRender() {
+    filteredChannels = allChannels.filter(c => {
+        const matchCat = activeCategory === 'All' || c.group === activeCategory;
+        const matchQ = !searchQuery || c.name.toLowerCase().includes(searchQuery);
+        return matchCat && matchQ;
+    });
+    renderCategories();
+    renderChannelGrid();
+    updateSideList();
+}
+
+// Full rebuild: re-apply overrides + admin channels, then re-render
+function refreshAllChannels() {
+    // Keep a base list (without admin-added or overridden URLs) stored separately
+    // We re-apply overrides to whichever channels we have
+    let base = allChannels.filter(c => !c._adminAdded);
+    base = applyChannelOverrides(base);
+    allChannels = mergeAdminChannels(base);
+    allChannels = allChannels.map(ch => { ch.paid = isChannelPaid(ch); return ch; });
+    refilterAndRender();
+}
+
+// ── BUILT-IN CHANNEL LIST ─────────────────────────────────
 function getBuiltinChannels() {
     return [
         // ── SPORTS / IPL ──
@@ -1508,7 +1589,6 @@ function getBuiltinChannels() {
         { id:'dd_sports2', name:'DD Sports 2.0', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/DD_Sports_logo.svg/200px-DD_Sports_logo.svg.png', url:'https://d3qs3d2rkhfqrt.cloudfront.net/out/v1/b17adfe543354fdd8d189b110617cddd/index_3.m3u8', paid:false },
         { id:'eurosport', name:'Eurosports HD', group:'Sports', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Eurosports.png', url:'http://103.161.153.165:8000/play/a01b/index.m3u8', paid:true },
         { id:'redbull_tv', name:'Red Bull TV', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Red_Bull_TV_Logo.svg/200px-Red_Bull_TV_Logo.svg.png', url:'https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master_3360.m3u8', paid:false },
-
         // ── HINDI ENTERTAINMENT ──
         { id:'star_plus', name:'Star Plus', group:'Entertainment', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Plus.png', url:'http://103.229.254.25:7001/play/a09z/index.m3u8', paid:true },
         { id:'zee_tv', name:'Zee TV', group:'Entertainment', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Zee%20TV.png', url:'http://103.161.153.165:8000/play/a01j/index.m3u8', paid:true },
@@ -1516,7 +1596,6 @@ function getBuiltinChannels() {
         { id:'big_magic', name:'Big Magic', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Star_Plus_2020.svg/200px-Star_Plus_2020.svg.png', url:'http://103.175.73.12:8080/live/13/13_0.m3u8', paid:false },
         { id:'colors_tv', name:'Colors Infinity HD', group:'Entertainment', logo:'https://gd.mdsharifulislamnayon.workers.dev/1:/TV%20LOGO/colors%20infinity.jpeg', url:'http://103.229.254.25:7001/play/a0du/index.m3u8', paid:true },
         { id:'fashion_one', name:'Fashion One', group:'Entertainment', logo:'https://i.ibb.co/9grLJCS/fone22.png', url:'https://b01c02nl.mediatriple.net/videoonlylive/mtkgeuihrlfwlive/u_stream_5c9e2ee6997cb_1/playlist.m3u8', paid:false },
-
         // ── HINDI MOVIES ──
         { id:'zee_anmol', name:'Zee Anmol Cinema', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/b/b4/Zee_Anmol_Cinema_logo.png', url:'http://103.175.73.12:8080/live/256/256_0.m3u8', paid:false },
         { id:'hindi_movies', name:'Hindi Movies HD', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209612/master.m3u8', paid:false },
@@ -1527,85 +1606,37 @@ function getBuiltinChannels() {
         { id:'star_gold_sel', name:'Star Gold Select HD', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Star%20Gold%20Select%20HD.jpg', url:'http://103.229.254.25:7001/play/a032/index.m3u8', paid:true },
         { id:'and_pictures', name:'&Pictures HD', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/And%20Pictures%20.png', url:'http://103.229.254.25:7001/play/a033/index.m3u8', paid:true },
         { id:'utv_gold', name:'UTV Gold', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'http://103.161.153.165:8000/play/a03c/index.m3u8', paid:false },
-        { id:'utv_classic', name:'UTV Classic', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'http://103.161.153.165:8000/play/a03d/index.m3u8', paid:false },
-        { id:'utv_pictures', name:'UTV Pictures', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'http://103.161.153.165:8000/play/a03e/index.m3u8', paid:false },
         { id:'b4u_movies', name:'B4U Movies', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/B4U%20Movies.png', url:'https://cdnb4u.wiseplayout.com/B4U_Movies/HD1080/HD1080.m3u8', paid:false },
         { id:'b4u_kadak', name:'B4U Kadak', group:'Movies', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/B4U%20Movies.png', url:'https://cdn-2.pishow.tv/live/227/master.m3u8', paid:false },
         { id:'sheemaroo', name:'Sheemaroo Bollywood', group:'Movies', logo:'https://i.ibb.co/KjjqnRH/Picsart-23-06-30-21-35-20-283.png', url:'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg00864-shemarooenterta-shemabollywood-ono/playlist.m3u8', paid:false },
         { id:'goldmines', name:'Goldmines', group:'Movies', logo:'https://static.wikia.nocookie.net/jhmovie/images/7/7b/Goldmines_logo.png/revision/latest?cb=20240404141630', url:'https://cdn-2.pishow.tv/live/1459/master.m3u8', paid:false },
-        { id:'goldmines_bol', name:'Goldmines Bollywood', group:'Movies', logo:'https://static.wikia.nocookie.net/jhmovie/images/7/7b/Goldmines_logo.png/revision/latest?cb=20240404141630', url:'http://103.175.73.12:8080/live/52/52_0.m3u8', paid:false },
-        { id:'goldmines2', name:'Goldmines Movies 2', group:'Movies', logo:'https://static.wikia.nocookie.net/jhmovie/images/7/7b/Goldmines_logo.png/revision/latest?cb=20240404141630', url:'https://cdn-2.pishow.tv/live/1460/master.m3u8', paid:false },
-        { id:'manoranjan', name:'Manoranjan Prime', group:'Movies', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSLOrrVnk_41l-x7vMswKXKH2YJYGL5TNx6MzOEbEvzUA&s', url:'http://103.175.73.12:8080/live/345/345_0.m3u8', paid:false },
-        { id:'movie_club', name:'The Movie Club', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cc-r5hupcym5oehh.akamaized.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-r5hupcym5oehh/SBUM/RunnTV/BollyFlix_IN/BollyFlix_IN.m3u8', paid:false },
-        { id:'kolkata_movies', name:'Kolkata Movies', group:'Movies', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Star_Movies_logo_%282020%29.svg/200px-Star_Movies_logo_%282020%29.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209627/master.m3u8', paid:false },
-
         // ── HINDI MUSIC ──
         { id:'yrf_music', name:'YRF Music HD', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MTV_India_Logo.svg/200px-MTV_India_Logo.svg.png', url:'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg01412-xiaomiasia-yrfmusic-xiaomi/playlist.m3u8', paid:false },
-        { id:'hindi_hits', name:'Hindi Hits HD', group:'Music', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/MTV_India_Logo.svg/200px-MTV_India_Logo.svg.png', url:'http://146.59.253.52:8080/hindihitshd/index.m3u8', paid:false },
         { id:'9xm', name:'9XM', group:'Music', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/9xm.png', url:'http://103.175.73.12:8080/live/155/155_0.m3u8', paid:false },
         { id:'music_india', name:'Music India', group:'Music', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSKyMNNb_SRC2dnm7IW84llAJ9aO5Zb7V4jdjHaweOo58tzrc9pSsRv85-TZD1w4L57nc4&usqp=CAU', url:'http://103.175.73.12:8080/live/158/158_0.m3u8', paid:false },
-        { id:'joo_music', name:'Joo Music', group:'Music', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSisiK50nT9KXOAVZcRYy4aTrv4cVP9btrY4_s2KvXzXaSzGeUEmvgE3Gj4&s=10', url:'https://livecdn.live247stream.com/joomusic/tv/playlist.m3u8', paid:false },
-        { id:'e24', name:'E24', group:'Music', logo:'https://i.ibb.co/dbjnG3X/20240803-105403.png', url:'http://103.175.73.12:8080/live/159/159_0.m3u8', paid:false },
-
         // ── NEWS INDIA ──
         { id:'ndtv_english', name:'NDTV English', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/NDTV_logo_new.svg/200px-NDTV_logo_new.svg.png', url:'https://ndtv24x7elemarchana.akamaized.net/hls/live/2003678/ndtv24x7/master.m3u8', paid:false },
         { id:'ndtv_hindi', name:'NDTV Hindi', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/be/NDTV_logo_new.svg/200px-NDTV_logo_new.svg.png', url:'https://ndtvindiaelemarchana.akamaized.net/hls/live/2003679/ndtvindia/master.m3u8', paid:false },
         { id:'india_today', name:'India Today', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/India_Today_logo.svg/200px-India_Today_logo.svg.png', url:'https://indiatodaylive.akamaized.net/hls/live/2014320/indiatoday/indiatodaylive/playlist.m3u8', paid:false },
         { id:'wion', name:'WION News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/WION_logo.svg/200px-WION_logo.svg.png', url:'https://d7x8z4yuq42qn.cloudfront.net/index_7.m3u8', paid:false },
-        { id:'times_now', name:'Times of India', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/Times_Now_logo.png/200px-Times_Now_logo.png', url:'https://live.sli.ke/live/npnhm84gz9/master.m3u8', paid:false },
-        { id:'tv9_bangla', name:'TV9 Bangla', group:'News', logo:'https://jio.dinesh29.com.np/smart/ardinesh/logos/tv9-bangla.png', url:'https://dyjmyiv3bp2ez.cloudfront.net/pub-iotv9banaen8yq/liveabr/playlist.m3u8', paid:false },
-
-        // ── INTERNATIONAL NEWS ──
         { id:'cnn', name:'CNN', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/CNN.svg/200px-CNN.svg.png', url:'https://amg01448-samsungin-cnnnow-samsungin-4npqg.amagi.tv/playlist/amg01448-samsungin-cnnnow-samsungin/playlist.m3u8', paid:false },
         { id:'dw_news', name:'DW News', group:'News', logo:'https://i.ibb.co/7kNhrmW/dw-english-home-tv.png', url:'https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8', paid:false },
         { id:'france24', name:'France 24', group:'News', logo:'https://upload.wikimedia.org/wikipedia/en/thumb/6/65/FRANCE_24_logo.svg/1200px-FRANCE_24_logo.svg.png', url:'https://live.france24.com/hls/live/2037218-b/F24_EN_HI_HLS/master_2300.m3u8', paid:false },
         { id:'aljazeera', name:'Al Jazeera', group:'News', logo:'https://i.ibb.co/CzCnTHV/aljazeera-home-tv.png', url:'https://d1cy85syyhvqz5.cloudfront.net/v1/master/7b67fbda7ab859400a821e9aa0deda20ab7ca3d2/aljazeeraLive/AJE/index.m3u8', paid:false },
         { id:'rt_news', name:'RT News', group:'News', logo:'https://i.ibb.co/M7W5zRy/images.png', url:'https://rt-glb.rttv.com/live/rtnews/playlist.m3u8', paid:false },
         { id:'trt_world', name:'TRT World', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/TRT_World_logo.svg/200px-TRT_World_logo.svg.png', url:'https://tv-trtworld.medya.trt.com.tr/master.m3u8', paid:false },
-        { id:'press_tv', name:'Press TV Iran', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Press_TV.svg/200px-Press_TV.svg.png', url:'https://live.presstv.ir/hls/presstv_5_482/index.m3u8', paid:false },
-        { id:'cgtn', name:'CGTN News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/CGTN_logo.svg/200px-CGTN_logo.svg.png', url:'https://0472.org/hls/cgtn.m3u8', paid:false },
-
         // ── KIDS ──
         { id:'cartoon_net', name:'Cartoon Network', group:'Kids', logo:'https://i.postimg.cc/d3j5T2F8/Cartoon-Network.jpg', url:'https://live20.bozztv.com/giatvplayout7/giatv-209624/index.m3u8', paid:false },
         { id:'pbs_kids', name:'PBS Kids', group:'Kids', logo:'https://i.imgur.com/ubZMeQv.jpg', url:'https://2-fss-2.streamhoster.com/pl_140/amlst:200914-1298290/playlist.m3u8', paid:false },
         { id:'zoo_moo', name:'Zoo Moo', group:'Kids', logo:'https://i.postimg.cc/3RxSzVbd/image.jpg', url:'https://zoomoo-samsungau.amagi.tv/playlist.m3u8', paid:false },
-        { id:'motu_patlu', name:'Motu Patlu', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/sco/c/cc/Motu_Patlu_official_logo.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209622/master.m3u8', paid:false },
-        { id:'doraemon', name:'Doraemon', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/76/Doraemon_character.svg/200px-Doraemon_character.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209902/master.m3u8', paid:false },
-        { id:'shinchan', name:'Shinchan', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Shinnosuke_Nohara.jpg/200px-Shinnosuke_Nohara.jpg', url:'https://cloudfrontnet.vercel.app/tplay/playout/209901/master.m3u8', paid:false },
-        { id:'gopal_bhar', name:'Gopal Bhar 24/7', group:'Kids', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/Cartoon_Network_2010_logo.svg/200px-Cartoon_Network_2010_logo.svg.png', url:'https://cloudfrontnet.vercel.app/tplay/playout/209611/master.m3u8', paid:false },
-        { id:'jungle_book', name:'Jungle Book', group:'Kids', logo:'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSdYDuOawIs57oT6PcXREjNLnVUF58DK9qrsQ&s', url:'https://cc-4bhi5osabejc9.akamaized.net/v1/master/3722c60a815c199d9c0ef36c5b73da68a62b09d1/cc-4bhi5osabejc9/junglebook.m3u8', paid:false },
-        { id:'cbeebies', name:'BBC CBeebies', group:'Kids', logo:'https://i.postimg.cc/d3j5T2F8/Cartoon-Network.jpg', url:'https://live20.bozztv.com/giatvplayout7/giatv-209622/index.m3u8', paid:false },
-
-        // ── DOCUMENTARY / INFOTAINMENT ──
+        // ── DOCUMENTARY ──
         { id:'discovery', name:'Discovery Channel', group:'Documentary', logo:'https://i.ibb.co/V2gtYfH/download-1.png', url:'http://stvlive.net:8080/discovery/index.m3u8', paid:false },
         { id:'natgeo', name:'Nat Geo HD', group:'Documentary', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/National%20Geographic%20Channel.png', url:'http://103.229.254.25:7001/play/a038/index.m3u8', paid:false },
-        { id:'history_tv', name:'History TV 18', group:'Documentary', logo:'https://images.toffeelive.com/images/program/2429/logo/240x240/mobile_logo_009938001674474908.png', url:'http://103.229.254.25:7001/play/a02z/index.m3u8', paid:false },
         { id:'bbc_earth', name:'BBC Earth', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/BBC_Earth.svg/200px-BBC_Earth.svg.png', url:'https://amg00793-bbcstudios-amg00793c3-lg-us-2528.playouts.now.amagi.tv/playlist/amg00793-bbcstudios-bbcearta-lgus/playlist.m3u8', paid:false },
-        { id:'wild_earth', name:'Wild Earth', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'https://wildearth-plex.amagi.tv/master.m3u8', paid:false },
-        { id:'real_wild', name:'Real Wild', group:'Documentary', logo:'https://i.ibb.co/sRhcqHT/realwild.png', url:'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg00426-littledotstudio-realwild-tcl/playlist.m3u8', paid:false },
-        { id:'outdoor_ch', name:'Outdoor Channel', group:'Documentary', logo:'https://i.ibb.co/jZ2NVqN/outdoorch.png', url:'https://cdn-apse1-prod.tsv2.amagi.tv/linear/amg00718-outdoorchannela-outdoortvnz-samsungnz/playlist.m3u8', paid:false },
-        { id:'accu_weather', name:'AccuWeather', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/5/5d/AccuWeather_2021.svg', url:'https://cdn-ue1-prod.tsv2.amagi.tv/linear/amg00684-accuweather-accuweather-plex/playlist.m3u8', paid:false },
         { id:'travel_xp', name:'Travel XP', group:'Documentary', logo:'https://raw.githubusercontent.com/subirkumarpaul/Logo/main/Travel%20XP.png', url:'https://travelxp-travelxp-1-eu.rakuten.wurl.tv/playlist.m3u8', paid:false },
-        { id:'insight_tv', name:'Insight TV', group:'Documentary', logo:'https://business.insight.tv/wp-content/uploads/7521/01/Insight-TV-Logo-small-150x150.png', url:'https://insighttv-samsung-us.amagi.tv/playlist.m3u8', paid:false },
-        { id:'cgtn_doc', name:'CGTN Documentary', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/CGTN_logo.svg/200px-CGTN_logo.svg.png', url:'https://english-livebkali.cgtn.com/live/doccgtn_1.m3u8', paid:false },
-        { id:'food_food', name:'Food Food', group:'Documentary', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'http://103.175.73.12:8080/live/143/143_0.m3u8', paid:false },
-
-        // ── RELIGIOUS / ISLAMIC ──
+        // ── RELIGIOUS ──
         { id:'saudi_quran', name:'Saudi Quran', group:'Religious', logo:'https://i.ibb.co/GnfgKbs/alquran.png', url:'https://cdn-globecast.akamaized.net/live/eds/saudi_quran/hls_roku/index.m3u8', paid:false },
-        { id:'madina_live', name:'Madina Live', group:'Religious', logo:'https://images-na.ssl-images-amazon.com/images/I/71CywdrFaZL.png', url:'https://cdn-globecast.akamaized.net/live/eds/saudi_sunnah/hls_roku/index.m3u8', paid:false },
         { id:'peace_tv_eng', name:'Peace TV English', group:'Religious', logo:'https://i.ibb.co/598TYnC/20240827-092020.png', url:'https://dzkyvlfyge.erbvr.com/PeaceTvEnglish/index.m3u8', paid:false },
-        { id:'peace_tv_urdu', name:'Peace TV Urdu', group:'Religious', logo:'https://i.ibb.co/598TYnC/20240827-092020.png', url:'https://dzkyvlfyge.erbvr.com/PeaceTvUrdu/index.m3u8', paid:false },
-        { id:'madani_tv', name:'Madani TV', group:'Religious', logo:'https://i.ibb.co/7jrjkW1/20240813-112630.png', url:'https://streaming.madanichannel.tv/static/streaming-playlists/hls/d3e49b76-ac06-4689-a641-9200445b647f/master.m3u8', paid:false },
-        { id:'al_sunnah', name:'AL Sunnah TV', group:'Religious', logo:'https://i.ibb.co/MctgDQ8/sunnah.png', url:'https://cdn-globecast.akamaized.net/live/eds/saudi_sunnah/hls_roku/index.m3u8', paid:false },
-        { id:'sharjah_quran', name:'Sharjah Quran', group:'Religious', logo:'https://i.ibb.co/2qdGPCh/Sharjahtvquran.png', url:'https://live.kwikmotion.com/sharjahtvquranlive/shqurantv.smil/playlist.m3u8', paid:false },
-        { id:'god_tv', name:'God TV', group:'Religious', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Discovery_Channel_logo_2019.svg/200px-Discovery_Channel_logo_2019.svg.png', url:'https://hlsb-us.god.tv/GODTV/USA-480.m3u8', paid:false },
-        { id:'bahrain_quran', name:'Bahrain Quran', group:'Religious', logo:'https://i.ibb.co/cygNtwH/bahrain-quaran.png', url:'https://5c7b683162943.streamlock.net/live/ngrp:bahrainquran_all/playlist.m3u8', paid:false },
-
-        // ── FOOTBALL ──
-        { id:'bein_sports', name:'Bein Sports 1', group:'Sports', logo:'https://i.ibb.co/BfM21nC/beinhaber.png', url:'https://cdn-uw2-prod.tsv2.amagi.tv/linear/amg02873-kravemedia-mtrspt1-distrotv/playlist.m3u8', paid:false },
-        { id:'real_madrid_tv', name:'Real Madrid TV', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/200px-Real_Madrid_CF.svg.png', url:'https://rmtv.akamaized.net/hls/live/2043153/rmtv-es-web/bitrate_3.m3u8', paid:false },
-        { id:'fifa_plus', name:'FIFA+', group:'Sports', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/FIFA_logo_without_slogan.svg/200px-FIFA_logo_without_slogan.svg.png', url:'https://37b4c228.wurl.com/master/f36d25e7e52f1ba8d7e56eb859c636563214f541/UmFrdXRlblRWLWZyX0ZJRkFQbHVzRnJlbmNoX0hMUw/playlist.m3u8', paid:false },
-
         // ── DD NATIONAL (Free) ──
         { id:'dd_national', name:'DD National', group:'Entertainment', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/DD_National_logo_vector.svg/200px-DD_National_logo_vector.svg.png', url:'https://ddnatlive.com/hls/dd_national/index.m3u8', paid:false },
         { id:'dd_news', name:'DD News', group:'News', logo:'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/DD_News_logo.svg/200px-DD_News_logo.svg.png', url:'https://ddnews.live/hls/ddnews/index.m3u8', paid:false },
@@ -1614,23 +1645,19 @@ function getBuiltinChannels() {
     ];
 }
 
-// ── FALLBACK CHANNELS (minimal, only if Firebase also fails) ──
 function getFallbackChannels() {
-    // Use the full built-in list as fallback
     return getBuiltinChannels();
 }
 
-// ── CLOSE MODAL ON OUTSIDE CLICK ─────────────────────────
+// ── EVENT LISTENERS ───────────────────────────────────────
 document.getElementById('plan-popup').addEventListener('click', function(e) {
     if (e.target === this) closePlanPopup();
 });
 
-// ── KEYBOARD SHORTCUTS ────────────────────────────────────
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') { closePlayer(); closePlanPopup(); }
 });
 
-// ── CONTEXT MENU / DEV TOOLS PROTECTION ──────────────────
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('keydown', e => {
     if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key)) || (e.ctrlKey && e.key === 'U')) e.preventDefault();
