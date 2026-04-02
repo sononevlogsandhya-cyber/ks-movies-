@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KS Movies — Launch Guide</title>
+<style>
+  :root { --red:#e50914; --bg:#0a0a0a; --card:#111; --border:rgba(255,255,255,0.08); --text:#fff; --text2:#aaa; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family: -apple-system, 'Segoe UI', sans-serif; line-height:1.7; }
+  ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-thumb { background:var(--red); border-radius:4px; }
+
+  header { background:rgba(10,10,10,0.98); border-bottom:1px solid var(--border); padding:18px 5%; text-align:center; position:sticky; top:0; z-index:100; }
+  .logo { font-size:1.6rem; font-weight:900; letter-spacing:3px; }
+  .logo span { color:var(--red); }
+  .badge { display:inline-block; background:var(--red); color:#fff; font-size:0.7rem; font-weight:800; padding:3px 10px; border-radius:20px; letter-spacing:1px; margin-left:10px; vertical-align:middle; }
+
+  .hero { text-align:center; padding:60px 5% 40px; }
+  .hero h1 { font-size:clamp(1.8rem,5vw,3rem); font-weight:900; margin-bottom:12px; }
+  .hero p { color:var(--text2); font-size:1.05rem; max-width:500px; margin:0 auto; }
+
+  .steps { max-width:800px; margin:0 auto; padding:0 5% 80px; }
+
+  .phase { margin-bottom:48px; }
+  .phase-title {
+    display:flex; align-items:center; gap:12px;
+    font-size:1.1rem; font-weight:800; color:var(--red);
+    letter-spacing:1px; text-transform:uppercase;
+    margin-bottom:20px; padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
+  .phase-title .num {
+    width:32px; height:32px; background:var(--red); border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.9rem; font-weight:900; color:#fff; flex-shrink:0;
+  }
+
+  .step {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:20px 22px; margin-bottom:14px;
+    display:flex; gap:16px; align-items:flex-start;
+  }
+  .step-icon {
+    width:42px; height:42px; border-radius:10px;
+    background:rgba(229,9,20,0.1); border:1px solid rgba(229,9,20,0.2);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.3rem; flex-shrink:0;
+  }
+  .step-body h3 { font-size:0.95rem; font-weight:800; margin-bottom:6px; }
+  .step-body p { color:var(--text2); font-size:0.88rem; }
+  .step-body code {
+    background:rgba(229,9,20,0.1); color:var(--red);
+    padding:2px 8px; border-radius:5px; font-size:0.82rem; font-weight:700;
+  }
+
+  .highlight-box {
+    background:linear-gradient(135deg,rgba(229,9,20,0.1),rgba(229,9,20,0.05));
+    border:1px solid rgba(229,9,20,0.3); border-radius:14px;
+    padding:20px 24px; margin-bottom:20px;
+  }
+  .highlight-box h3 { color:var(--red); font-size:1rem; font-weight:800; margin-bottom:8px; }
+  .highlight-box p { color:var(--text2); font-size:0.88rem; }
+
+  .btn-big {
+    display:inline-block; background:var(--red); color:#fff;
+    padding:14px 28px; border-radius:10px; text-decoration:none;
+    font-weight:800; font-size:1rem; letter-spacing:0.5px;
+    box-shadow:0 4px 20px rgba(229,9,20,0.4);
+    transition:transform 0.2s; margin-top:8px;
+  }
+  .btn-big:hover { transform:scale(1.03); }
+
+  .check { color:#22c55e; font-weight:800; }
+
+  .files-grid {
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap:10px; margin-top:12px;
+  }
+  .file-chip {
+    background:#1a1a1a; border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px;
+    font-size:0.8rem; font-weight:700; color:#fff;
+    display:flex; align-items:center; gap:8px;
+  }
+  .file-chip .dot { width:8px; height:8px; background:var(--red); border-radius:50%; flex-shrink:0; }
+
+  .warning {
+    background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.25);
+    border-radius:10px; padding:14px 18px; margin:16px 0;
+    color:#fbbf24; font-size:0.87rem;
+  }
+  .warning strong { display:block; margin-bottom:4px; }
+
+  footer { text-align:center; padding:30px; color:#333; font-size:0.75rem; letter-spacing:2px; border-top:1px solid var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span>KS</span> MOVIES <span class="badge">LAUNCH GUIDE</span></div>
+</header>
+
+<div class="hero">
+  <h1>🚀 Launch Karo Aaj!</h1>
+  <p>Step-by-step guide — Vercel deploy se lekar APK banane tak. Total time: 30 minutes!</p>
+</div>
+
+<div class="steps">
+
+  <!-- PHASE 1 -->
+  <div class="phase">
+    <div class="phase-title"><div class="num">1</div> Vercel Pe Upload Karo</div>
+
+    <div class="highlight-box">
+      <h3>📦 Ye Sab Files Upload Karo</h3>
+      <p>Sirf ye files chahiye vercel mein — sab ek folder mein honi chahiye</p>
+      <div class="files-grid">
+        <div class="file-chip"><div class="dot"></div>manifest.json</div>
+        <div class="file-chip"><div class="dot"></div>sw.js</div>
+        <div class="file-chip"><div class="dot"></div>ks-tv.js</div>
+        <div class="file-chip"><div class="dot"></div>ks-pwa.js</div>
+        <div class="file-chip"><div class="dot"></div>vercel.json</div>
+        <div class="file-chip"><div class="dot"></div>index.html</div>
+        <div class="file-chip"><div class="dot"></div>user.html</div>
+        <div class="file-chip"><div class="dot"></div>login.html</div>
+        <div class="file-chip"><div class="dot"></div>player.html</div>
+        <div class="file-chip"><div class="dot"></div>onboarding.html</div>
+        <div class="file-chip"><div class="dot"></div>live.html</div>
+        <div class="file-chip"><div class="dot"></div>kspay.html</div>
+        <div class="file-chip"><div class="dot"></div>icons/ folder</div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-icon">🌐</div>
+      <div class="step-body">
+        <h3>Vercel.com pe jao</h3>
+        <p>vercel.com kholo → Login karo (GitHub se) → <strong>"Add New → Project"</strong> click karo</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">📂</div>
+      <div class="step-body">
+        <h3>GitHub repo se deploy karo (Recommended)</h3>
+        <p>Sab files GitHub pe daalo → Vercel se connect karo → Deploy hoga automatically. Ya seedha <code>vercel deploy</code> CLI se kar sakte ho.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">✅</div>
+      <div class="step-body">
+        <h3>URL milegi — Test karo</h3>
+        <p>Deploy ke baad <code>https://ks-movies.vercel.app</code> jaisi URL milegi. Browser mein open karo aur check karo sab pages work kar rahe hain.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 2 -->
+  <div class="phase">
+    <div class="phase-title"><div class="num">2</div> PWA Test Karo (Browser Mein)</div>
+
+    <div class="step">
+      <div class="step-icon">🔍</div>
+      <div class="step-body">
+        <h3>Chrome DevTools mein check karo</h3>
+        <p>Chrome open karo → F12 → <strong>Lighthouse</strong> tab → "Progressive Web App" check karo → Score 90+ aana chahiye</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">📱</div>
+      <div class="step-body">
+        <h3>Mobile pe install karo (test ke liye)</h3>
+        <p>Android phone mein Chrome se apni Vercel URL kholo → Address bar mein <strong>"Install App"</strong> icon dikhega → Install karo → Test karo</p>
+      </div>
+    </div>
+
+    <div class="warning">
+      <strong>⚠️ Important:</strong> HTTPS zaruri hai PWA ke liye. Vercel automatically HTTPS deta hai — toh koi tension nahi!
+    </div>
+  </div>
+
+  <!-- PHASE 3 -->
+  <div class="phase">
+    <div class="phase-title"><div class="num">3</div> APK Banao — PWABuilder Se (Free!)</div>
+
+    <div class="step">
+      <div class="step-icon">🌍</div>
+      <div class="step-body">
+        <h3>PWABuilder.com kholo</h3>
+        <p>Browser mein <code>pwabuilder.com</code> kholo — Microsoft ka official free tool hai</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">🔗</div>
+      <div class="step-body">
+        <h3>Apni URL daalo</h3>
+        <p>Text box mein apni Vercel URL daalo (jaise <code>https://ks-movies.vercel.app</code>) → <strong>"Start"</strong> click karo</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">🤖</div>
+      <div class="step-body">
+        <h3>"Android" choose karo → Download</h3>
+        <p>Packages screen pe <strong>Android</strong> ka button dikhega → Click karo → Options mein sab default chhod do → <strong>"Download"</strong> click karo → .zip milega</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">📦</div>
+      <div class="step-body">
+        <h3>ZIP se APK nikalo</h3>
+        <p>Zip extract karo → Andar <code>app-release-unsigned.apk</code> milega → Direct install ho sakta hai! Ya Play Store ke liye sign karo.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 4 -->
+  <div class="phase">
+    <div class="phase-title"><div class="num">4</div> Android TV Pe Install Karo</div>
+
+    <div class="step">
+      <div class="step-icon">📺</div>
+      <div class="step-body">
+        <h3>APK TV pe transfer karo</h3>
+        <p>APK file ko pendrive/SD card mein daalo → TV se connect karo → File Manager se install karo. Ya <strong>ADB</strong> use karo: <code>adb install app.apk</code></p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">🎮</div>
+      <div class="step-body">
+        <h3>Remote control navigation</h3>
+        <p>KS TV.js automatically D-pad navigation enable kar deta hai! Up/Down/Left/Right arrows se navigate hoga, OK button se select hoga, Back button se wapas jayega.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">🎬</div>
+      <div class="step-body">
+        <h3>Player controls</h3>
+        <p>Video player mein: <strong>Play/Pause</strong> button → play/pause | <strong>→</strong> arrow → 10 sec forward | <strong>←</strong> arrow → 10 sec rewind</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHASE 5 -->
+  <div class="phase">
+    <div class="phase-title"><div class="num">5</div> Optional — Play Store Submit</div>
+
+    <div class="step">
+      <div class="step-icon">🏪</div>
+      <div class="step-body">
+        <h3>Google Play Console</h3>
+        <p>play.google.com/console → $25 one-time fee → APK sign karo → Upload karo → Review process 1-3 din</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-icon">🔑</div>
+      <div class="step-body">
+        <h3>APK Sign karna (Play Store ke liye)</h3>
+        <p>PWABuilder se signed APK bhi milta hai — unke wizard mein keystore generate karne ka option hai. Direct Play Store ready AAB bhi download kar sakte ho!</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box" style="text-align:center;">
+    <h3>🎉 Aaj Ka Target</h3>
+    <p style="margin-bottom:16px;">Vercel deploy + PWABuilder APK = <strong style="color:#fff;">30 minutes mein launch ready!</strong></p>
+    <a href="https://pwabuilder.com" target="_blank" class="btn-big">PWABuilder Kholo →</a>
+  </div>
+
+</div>
+
+<footer>KS MOVIES © 2026 — EXCELLENCE IN CINEMA</footer>
+</body>
+</html>

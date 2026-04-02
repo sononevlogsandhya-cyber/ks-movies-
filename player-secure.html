@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/ks-pwa.js"></script>
+    <script src="/ks-tv.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="referrer" content="strict-origin">
+<title>KS Movies — Secure Player</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!-- Shaka Player (Google's DRM-capable player) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.6/shaka-player.compiled.js"></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<style>
+:root {
+  --bg: #050505;
+  --accent: #e50914;
+  --gold: #FFD700;
+  --text: #ffffff;
+  --muted: #888;
+  --ctrl-bg: rgba(0,0,0,0.75);
+  --ease: cubic-bezier(.4,0,.2,1);
+  --spring: cubic-bezier(.34,1.56,.64,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg); font-family: 'DM Sans', sans-serif;
+  color: var(--text); overflow: hidden;
+  user-select: none; -webkit-user-select: none;
+}
+
+/* ─── ANTI-INSPECT OVERLAY ─── */
+#devtools-warning {
+  display: none;
+  position: fixed; inset: 0; z-index: 99999;
+  background: #000;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 20px; text-align: center; padding: 40px;
+}
+#devtools-warning i { font-size: 3rem; color: var(--accent); }
+#devtools-warning h2 { font-size: 1.5rem; color: #fff; }
+#devtools-warning p { color: #888; max-width: 400px; }
+
+/* ─── PLAYER SHELL ─── */
+#player-shell {
+  position: relative; width: 100vw; height: 100vh;
+  display: flex; flex-direction: column; background: #000;
+}
+
+/* ─── VIDEO AREA ─── */
+#video-area {
+  flex: 1; position: relative; background: #000; overflow: hidden;
+}
+
+video {
+  width: 100%; height: 100%; object-fit: contain; display: block;
+}
+
+/* ─── DYNAMIC WATERMARK ─── */
+#watermark {
+  position: absolute; z-index: 20; pointer-events: none;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px;
+  color: rgba(255,255,255,0.12);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  transition: all 2s ease;
+  font-family: 'DM Sans', monospace;
+}
+
+/* ─── SCREEN RECORD DETECTION OVERLAY ─── */
+#record-shield {
+  display: none;
+  position: absolute; inset: 0; z-index: 50;
+  background: #000;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; text-align: center;
+}
+#record-shield i { font-size: 2.5rem; color: var(--accent); }
+#record-shield p { color: #aaa; font-size: 0.9rem; max-width: 300px; }
+
+/* ─── CONTROLS OVERLAY ─── */
+#ctrl-overlay {
+  position: absolute; inset: 0; z-index: 10;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.55) 0%, transparent 22%,
+    transparent 58%, rgba(0,0,0,0.85) 100%);
+  display: flex; flex-direction: column; justify-content: space-between;
+  padding: 0; opacity: 0;
+  transition: opacity 0.35s var(--ease); pointer-events: none;
+}
+#ctrl-overlay.visible { opacity: 1; pointer-events: all; }
+
+/* Top bar */
+.ctrl-top {
+  display: flex; align-items: center;
+  padding: 18px 20px 0; gap: 14px;
+}
+.back-btn {
+  background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+  color: #fff; border-radius: 8px; padding: 7px 14px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: 0.2s; font-family: inherit;
+}
+.back-btn:hover { background: rgba(255,255,255,0.15); }
+.movie-title-bar {
+  font-size: 1rem; font-weight: 700; opacity: 0.9; flex: 1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.quality-badge {
+  background: rgba(229,9,20,0.15); border: 1px solid rgba(229,9,20,0.4);
+  color: var(--accent); padding: 4px 10px; border-radius: 4px;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 1px;
+}
+
+/* Center play area */
+.ctrl-center {
+  display: flex; align-items: center; justify-content: center;
+  gap: 48px; flex: 1;
+}
+.ctrl-btn-lg {
+  background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.2);
+  color: #fff; border-radius: 50%; width: 58px; height: 58px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; cursor: pointer;
+  transition: all 0.2s var(--spring); backdrop-filter: blur(4px);
+}
+.ctrl-btn-lg:hover { transform: scale(1.12); border-color: #fff; }
+.ctrl-btn-lg.play-pause { width: 68px; height: 68px; font-size: 1.6rem; background: rgba(229,9,20,0.8); border-color: var(--accent); }
+.ctrl-btn-lg.play-pause:hover { background: var(--accent); }
+
+/* Bottom bar */
+.ctrl-bottom { padding: 0 18px 14px; }
+.progress-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.time-display { font-size: 0.8rem; color: rgba(255,255,255,0.8); font-weight: 600; white-space: nowrap; }
+
+/* Progress bar */
+.seek-wrap {
+  flex: 1; height: 4px; background: rgba(255,255,255,0.2);
+  border-radius: 4px; cursor: pointer; position: relative;
+  transition: height 0.2s; overflow: visible;
+}
+.seek-wrap:hover { height: 6px; }
+.seek-buf {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: rgba(255,255,255,0.25); border-radius: 4px;
+}
+.seek-fill {
+  position: absolute; left: 0; top: 0; height: 100%;
+  background: var(--accent); border-radius: 4px;
+  transition: width 0.1s linear;
+}
+.seek-thumb {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 14px; height: 14px; background: #fff; border-radius: 50%;
+  box-shadow: 0 0 6px rgba(0,0,0,0.8);
+  opacity: 0; transition: opacity 0.2s;
+}
+.seek-wrap:hover .seek-thumb { opacity: 1; }
+
+/* Bottom icons row */
+.ctrl-icons {
+  display: flex; align-items: center; gap: 6px;
+}
+.ctrl-icon {
+  background: none; border: none; color: rgba(255,255,255,0.85);
+  font-size: 1.1rem; cursor: pointer; padding: 6px 8px;
+  border-radius: 6px; transition: all 0.15s;
+}
+.ctrl-icon:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.spacer { flex: 1; }
+
+/* Volume slider */
+.vol-wrap {
+  display: flex; align-items: center; gap: 8px;
+}
+.vol-slider {
+  -webkit-appearance: none; appearance: none;
+  width: 80px; height: 4px; background: rgba(255,255,255,0.2);
+  border-radius: 4px; outline: none; cursor: pointer;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 12px; height: 12px;
+  background: #fff; border-radius: 50%;
+}
+
+/* Quality selector */
+.quality-menu {
+  position: absolute; bottom: 70px; right: 20px;
+  background: rgba(15,15,15,0.97); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 8px 0; min-width: 150px;
+  display: none; backdrop-filter: blur(10px);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+}
+.quality-menu.open { display: block; }
+.q-item {
+  padding: 10px 18px; cursor: pointer; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: 0.15s;
+}
+.q-item:hover { background: rgba(255,255,255,0.05); }
+.q-item.active { color: var(--accent); font-weight: 700; }
+.q-badge { font-size: 0.65rem; background: rgba(229,9,20,0.2); color: var(--accent); padding: 2px 6px; border-radius: 4px; }
+
+/* Spinner */
+#spinner {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  width: 52px; height: 52px; z-index: 15;
+  display: none;
+}
+#spinner.active { display: block; }
+.spin-ring {
+  width: 100%; height: 100%; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error screen */
+#error-screen {
+  display: none; position: absolute; inset: 0; z-index: 30;
+  background: rgba(0,0,0,0.92); align-items: center; justify-content: center;
+  flex-direction: column; gap: 16px; text-align: center; padding: 40px;
+}
+#error-screen.visible { display: flex; }
+#error-screen i { font-size: 2.5rem; color: var(--accent); }
+#error-screen h3 { font-size: 1.2rem; }
+#error-screen p { color: var(--muted); font-size: 0.9rem; }
+.err-retry {
+  background: var(--accent); color: #fff; border: none;
+  padding: 10px 28px; border-radius: 6px; font-size: 0.9rem;
+  font-weight: 700; cursor: pointer; font-family: inherit;
+  margin-top: 8px; transition: 0.2s;
+}
+.err-retry:hover { background: #ff2030; }
+
+/* Token expiry warning */
+#token-warning {
+  display: none; position: absolute; top: 80px; left: 50%;
+  transform: translateX(-50%); z-index: 40;
+  background: linear-gradient(135deg,#1a0a00,#3d1800);
+  border: 1px solid rgba(255,165,0,0.4); border-radius: 10px;
+  padding: 12px 22px; text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+}
+#token-warning.visible { display: block; }
+#token-warning p { font-size: 0.85rem; color: #ffb347; font-weight: 700; }
+
+/* DRM badge */
+.drm-badge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.72rem; color: rgba(255,255,255,0.4);
+  padding: 0 4px;
+}
+.drm-dot { width: 6px; height: 6px; border-radius: 50%; background: #46d369; }
+
+/* Session info toast */
+.toast {
+  position: fixed; bottom: 20px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: rgba(20,20,20,0.95); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; padding: 12px 20px; font-size: 0.85rem;
+  z-index: 9999; transition: transform 0.4s var(--spring);
+  pointer-events: none; white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Fullscreen */
+:fullscreen #player-shell { width: 100vw; height: 100vh; }
+:-webkit-full-screen #player-shell { width: 100vw; height: 100vh; }
+
+/* Prevent text selection during seek */
+.seeking * { pointer-events: none; }
+
+/* Screen blackout for screenshot attempts */
+@media print {
+  body { visibility: hidden; }
+  body::after {
+    content: "Content cannot be printed — KS Movies";
+    visibility: visible; display: block; text-align: center; margin-top: 100px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- DevTools Warning -->
+<div id="devtools-warning">
+  <i class="fa-solid fa-shield-halved"></i>
+  <h2>Security Warning</h2>
+  <p>Developer tools are not allowed on this page. Please close DevTools to continue watching.</p>
+</div>
+
+<div id="player-shell">
+  <div id="video-area">
+    <!-- Dynamic Watermark (position changes every 30s) -->
+    <div id="watermark"></div>
+
+    <!-- Screen Record Shield -->
+    <div id="record-shield">
+      <i class="fa-solid fa-video-slash"></i>
+      <p>Playback paused — screen recording detected. Please stop recording to continue.</p>
+    </div>
+
+    <!-- Main Video -->
+    <video id="main-video" playsinline crossorigin="anonymous"></video>
+
+    <!-- Spinner -->
+    <div id="spinner"><div class="spin-ring"></div></div>
+
+    <!-- Error Screen -->
+    <div id="error-screen">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <h3 id="err-title">Playback Error</h3>
+      <p id="err-msg">Something went wrong. Please try again.</p>
+      <button class="err-retry" onclick="retryPlayback()">Try Again</button>
+    </div>
+
+    <!-- Token Warning -->
+    <div id="token-warning">
+      <p><i class="fa-solid fa-clock"></i> &nbsp;Your session expires in <span id="token-countdown">5:00</span> — please refresh.</p>
+    </div>
+
+    <!-- Controls Overlay -->
+    <div id="ctrl-overlay">
+      <!-- Top -->
+      <div class="ctrl-top">
+        <button class="back-btn" onclick="goBack()">
+          <i class="fa-solid fa-chevron-left"></i> Back
+        </button>
+        <div class="movie-title-bar" id="movie-title">Loading…</div>
+        <div class="drm-badge"><div class="drm-dot"></div><span id="drm-label">Encrypted</span></div>
+        <div class="quality-badge" id="quality-label">HD</div>
+      </div>
+
+      <!-- Center Playback Controls -->
+      <div class="ctrl-center">
+        <button class="ctrl-btn-lg" onclick="seek(-10)" title="Rewind 10s">
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <button class="ctrl-btn-lg play-pause" id="play-btn" onclick="togglePlay()">
+          <i class="fa-solid fa-play" id="play-icon"></i>
+        </button>
+        <button class="ctrl-btn-lg" onclick="seek(10)" title="Forward 10s">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+
+      <!-- Bottom -->
+      <div class="ctrl-bottom">
+        <!-- Progress -->
+        <div class="progress-row">
+          <span class="time-display" id="time-cur">0:00</span>
+          <div class="seek-wrap" id="seek-wrap">
+            <div class="seek-buf" id="seek-buf"></div>
+            <div class="seek-fill" id="seek-fill"></div>
+            <div class="seek-thumb" id="seek-thumb"></div>
+          </div>
+          <span class="time-display" id="time-dur">0:00</span>
+        </div>
+
+        <!-- Icon Row -->
+        <div class="ctrl-icons">
+          <div class="vol-wrap">
+            <button class="ctrl-icon" id="vol-btn" onclick="toggleMute()">
+              <i class="fa-solid fa-volume-high" id="vol-icon"></i>
+            </button>
+            <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="100">
+          </div>
+
+          <div class="spacer"></div>
+
+          <button class="ctrl-icon" onclick="toggleQualityMenu()" title="Quality">
+            <i class="fa-solid fa-sliders"></i>
+          </button>
+          <button class="ctrl-icon" onclick="togglePip()" title="Picture-in-Picture">
+            <i class="fa-solid fa-clone"></i>
+          </button>
+          <button class="ctrl-icon" onclick="toggleFullscreen()" id="fs-btn" title="Fullscreen">
+            <i class="fa-solid fa-expand" id="fs-icon"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quality Menu -->
+    <div class="quality-menu" id="quality-menu">
+      <div class="q-item active" data-q="auto">
+        Auto <span class="q-badge">ABR</span>
+      </div>
+      <div class="q-item" data-q="1080">1080p <span class="q-badge">FHD</span></div>
+      <div class="q-item" data-q="720">720p</div>
+      <div class="q-item" data-q="480">480p</div>
+      <div class="q-item" data-q="360">360p</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  KS MOVIES — SECURE PLAYER v2.0
+//  Anti-piracy | DRM | Token Auth | Watermark | ABR
+// ═══════════════════════════════════════════════════════════
+
+// ─── Firebase Config ───
+const firebaseConfig = {
+  apiKey: "AIzaSyBNyfzP26mSnB0qsm24zIeTM2K9sVBV1zc",
+  authDomain: "ks-movies-98e3e.firebaseapp.com",
+  databaseURL: "https://ks-movies-98e3e-default-rtdb.firebaseio.com",
+  projectId: "ks-movies-98e3e",
+  storageBucket: "ks-movies-98e3e.firebasestorage.app",
+  messagingSenderId: "392323800373",
+  appId: "1:392323800373:web:b289cf81f4c0232d66007c"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+// ─── URL Params ───
+const params = new URLSearchParams(location.search);
+const movieId    = params.get('id')    || '';
+const streamUrl  = params.get('url')   || '';   // Should be signed HLS/DASH URL
+const sessionToken = params.get('token') || ''; // JWT session token
+
+// ─── Player State ───
+let shakaPlayer = null;
+let currentUser = null;
+let currentUserData = null;
+let watermarkInterval = null;
+let tokenCheckInterval = null;
+let sessionLogged = false;
+let playbackLogRef = null;
+let isPlaying = false;
+let ctrlTimeout = null;
+let qualityMenuOpen = false;
+let devtoolsOpen = false;
+
+const videoEl    = document.getElementById('main-video');
+const overlay    = document.getElementById('ctrl-overlay');
+const spinner    = document.getElementById('spinner');
+const errScreen  = document.getElementById('error-screen');
+const seekFill   = document.getElementById('seek-fill');
+const seekBuf    = document.getElementById('seek-buf');
+const seekThumb  = document.getElementById('seek-thumb');
+const timeCur    = document.getElementById('time-cur');
+const timeDur    = document.getElementById('time-dur');
+const volSlider  = document.getElementById('vol-slider');
+const watermark  = document.getElementById('watermark');
+
+// ══════════════════════════════════════
+//  1. DEVTOOLS DETECTION
+// ══════════════════════════════════════
+(function detectDevTools() {
+  const threshold = 160;
+  function check() {
+    const open = (window.outerWidth - window.innerWidth > threshold) ||
+                 (window.outerHeight - window.innerHeight > threshold);
+    if (open && !devtoolsOpen) {
+      devtoolsOpen = true;
+      document.getElementById('devtools-warning').style.display = 'flex';
+      pausePlayback();
+      logSecurityEvent('devtools_open');
+    } else if (!open && devtoolsOpen) {
+      devtoolsOpen = false;
+      document.getElementById('devtools-warning').style.display = 'none';
+    }
+  }
+  setInterval(check, 1000);
+  // Disable F12, Ctrl+Shift+I/J/C, Ctrl+U
+  document.addEventListener('keydown', e => {
+    const blocked = e.keyCode === 123 ||
+      (e.ctrlKey && e.shiftKey && [73,74,67].includes(e.keyCode)) ||
+      (e.ctrlKey && e.keyCode === 85);
+    if (blocked) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+})();
+
+// ══════════════════════════════════════
+//  2. RIGHT-CLICK & SELECTION BLOCK
+// ══════════════════════════════════════
+document.addEventListener('contextmenu', e => e.preventDefault(), true);
+document.addEventListener('selectstart', e => e.preventDefault(), true);
+document.addEventListener('dragstart', e => e.preventDefault(), true);
+
+// ══════════════════════════════════════
+//  3. SCREEN RECORDING DETECTION
+// ══════════════════════════════════════
+async function checkScreenCapture() {
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+      const shield = document.getElementById('record-shield');
+      // Listen for visibility changes (often triggered during recording)
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          // Pause when tab loses focus — helps prevent screen cap
+          if (!videoEl.paused) videoEl.pause();
+        }
+      });
+    }
+  } catch(e) {}
+}
+checkScreenCapture();
+
+// CSS approach: force black background during print/screenshot
+const printStyle = document.createElement('style');
+printStyle.textContent = `@media print { * { display: none !important; } }`;
+document.head.appendChild(printStyle);
+
+// ══════════════════════════════════════
+//  4. AUTH & SESSION VALIDATION
+// ══════════════════════════════════════
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    showError('Authentication Required', 'Please log in to watch this content.');
+    return;
+  }
+  currentUser = user;
+  
+  // Load user data & validate plan
+  try {
+    const snap = await db.ref(`users/${user.uid}`).once('value');
+    currentUserData = snap.val() || {};
+    
+    const plan = currentUserData.plan || 'free';
+    if (plan === 'free' || plan === 'none') {
+      showError('Subscription Required', 'Upgrade your plan to watch in HD quality.');
+      return;
+    }
+    
+    // Check concurrent stream limit
+    const activeSessions = currentUserData.activeSessions || {};
+    const sessionCount = Object.keys(activeSessions).length;
+    const maxStreams = plan === 'premium' ? 4 : plan === 'standard' ? 2 : 1;
+    
+    if (sessionCount >= maxStreams) {
+      showError('Too Many Streams', `Your ${plan} plan allows ${maxStreams} screen${maxStreams > 1 ? 's' : ''}. Please stop watching on another device.`);
+      return;
+    }
+    
+    // Register this session
+    playbackLogRef = db.ref(`sessions/${user.uid}/${movieId}_${Date.now()}`);
+    await playbackLogRef.set({
+      movieId, startTime: Date.now(), ip: 'detected-server-side',
+      userAgent: navigator.userAgent.substring(0, 100),
+      plan, active: true
+    });
+    // Remove on disconnect
+    playbackLogRef.onDisconnect().remove();
+    
+    // Initialize player
+    initWatermark(user);
+    initPlayer();
+    startTokenWatch();
+    
+  } catch(err) {
+    console.warn('Session setup error:', err);
+    initPlayer(); // Still init in degraded mode
+  }
+});
+
+// ══════════════════════════════════════
+//  5. DYNAMIC WATERMARK SYSTEM
+// ══════════════════════════════════════
+function initWatermark(user) {
+  const uid = user.uid.substring(0, 8).toUpperCase();
+  const email = user.email ? user.email.split('@')[0] : 'USER';
+  const text = `KS-${uid} • ${email} • ${new Date().toLocaleDateString('en-IN')}`;
+  watermark.textContent = text;
+  
+  function moveWatermark() {
+    const maxX = window.innerWidth - watermark.offsetWidth - 20;
+    const maxY = window.innerHeight - 60;
+    const x = Math.floor(Math.random() * Math.max(maxX, 100));
+    const y = Math.floor(Math.random() * Math.max(maxY, 80)) + 40;
+    watermark.style.left = x + 'px';
+    watermark.style.top = y + 'px';
+    // Vary opacity subtly
+    watermark.style.color = `rgba(255,255,255,${0.07 + Math.random() * 0.08})`;
+  }
+  
+  moveWatermark();
+  watermarkInterval = setInterval(moveWatermark, 25000); // Move every 25s
+}
+
+// ══════════════════════════════════════
+//  6. TOKEN/SESSION EXPIRY WATCH
+// ══════════════════════════════════════
+function startTokenWatch() {
+  if (!sessionToken) return;
+  
+  // Decode JWT expiry (without verification — server handles that)
+  try {
+    const parts = sessionToken.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(atob(parts[1]));
+      if (payload.exp) {
+        const expiresAt = payload.exp * 1000;
+        tokenCheckInterval = setInterval(() => {
+          const remaining = expiresAt - Date.now();
+          if (remaining <= 0) {
+            clearInterval(tokenCheckInterval);
+            showError('Session Expired', 'Your viewing session has expired. Please refresh the page.');
+            pausePlayback();
+          } else if (remaining < 5 * 60 * 1000) {
+            // Warn 5 minutes before expiry
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            document.getElementById('token-warning').classList.add('visible');
+            document.getElementById('token-countdown').textContent =
+              `${mins}:${secs.toString().padStart(2,'0')}`;
+          }
+        }, 5000);
+      }
+    }
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════
+//  7. SHAKA PLAYER INIT (DRM + HLS + DASH)
+// ══════════════════════════════════════
+async function initPlayer() {
+  shaka.polyfill.installAll();
+  
+  if (!shaka.Player.isBrowserSupported()) {
+    showError('Browser Not Supported', 'Please use Chrome, Firefox, or Safari to watch.');
+    return;
+  }
+  
+  shakaPlayer = new shaka.Player(videoEl);
+  
+  // ── DRM Configuration ──
+  shakaPlayer.configure({
+    drm: {
+      servers: {
+        // Google Widevine (Chrome, Android, Firefox)
+        'com.widevine.alpha': 'https://api.ksmovies.com/drm/widevine?token=' + sessionToken,
+        // Microsoft PlayReady (Edge, IE)
+        'com.microsoft.playready': 'https://api.ksmovies.com/drm/playready?token=' + sessionToken,
+      },
+      advanced: {
+        'com.widevine.alpha': {
+          videoRobustness: 'SW_SECURE_CRYPTO',
+          audioRobustness: 'SW_SECURE_CRYPTO',
+        }
+      }
+    },
+    // Adaptive Bitrate settings
+    abr: {
+      enabled: true,
+      defaultBandwidthEstimate: 1e6,     // Start at 1Mbps
+      switchInterval: 8,                  // Check every 8s
+      bandwidthUpgradeTarget: 0.85,
+      bandwidthDowngradeTarget: 0.95,
+    },
+    streaming: {
+      bufferingGoal: 30,                  // Buffer 30s ahead
+      rebufferingGoal: 2,
+      bufferBehind: 30,
+      retryParameters: {
+        maxAttempts: 4,
+        baseDelay: 1000,
+        backoffFactor: 2,
+        fuzzFactor: 0.5,
+      },
+    },
+    manifest: {
+      retryParameters: {
+        maxAttempts: 3,
+        baseDelay: 500,
+      }
+    },
+  });
+
+  // ── Network Filters (token injection + CORS) ──
+  shakaPlayer.getNetworkingEngine().registerRequestFilter((type, request) => {
+    // Inject auth token to every segment request
+    if (sessionToken) {
+      request.headers['X-KS-Token'] = sessionToken;
+      request.headers['X-KS-User'] = currentUser ? currentUser.uid : '';
+    }
+    // Force same-origin for key requests
+    request.allowCrossSiteCredentials = false;
+  });
+
+  // ── Response Filter (detect token expiry from server) ──
+  shakaPlayer.getNetworkingEngine().registerResponseFilter((type, response) => {
+    const authError = response.headers['x-ks-auth-error'];
+    if (authError === 'token_expired') {
+      showError('Session Expired', 'Your session has expired. Please go back and reopen.');
+    }
+  });
+
+  // ── Error Handler ──
+  shakaPlayer.addEventListener('error', e => {
+    const err = e.detail;
+    console.error('Shaka error:', err.code, err.message);
+    if (err.code === shaka.util.Error.Code.LICENSE_REQUEST_FAILED) {
+      showError('DRM Error', 'Content license failed. Please try again or contact support.');
+    } else if (err.code === shaka.util.Error.Code.HTTP_ERROR) {
+      showError('Network Error', 'Stream unavailable. Check your connection and try again.');
+    } else {
+      showError('Playback Error', 'Unable to play this content. Error: ' + err.code);
+    }
+    logSecurityEvent('playback_error', { code: err.code });
+  });
+
+  // ── Buffering indicator ──
+  shakaPlayer.addEventListener('buffering', e => {
+    e.buffering ? showSpinner() : hideSpinner();
+  });
+
+  // ── Load content ──
+  await loadContent();
+  
+  // ── Quality tracking ──
+  shakaPlayer.addEventListener('adaptation', () => {
+    const tracks = shakaPlayer.getVariantTracks();
+    const active = tracks.find(t => t.active);
+    if (active) {
+      const h = active.height || 0;
+      const label = h >= 2160 ? '4K' : h >= 1080 ? '1080p' : h >= 720 ? '720p' : h >= 480 ? '480p' : h + 'p';
+      document.getElementById('quality-label').textContent = label;
+    }
+  });
+  
+  updateDrmLabel();
+}
+
+async function loadContent() {
+  const url = streamUrl || buildDemoUrl();
+  if (!url) { showError('No Content', 'No video URL provided.'); return; }
+  
+  showSpinner();
+  try {
+    await shakaPlayer.load(url);
+    hideSpinner();
+    videoEl.play();
+    isPlaying = true;
+    updatePlayIcon();
+    loadMovieMeta();
+  } catch(err) {
+    hideSpinner();
+    // Fallback: try loading as direct video if shaka fails
+    tryDirectLoad(url);
+  }
+}
+
+function buildDemoUrl() {
+  // Demo HLS stream for testing — replace with real signed URL
+  return 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+}
+
+function tryDirectLoad(url) {
+  // Fallback to native video for non-DRM content
+  if (videoEl.canPlayType('application/vnd.apple.mpegurl') && url.includes('.m3u8')) {
+    videoEl.src = url;
+    videoEl.load();
+    videoEl.play().then(() => { isPlaying = true; updatePlayIcon(); }).catch(() => {
+      showError('Playback Failed', 'Could not play this video. Please try another browser.');
+    });
+  } else {
+    showError('Format Not Supported', 'Your browser cannot play this stream.');
+  }
+}
+
+function updateDrmLabel() {
+  const label = document.getElementById('drm-label');
+  const dot = document.querySelector('.drm-dot');
+  if (shakaPlayer) {
+    const keys = shakaPlayer.keySystem();
+    if (keys === 'com.widevine.alpha') { label.textContent = 'Widevine'; dot.style.background = '#46d369'; }
+    else if (keys === 'com.microsoft.playready') { label.textContent = 'PlayReady'; dot.style.background = '#4da6ff'; }
+    else if (keys === 'com.apple.fps') { label.textContent = 'FairPlay'; dot.style.background = '#ff9f46'; }
+    else { label.textContent = 'Encrypted'; }
+  }
+}
+
+// ══════════════════════════════════════
+//  8. VIDEO CONTROLS
+// ══════════════════════════════════════
+function togglePlay() {
+  if (videoEl.paused) {
+    videoEl.play(); isPlaying = true;
+  } else {
+    videoEl.pause(); isPlaying = false;
+  }
+  updatePlayIcon();
+}
+
+function pausePlayback() {
+  videoEl.pause(); isPlaying = false; updatePlayIcon();
+}
+
+function updatePlayIcon() {
+  const icon = document.getElementById('play-icon');
+  icon.className = isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+}
+
+function seek(secs) {
+  videoEl.currentTime = Math.max(0, Math.min(videoEl.duration || 0, videoEl.currentTime + secs));
+}
+
+function toggleMute() {
+  videoEl.muted = !videoEl.muted;
+  document.getElementById('vol-icon').className = videoEl.muted
+    ? 'fa-solid fa-volume-xmark' : 'fa-solid fa-volume-high';
+  volSlider.value = videoEl.muted ? 0 : videoEl.volume * 100;
+}
+
+volSlider.addEventListener('input', () => {
+  videoEl.volume = volSlider.value / 100;
+  videoEl.muted = (volSlider.value == 0);
+  document.getElementById('vol-icon').className =
+    videoEl.muted ? 'fa-solid fa-volume-xmark' :
+    volSlider.value < 50 ? 'fa-solid fa-volume-low' : 'fa-solid fa-volume-high';
+});
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    (document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)
+      .call(document.documentElement);
+    document.getElementById('fs-icon').className = 'fa-solid fa-compress';
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    document.getElementById('fs-icon').className = 'fa-solid fa-expand';
+  }
+}
+
+async function togglePip() {
+  try {
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+    } else if (videoEl.requestPictureInPicture) {
+      await videoEl.requestPictureInPicture();
+    }
+  } catch(e) { showToast('PiP not supported on this device'); }
+}
+
+function toggleQualityMenu() {
+  qualityMenuOpen = !qualityMenuOpen;
+  document.getElementById('quality-menu').classList.toggle('open', qualityMenuOpen);
+}
+
+// Quality selection
+document.querySelectorAll('.q-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const q = item.dataset.q;
+    document.querySelectorAll('.q-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+    toggleQualityMenu();
+    
+    if (!shakaPlayer) return;
+    if (q === 'auto') {
+      shakaPlayer.configure('abr.enabled', true);
+      showToast('Quality: Auto (ABR)');
+    } else {
+      shakaPlayer.configure('abr.enabled', false);
+      const tracks = shakaPlayer.getVariantTracks();
+      const target = parseInt(q);
+      // Find closest track to target height
+      const best = tracks.filter(t => t.height).sort((a,b) =>
+        Math.abs(a.height - target) - Math.abs(b.height - target))[0];
+      if (best) {
+        shakaPlayer.selectVariantTrack(best, true);
+        showToast(`Quality: ${best.height}p`);
+      }
+    }
+  });
+});
+
+// ── Progress Bar ──
+videoEl.addEventListener('timeupdate', updateProgress);
+videoEl.addEventListener('progress', updateBuffer);
+videoEl.addEventListener('loadedmetadata', () => {
+  timeDur.textContent = formatTime(videoEl.duration);
+  resumeProgress();
+});
+videoEl.addEventListener('playing', () => { isPlaying = true; updatePlayIcon(); hideSpinner(); });
+videoEl.addEventListener('pause', () => { isPlaying = false; updatePlayIcon(); });
+videoEl.addEventListener('waiting', showSpinner);
+videoEl.addEventListener('canplay', hideSpinner);
+videoEl.addEventListener('ended', onEnded);
+
+function updateProgress() {
+  const d = videoEl.duration || 0, c = videoEl.currentTime || 0;
+  const pct = d ? (c / d * 100) : 0;
+  seekFill.style.width = pct + '%';
+  seekThumb.style.left = pct + '%';
+  timeCur.textContent = formatTime(c);
+  
+  // Save position every 15s
+  if (currentUser && movieId && Math.floor(c) % 15 === 0) {
+    db.ref(`users/${currentUser.uid}/watched/${movieId}/position`).set(c).catch(()=>{});
+  }
+}
+
+function updateBuffer() {
+  if (!videoEl.buffered.length) return;
+  const d = videoEl.duration || 0;
+  const end = videoEl.buffered.end(videoEl.buffered.length - 1);
+  seekBuf.style.width = (d ? end / d * 100 : 0) + '%';
+}
+
+async function resumeProgress() {
+  if (!currentUser || !movieId) return;
+  try {
+    const snap = await db.ref(`users/${currentUser.uid}/watched/${movieId}/position`).once('value');
+    const pos = snap.val();
+    if (pos && pos > 10 && pos < videoEl.duration - 10) {
+      videoEl.currentTime = pos;
+      showToast(`Resumed from ${formatTime(pos)}`);
+    }
+  } catch(e) {}
+}
+
+// Seek bar interaction
+const seekWrap = document.getElementById('seek-wrap');
+let isSeeking = false;
+
+function getSeekPct(e) {
+  const rect = seekWrap.getBoundingClientRect();
+  return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+}
+seekWrap.addEventListener('mousedown', e => {
+  isSeeking = true;
+  videoEl.currentTime = getSeekPct(e) * (videoEl.duration || 0);
+});
+document.addEventListener('mousemove', e => {
+  if (!isSeeking) return;
+  videoEl.currentTime = getSeekPct(e) * (videoEl.duration || 0);
+});
+document.addEventListener('mouseup', () => { isSeeking = false; });
+
+// Touch seek
+seekWrap.addEventListener('touchstart', e => {
+  isSeeking = true;
+  videoEl.currentTime = getSeekPct(e.touches[0]) * (videoEl.duration || 0);
+}, { passive: true });
+document.addEventListener('touchmove', e => {
+  if (!isSeeking) return;
+  videoEl.currentTime = getSeekPct(e.touches[0]) * (videoEl.duration || 0);
+}, { passive: true });
+document.addEventListener('touchend', () => { isSeeking = false; });
+
+// ── Controls Show/Hide ──
+function showControls() {
+  overlay.classList.add('visible');
+  clearTimeout(ctrlTimeout);
+  ctrlTimeout = setTimeout(() => {
+    if (!qualityMenuOpen) overlay.classList.remove('visible');
+  }, 3500);
+}
+
+document.getElementById('video-area').addEventListener('mousemove', showControls);
+document.getElementById('video-area').addEventListener('touchstart', showControls, { passive: true });
+document.getElementById('video-area').addEventListener('click', e => {
+  if (e.target === videoEl || e.target.id === 'ctrl-overlay') togglePlay();
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+  switch(e.key) {
+    case ' ': case 'k': e.preventDefault(); togglePlay(); break;
+    case 'ArrowRight': seek(10); break;
+    case 'ArrowLeft': seek(-10); break;
+    case 'ArrowUp': e.preventDefault(); videoEl.volume = Math.min(1, videoEl.volume + 0.1); break;
+    case 'ArrowDown': e.preventDefault(); videoEl.volume = Math.max(0, videoEl.volume - 0.1); break;
+    case 'f': toggleFullscreen(); break;
+    case 'm': toggleMute(); break;
+  }
+});
+
+function onEnded() {
+  isPlaying = false; updatePlayIcon();
+  if (currentUser && movieId) {
+    db.ref(`users/${currentUser.uid}/watched/${movieId}`).update({
+      completed: true, completedAt: Date.now()
+    }).catch(()=>{});
+  }
+  showControls();
+}
+
+// ══════════════════════════════════════
+//  9. LOGGING & MONITORING
+// ══════════════════════════════════════
+function logSecurityEvent(type, extra = {}) {
+  if (!currentUser) return;
+  db.ref(`security_logs/${currentUser.uid}`).push({
+    type, movieId, timestamp: Date.now(),
+    ua: navigator.userAgent.substring(0, 80),
+    ...extra
+  }).catch(() => {});
+}
+
+// Log playback start
+setTimeout(() => {
+  if (currentUser) logSecurityEvent('playback_start');
+}, 5000);
+
+// Detect unusual seek patterns (potential recording/scraping)
+let seekCount = 0;
+videoEl.addEventListener('seeked', () => {
+  seekCount++;
+  if (seekCount > 30) {
+    logSecurityEvent('excessive_seeking', { count: seekCount });
+    seekCount = 0;
+  }
+});
+
+// ══════════════════════════════════════
+//  10. UTILITY FUNCTIONS
+// ══════════════════════════════════════
+async function loadMovieMeta() {
+  if (!movieId) return;
+  try {
+    const snap = await db.ref(`movies/${movieId}`).once('value');
+    const movie = snap.val();
+    if (movie) {
+      document.getElementById('movie-title').textContent = movie.title || 'KS Movies';
+      document.title = `${movie.title || 'Movie'} — KS Movies`;
+    }
+  } catch(e) {}
+}
+
+function showError(title, msg) {
+  document.getElementById('err-title').textContent = title;
+  document.getElementById('err-msg').textContent = msg;
+  errScreen.classList.add('visible');
+  hideSpinner();
+}
+
+function retryPlayback() {
+  errScreen.classList.remove('visible');
+  loadContent();
+}
+
+function showSpinner() { spinner.classList.add('active'); }
+function hideSpinner() { spinner.classList.remove('active'); }
+
+function showToast(msg, duration = 2500) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), duration);
+}
+
+function formatTime(s) {
+  if (isNaN(s)) return '0:00';
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return h > 0
+    ? `${h}:${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`
+    : `${m}:${sec.toString().padStart(2,'0')}`;
+}
+
+function goBack() {
+  if (playbackLogRef) playbackLogRef.remove().catch(()=>{});
+  if (watermarkInterval) clearInterval(watermarkInterval);
+  if (tokenCheckInterval) clearInterval(tokenCheckInterval);
+  window.history.back() || (window.location.href = 'user.html');
+}
+
+// Cleanup on page leave
+window.addEventListener('beforeunload', () => {
+  if (playbackLogRef) playbackLogRef.remove();
+});
+
+// ══════════════════════════════════════
+//  SHOW CONTROLS ON LOAD
+// ══════════════════════════════════════
+showControls();
+</script>
+</body>
+</html>

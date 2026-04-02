@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/ks-pwa.js"></script>
+    <script src="/ks-tv.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KS Movies — Secure Streaming Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --red: #e50914;
+    --red2: #ff1e2d;
+    --gold: #f5c518;
+    --green: #46d369;
+    --blue: #4da6ff;
+    --bg: #080808;
+    --surface: #111;
+    --surface2: #1a1a1a;
+    --border: rgba(255,255,255,0.08);
+    --text: #f0f0f0;
+    --muted: #888;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─ HEADER ─ */
+  .doc-header {
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a0000 50%, #0a0a0a 100%);
+    border-bottom: 1px solid rgba(229,9,20,0.25);
+    padding: 60px 8% 50px;
+    position: relative;
+    overflow: hidden;
+  }
+  .doc-header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 70% 50%, rgba(229,9,20,0.12) 0%, transparent 60%);
+  }
+  .doc-header-inner { position: relative; max-width: 900px; margin: 0 auto; }
+  .logo-doc {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 1.2rem; letter-spacing: 3px;
+    color: var(--red); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-doc::before {
+    content: ''; display: inline-block; width: 28px; height: 2px;
+    background: var(--red);
+  }
+  .doc-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    letter-spacing: 2px; line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .doc-title span { color: var(--red); }
+  .doc-subtitle {
+    color: var(--muted); font-size: 1.05rem; margin-bottom: 32px;
+  }
+  .doc-meta {
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .doc-meta-item {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .doc-meta-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); }
+  .doc-meta-value { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+
+  /* ─ LAYOUT ─ */
+  .doc-body {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 60px 6% 100px;
+  }
+
+  /* ─ TABLE OF CONTENTS ─ */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px 36px;
+    margin-bottom: 60px;
+  }
+  .toc-title {
+    font-family: 'Bebas Neue', cursive;
+    font-size: 1.2rem; letter-spacing: 2px;
+    color: var(--muted); margin-bottom: 20px;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 8px;
+  }
+  .toc-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-radius: 8px;
+    text-decoration: none; color: var(--text);
+    font-size: 0.88rem; font-weight: 600;
+    transition: 0.15s; border: 1px solid transparent;
+  }
+  .toc-item:hover { background: rgba(229,9,20,0.08); border-color: rgba(229,9,20,0.2); color: #fff; }
+  .toc-num {
+    width: 24px; height: 24px; border-radius: 6px;
+    background: rgba(229,9,20,0.15); border: 1px solid rgba(229,9,20,0.3);
+    color: var(--red); font-size: 0.7rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* ─ SECTIONS ─ */
+  .section {
+    margin-bottom: 56px;
+    scroll-margin-top: 20px;
+  }
+  .section-header {
+    display: flex; align-items: flex-start; gap: 16px;
+    margin-bottom: 24px; padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-num {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: linear-gradient(135deg, rgba(229,9,20,0.2), rgba(229,9,20,0.05));
+    border: 1px solid rgba(229,9,20,0.35);
+    color: var(--red); font-weight: 800; font-size: 0.95rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 3px;
+  }
+  .section-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.5rem; font-weight: 800;
+    line-height: 1.2;
+  }
+  .section-subtitle {
+    font-size: 0.85rem; color: var(--muted); margin-top: 4px; font-weight: 500;
+  }
+
+  p { color: #ccc; margin-bottom: 14px; font-size: 0.95rem; }
+  
+  /* ─ CARDS ─ */
+  .card-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px; margin: 20px 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .card-icon { font-size: 1.5rem; margin-bottom: 10px; }
+  .card-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 6px; }
+  .card-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+  .card.accent { border-color: rgba(229,9,20,0.3); background: rgba(229,9,20,0.04); }
+  .card.green { border-color: rgba(70,211,105,0.3); background: rgba(70,211,105,0.04); }
+  .card.blue { border-color: rgba(77,166,255,0.3); background: rgba(77,166,255,0.04); }
+  .card.gold { border-color: rgba(245,197,24,0.3); background: rgba(245,197,24,0.04); }
+
+  /* ─ CODE BLOCKS ─ */
+  .code-block {
+    background: #0d0d0d;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-left: 3px solid var(--red);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .code-label {
+    font-size: 0.68rem; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--muted); margin-bottom: 10px; display: block;
+    font-family: var(--font-mono);
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.82rem; line-height: 1.8;
+    color: #ddd; display: block; white-space: pre;
+  }
+  .kw { color: #ff79c6; }
+  .str { color: #50fa7b; }
+  .cm { color: #6272a4; font-style: italic; }
+  .fn { color: #8be9fd; }
+  .num { color: #bd93f9; }
+
+  /* ─ SECURITY TABLE ─ */
+  .sec-table {
+    width: 100%; border-collapse: collapse; margin: 20px 0;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .sec-table th {
+    background: var(--surface2); padding: 14px 18px;
+    font-size: 0.78rem; text-transform: uppercase;
+    letter-spacing: 1.5px; color: var(--muted);
+    text-align: left; font-weight: 700;
+  }
+  .sec-table td {
+    padding: 14px 18px; font-size: 0.88rem;
+    border-top: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .sec-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .sec-table td:first-child { font-weight: 700; color: #fff; }
+  .sec-table td:last-child { color: var(--muted); }
+
+  /* ─ BADGE ─ */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 0.5px;
+  }
+  .badge-red { background: rgba(229,9,20,0.15); color: var(--red); border: 1px solid rgba(229,9,20,0.3); }
+  .badge-green { background: rgba(70,211,105,0.12); color: var(--green); border: 1px solid rgba(70,211,105,0.25); }
+  .badge-blue { background: rgba(77,166,255,0.12); color: var(--blue); border: 1px solid rgba(77,166,255,0.25); }
+  .badge-gold { background: rgba(245,197,24,0.12); color: var(--gold); border: 1px solid rgba(245,197,24,0.25); }
+
+  /* ─ ARCHITECTURE DIAGRAM ─ */
+  .arch-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    margin: 24px 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    line-height: 1.9;
+    color: #aaa;
+    overflow-x: auto;
+  }
+  .arch-diagram .layer {
+    margin: 12px 0;
+    padding: 14px 18px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+  .arch-diagram .layer-label {
+    font-size: 0.65rem; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .arch-diagram .layer-content {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+  }
+  .arch-box {
+    background: var(--surface2);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px; padding: 6px 14px;
+    font-size: 0.78rem; color: #ddd;
+    white-space: nowrap;
+  }
+  .arch-box.red { border-color: rgba(229,9,20,0.4); color: var(--red); background: rgba(229,9,20,0.08); }
+  .arch-box.green { border-color: rgba(70,211,105,0.4); color: var(--green); background: rgba(70,211,105,0.06); }
+  .arch-box.blue { border-color: rgba(77,166,255,0.4); color: var(--blue); background: rgba(77,166,255,0.06); }
+  .arch-box.gold { border-color: rgba(245,197,24,0.4); color: var(--gold); background: rgba(245,197,24,0.06); }
+  .arch-arrow { color: var(--muted); font-size: 1rem; }
+
+  /* ─ STEPS LIST ─ */
+  .steps { list-style: none; margin: 16px 0; }
+  .steps li {
+    display: flex; gap: 14px; padding: 14px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.92rem;
+  }
+  .steps li:last-child { border-bottom: none; }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: rgba(229,9,20,0.12); border: 1px solid rgba(229,9,20,0.3);
+    color: var(--red); font-size: 0.75rem; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .step-content strong { display: block; color: #fff; font-size: 0.92rem; margin-bottom: 2px; }
+  .step-content span { color: var(--muted); font-size: 0.85rem; }
+
+  /* ─ CALLOUT ─ */
+  .callout {
+    border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+    display: flex; gap: 14px; align-items: flex-start;
+    font-size: 0.88rem;
+  }
+  .callout-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+  .callout.warning { background: rgba(245,197,24,0.07); border: 1px solid rgba(245,197,24,0.25); }
+  .callout.info { background: rgba(77,166,255,0.07); border: 1px solid rgba(77,166,255,0.2); }
+  .callout.success { background: rgba(70,211,105,0.07); border: 1px solid rgba(70,211,105,0.2); }
+  .callout.danger { background: rgba(229,9,20,0.07); border: 1px solid rgba(229,9,20,0.2); }
+  .callout strong { display: block; margin-bottom: 4px; }
+  .callout.warning strong { color: var(--gold); }
+  .callout.info strong { color: var(--blue); }
+  .callout.success strong { color: var(--green); }
+  .callout.danger strong { color: var(--red); }
+
+  /* ─ PRINT ─ */
+  @media print {
+    body { background: #fff; color: #000; }
+    .doc-header { background: #f5f5f5; border-bottom: 2px solid #e50914; }
+    .code-block { background: #f9f9f9; border-left-color: #e50914; }
+    code { color: #333; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="doc-header">
+  <div class="doc-header-inner">
+    <div class="logo-doc">KS MOVIES</div>
+    <h1 class="doc-title">SECURE <span>STREAMING</span><br>ARCHITECTURE</h1>
+    <p class="doc-subtitle">Complete Anti-Piracy & Content Protection Blueprint — v2.0</p>
+    <div class="doc-meta">
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Version</span>
+        <span class="doc-meta-value">2.0.0</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Status</span>
+        <span class="doc-meta-value" style="color:var(--green)">● Production Ready</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">Security Level</span>
+        <span class="doc-meta-value" style="color:var(--red)">Maximum</span>
+      </div>
+      <div class="doc-meta-item">
+        <span class="doc-meta-label">DRM</span>
+        <span class="doc-meta-value">Widevine · FairPlay · PlayReady</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="doc-body">
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <div class="toc-title">CONTENTS</div>
+    <div class="toc-grid">
+      <a href="#s1" class="toc-item"><div class="toc-num">1</div>System Architecture Overview</a>
+      <a href="#s2" class="toc-item"><div class="toc-num">2</div>Video Streaming (HLS/DASH)</a>
+      <a href="#s3" class="toc-item"><div class="toc-num">3</div>DRM — Multi-DRM System</a>
+      <a href="#s4" class="toc-item"><div class="toc-num">4</div>AES-128 Segment Encryption</a>
+      <a href="#s5" class="toc-item"><div class="toc-num">5</div>JWT Token Authentication</a>
+      <a href="#s6" class="toc-item"><div class="toc-num">6</div>Signed URL & CDN Security</a>
+      <a href="#s7" class="toc-item"><div class="toc-num">7</div>CORS & Referer Protection</a>
+      <a href="#s8" class="toc-item"><div class="toc-num">8</div>Dynamic Watermarking</a>
+      <a href="#s9" class="toc-item"><div class="toc-num">9</div>Screen Recording Protection</a>
+      <a href="#s10" class="toc-item"><div class="toc-num">10</div>Rate Limiting & IP Blocking</a>
+      <a href="#s11" class="toc-item"><div class="toc-num">11</div>Concurrent Stream Limiting</div></a>
+      <a href="#s12" class="toc-item"><div class="toc-num">12</div>Logging & Monitoring</a>
+      <a href="#s13" class="toc-item"><div class="toc-num">13</div>Frontend Player Security</a>
+      <a href="#s14" class="toc-item"><div class="toc-num">14</div>Deployment & Infrastructure</a>
+      <a href="#s15" class="toc-item"><div class="toc-num">15</div>Admin Security Controls</a>
+    </div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div>
+        <div class="section-title">System Architecture Overview</div>
+        <div class="section-subtitle">End-to-end secure content pipeline</div>
+      </div>
+    </div>
+
+    <p>KS Movies uses a multi-layer security architecture that protects content at every stage — from raw video files on storage to playback on user devices. Every request passes through authentication, authorization, and content protection checks before any stream data is served.</p>
+
+    <div class="arch-diagram">
+      <div class="layer" style="border-color:rgba(229,9,20,0.2)">
+        <div class="layer-label">👤 Client Layer</div>
+        <div class="layer-content">
+          <div class="arch-box red">Browser / App</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box red">Shaka Player</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box red">DRM Module</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box red">AES Decryptor</div>
+        </div>
+      </div>
+      <div class="layer" style="border-color:rgba(77,166,255,0.2)">
+        <div class="layer-label">🔐 API / Auth Layer</div>
+        <div class="layer-content">
+          <div class="arch-box blue">JWT Validation</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box blue">Plan Check</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box blue">Session Limit</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box blue">Rate Limiter</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box blue">IP Filter</div>
+        </div>
+      </div>
+      <div class="layer" style="border-color:rgba(70,211,105,0.2)">
+        <div class="layer-label">🔑 DRM / Key Layer</div>
+        <div class="layer-content">
+          <div class="arch-box green">Widevine LSP</div>
+          <div class="arch-arrow">+</div>
+          <div class="arch-box green">FairPlay KSM</div>
+          <div class="arch-arrow">+</div>
+          <div class="arch-box green">PlayReady</div>
+          <div class="arch-arrow">+</div>
+          <div class="arch-box green">AES Key Server</div>
+        </div>
+      </div>
+      <div class="layer" style="border-color:rgba(245,197,24,0.2)">
+        <div class="layer-label">📦 CDN / Storage Layer</div>
+        <div class="layer-content">
+          <div class="arch-box gold">AWS CloudFront</div>
+          <div class="arch-arrow">←</div>
+          <div class="arch-box gold">S3 (Encrypted)</div>
+          <div class="arch-arrow">|</div>
+          <div class="arch-box gold">FFmpeg Pipeline</div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box gold">HLS Segments (.ts)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div>
+        <div class="section-title">Video Streaming — HLS & MPEG-DASH</div>
+        <div class="section-subtitle">Adaptive bitrate streaming with encrypted segments</div>
+      </div>
+    </div>
+
+    <p>All video content is transcoded into HLS (.m3u8 + .ts segments) and optionally MPEG-DASH format using an FFmpeg pipeline. Videos are never served as direct MP4 files — they are split into short encrypted segments that are meaningless without the decryption key.</p>
+
+    <div class="card-grid">
+      <div class="card accent">
+        <div class="card-icon">📦</div>
+        <div class="card-title">Segment Duration</div>
+        <div class="card-desc">2–6 second segments. Shorter segments = finer key rotation granularity.</div>
+      </div>
+      <div class="card green">
+        <div class="card-icon">📶</div>
+        <div class="card-title">Adaptive Bitrate</div>
+        <div class="card-desc">Multiple quality tracks: 360p, 480p, 720p, 1080p, 4K. Client auto-selects based on bandwidth.</div>
+      </div>
+      <div class="card blue">
+        <div class="card-icon">🔐</div>
+        <div class="card-title">AES-128 per segment</div>
+        <div class="card-desc">Each segment encrypted. Keys rotate every N segments. Keys only served after auth.</div>
+      </div>
+      <div class="card gold">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">CDN Delivery</div>
+        <div class="card-desc">Segments cached on CloudFront edge nodes globally. Fast + signed URLs.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <span class="code-label">FFmpeg — Transcode to multi-bitrate HLS with AES-128</span>
+      <code><span class="cm"># Transcode single source to ABR HLS with AES-128 encryption</span>
+ffmpeg -i input.mp4 \
+  -filter_complex \
+    "[0:v]split=4[v1][v2][v3][v4]; \
+     [v1]scale=1920:1080[h1080]; \
+     [v2]scale=1280:720[h720]; \
+     [v3]scale=854:480[h480]; \
+     [v4]scale=640:360[h360]" \
+  -map "[h1080]" -map "[h720]" -map "[h480]" -map "[h360]" -map 0:a \
+  -c:v libx264 -crf 22 -preset slow -profile:v high \
+  -c:a aac -b:a 128k \
+  -hls_time 4 \
+  -hls_key_info_file /keys/aes.keyinfo \
+  -hls_playlist_type vod \
+  -hls_segment_filename "seg_%v_%03d.ts" \
+  -master_pl_name master.m3u8 \
+  output_%v.m3u8</code>
+    </div>
+
+    <div class="code-block">
+      <span class="code-label">HLS Key Info File (aes.keyinfo)</span>
+      <code><span class="cm"># Line 1: URL where player fetches the key (your secure key server)</span>
+https://api.ksmovies.com/stream/aes-key/MOVIE_ID/KEY_ID
+<span class="cm"># Line 2: Local path to the binary AES-128 key (16 bytes)</span>
+/keys/aes128.key
+<span class="cm"># Line 3: IV (initialization vector) — hex, rotated per batch</span>
+0x0000000000000000000000000000001</code>
+    </div>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div>
+        <div class="section-title">DRM — Multi-DRM System</div>
+        <div class="section-subtitle">Widevine · FairPlay · PlayReady — covers all browsers and devices</div>
+      </div>
+    </div>
+
+    <p>DRM (Digital Rights Management) is the gold standard for content protection. It ensures that decryption keys never exist in the clear — they are secured inside a hardware or software Trusted Execution Environment on the user's device.</p>
+
+    <table class="sec-table">
+      <thead>
+        <tr>
+          <th>DRM System</th>
+          <th>Platform</th>
+          <th>Security Level</th>
+          <th>Robustness</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">Google Widevine</span></td>
+          <td>Chrome, Firefox, Android, Smart TVs</td>
+          <td>L1 (hardware) / L3 (software)</td>
+          <td>L1: Highest — TEE enforced</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">Apple FairPlay</span></td>
+          <td>Safari, iOS, macOS, Apple TV</td>
+          <td>Hardware + Secure Enclave</td>
+          <td>Very high — Apple ecosystem</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-gold">Microsoft PlayReady</span></td>
+          <td>Edge, Windows, Xbox</td>
+          <td>SL3000 (hardware) / SL2000</td>
+          <td>SL3000: Hardware-enforced</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="code-block">
+      <span class="code-label">Shaka Player — DRM Configuration (Frontend)</span>
+      <code>shakaPlayer.<span class="fn">configure</span>({
+  drm: {
+    servers: {
+      <span class="str">'com.widevine.alpha'</span>: <span class="str">'https://api.ksmovies.com/drm/widevine'</span>,
+      <span class="str">'com.microsoft.playready'</span>: <span class="str">'https://api.ksmovies.com/drm/playready'</span>,
+    },
+    advanced: {
+      <span class="str">'com.widevine.alpha'</span>: {
+        videoRobustness: <span class="str">'SW_SECURE_CRYPTO'</span>,   <span class="cm">// L3 minimum</span>
+        audioRobustness: <span class="str">'SW_SECURE_CRYPTO'</span>,
+      }
+    }
+  }
+});</code>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">💡</span>
+      <div>
+        <strong>License Server Setup</strong>
+        For production, use <strong>EZDRM</strong>, <strong>BuyDRM</strong>, or <strong>Axinom</strong> as your multi-DRM license provider. These services handle Widevine, FairPlay, and PlayReady licenses from a single integration. Your backend acts as a proxy that validates the user's subscription before forwarding the license request.
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div>
+        <div class="section-title">AES-128 Encryption — HLS Segments</div>
+        <div class="section-subtitle">Every video segment encrypted — keys served securely</div>
+      </div>
+    </div>
+
+    <p>For platforms that don't support full DRM (e.g. some Android WebViews), AES-128 HLS encryption provides a strong second layer. Each segment is encrypted, and the decryption key is only available from our key server after authentication and subscription validation.</p>
+
+    <ul class="steps">
+      <li>
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <strong>Key Generation</strong>
+          <span>A unique 128-bit AES key is derived per movie using HMAC-SHA256 from a master secret. Keys rotate every N segments (configurable).</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <strong>Key Storage</strong>
+          <span>Keys are never stored in plaintext. They are derived on-demand using: <code style="display:inline; background:none; color:var(--green); font-size:0.8rem">HMAC(masterSecret, movieId:keyId)</code></span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <strong>Key Request by Player</strong>
+          <span>HLS player reads #EXT-X-KEY URI from playlist and requests the key. Your server validates JWT token before responding.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <strong>Key Response</strong>
+          <span>Server returns raw 16-byte binary key. Response headers include Cache-Control: no-store to prevent caching.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <strong>Key Rotation</strong>
+          <span>Every 50 segments (≈200 seconds), a new keyId is used. Even if one key is leaked, attacker only gets ~3 minutes of footage.</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div>
+        <div class="section-title">JWT Token Authentication</div>
+        <div class="section-subtitle">Signed session tokens with expiry and plan embedding</div>
+      </div>
+    </div>
+
+    <p>Every video stream request must include a valid JWT session token. The token is issued by the backend after verifying the user's Firebase session and subscription status. Tokens expire after 4 hours, matching a typical movie viewing session.</p>
+
+    <div class="code-block">
+      <span class="code-label">JWT Payload Structure</span>
+      <code>{
+  <span class="str">"uid"</span>: <span class="str">"firebase-user-uid"</span>,
+  <span class="str">"email"</span>: <span class="str">"<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="e396908691a3869b828e938f86cd808c8e">[email&#160;protected]</a>"</span>,
+  <span class="str">"plan"</span>: <span class="str">"premium"</span>,           <span class="cm">// basic | standard | premium</span>
+  <span class="str">"iat"</span>: <span class="num">1709481600</span>,              <span class="cm">// issued at</span>
+  <span class="str">"exp"</span>: <span class="num">1709496000</span>,              <span class="cm">// expires in 4 hours</span>
+  <span class="str">"iss"</span>: <span class="str">"ksmovies.com"</span>,
+  <span class="str">"aud"</span>: <span class="str">"ks-player"</span>
+}</code>
+    </div>
+
+    <div class="code-block">
+      <span class="code-label">Token Validation Flow (Backend Middleware)</span>
+      <code><span class="kw">async function</span> <span class="fn">verifyToken</span>(req, res, next) {
+  <span class="kw">const</span> token = req.headers[<span class="str">'x-ks-token'</span>];
+  <span class="kw">if</span> (!token) <span class="kw">return</span> res.status(<span class="num">401</span>).json({ error: <span class="str">'No token'</span> });
+
+  <span class="cm">// 1. Check revocation cache</span>
+  <span class="kw">if</span> (tokenCache.get(token) === <span class="str">'invalid'</span>) <span class="kw">return</span> res.status(<span class="num">401</span>).end();
+
+  <span class="cm">// 2. Verify JWT signature + expiry</span>
+  <span class="kw">const</span> payload = jwt.verify(token, JWT_SECRET);
+
+  <span class="cm">// 3. Confirm Firebase account still active</span>
+  <span class="kw">const</span> user = <span class="kw">await</span> admin.auth().getUser(payload.uid);
+  <span class="kw">if</span> (user.disabled) <span class="kw">return</span> res.status(<span class="num">401</span>).end();
+
+  req.user = payload;
+  next();
+}</code>
+    </div>
+  </div>
+
+  <!-- SECTION 6 -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div>
+        <div class="section-title">Signed URLs & CDN Security</div>
+        <div class="section-subtitle">CloudFront signed URLs prevent hotlinking and sharing</div>
+      </div>
+    </div>
+
+    <p>Video segments are not served from open URLs. Each streaming session generates a signed URL that encodes the expiry time, allowed IP range, and a cryptographic signature. An attacker who copies the URL cannot use it from a different IP or after it expires.</p>
+
+    <table class="sec-table">
+      <thead><tr><th>Parameter</th><th>Value</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Expiry</td><td>4 hours from generation</td><td>URL becomes invalid after session ends</td></tr>
+        <tr><td>IP Restriction</td><td>User's IP at session start</td><td>URL unusable from different network</td></tr>
+        <tr><td>Signature</td><td>RSA-SHA1 with private key</td><td>Tamper-proof — cannot forge URL</td></tr>
+        <tr><td>Session ID</td><td>Unique per playback session</td><td>Enables per-session revocation</td></tr>
+        <tr><td>Cache-Control</td><td>private, max-age=300</td><td>Prevents CDN from caching segments publicly</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout warning">
+      <span class="callout-icon">⚠️</span>
+      <div>
+        <strong>IP Restriction Caveat</strong>
+        Mobile users may switch IPs during playback (4G ↔ WiFi). Consider allowing the full /24 subnet instead of a strict /32 to balance security with usability.
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 7 -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div>
+        <div class="section-title">CORS & Referer Protection</div>
+        <div class="section-subtitle">Block unauthorized embedding and hotlinking</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <span class="code-label">CORS Configuration</span>
+      <code>app.use(cors({
+  origin: [
+    <span class="str">'https://ksmovies.com'</span>,
+    <span class="str">'https://www.ksmovies.com'</span>,
+  ],
+  credentials: <span class="kw">true</span>,
+  methods: [<span class="str">'GET'</span>, <span class="str">'POST'</span>],
+  allowedHeaders: [<span class="str">'Authorization'</span>, <span class="str">'X-KS-Token'</span>],
+}));
+
+<span class="cm">// Referer check middleware</span>
+app.use(<span class="str">'/stream'</span>, (req, res, next) => {
+  <span class="kw">const</span> ref = req.headers.referer || <span class="str">''</span>;
+  <span class="kw">if</span> (!ref.startsWith(<span class="str">'https://ksmovies.com'</span>))
+    <span class="kw">return</span> res.status(<span class="num">403</span>).json({ error: <span class="str">'Forbidden'</span> });
+  next();
+});</code>
+    </div>
+  </div>
+
+  <!-- SECTION 8 -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div>
+        <div class="section-title">Dynamic Watermarking System</div>
+        <div class="section-subtitle">Invisible user-ID watermark that moves position every 25 seconds</div>
+      </div>
+    </div>
+
+    <p>KS Movies uses a two-layer watermarking system — a client-side visual watermark for deterrence, and a server-side forensic watermark embedded into video frames for legal identification of piracy sources.</p>
+
+    <div class="card-grid">
+      <div class="card accent">
+        <div class="card-icon">👁️</div>
+        <div class="card-title">Visual Watermark</div>
+        <div class="card-desc">User ID + email fragment overlaid on video with 8–15% opacity. Position changes every 25 seconds. Captures recording attempts.</div>
+      </div>
+      <div class="card blue">
+        <div class="card-icon">🔬</div>
+        <div class="card-title">Forensic Watermark</div>
+        <div class="card-desc">UserID embedded in video pixel data using A/B variant streams (e.g. Irdeto Cloakware). Survives compression and screen recording.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <span class="code-label">Client-side watermark positioning (Player JS)</span>
+      <code><span class="kw">function</span> <span class="fn">moveWatermark</span>() {
+  <span class="kw">const</span> x = Math.floor(Math.random() * (window.innerWidth - <span class="num">200</span>));
+  <span class="kw">const</span> y = Math.floor(Math.random() * (window.innerHeight - <span class="num">60</span>)) + <span class="num">40</span>;
+  watermark.style.left = x + <span class="str">'px'</span>;
+  watermark.style.top  = y + <span class="str">'px'</span>;
+  watermark.style.color = `rgba(255,255,255,${<span class="num">0.08</span> + Math.random() * <span class="num">0.07</span>})`;
+}
+<span class="cm">// Move position every 25 seconds</span>
+setInterval(moveWatermark, <span class="num">25000</span>);</code>
+    </div>
+
+    <div class="callout success">
+      <span class="callout-icon">✅</span>
+      <div>
+        <strong>Forensic Watermark Recommendation</strong>
+        For maximum protection, use <strong>Irdeto Cloakware</strong> or <strong>NAGRA NexGuard</strong> — these embed an imperceptible per-user watermark directly into video bitstream at the CDN level. Even if pirated, the source user can be identified.
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 9 -->
+  <div class="section" id="s9">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <div>
+        <div class="section-title">Screen Recording Protection</div>
+        <div class="section-subtitle">Best-effort detection and playback pausing</div>
+      </div>
+    </div>
+
+    <div class="callout danger">
+      <span class="callout-icon">🛡️</span>
+      <div>
+        <strong>Browser Limitation</strong>
+        Web browsers do not expose screen recording APIs to JavaScript. True screen recording prevention requires native apps with OS-level APIs (EME, HDCP). On web, best-effort measures are used — the watermark is the primary forensic tool.
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">🖥️</div>
+        <div class="card-title">Tab Visibility Pause</div>
+        <div class="card-desc">Playback pauses when tab loses focus. Reduces usefulness of recording on hidden tabs.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🖨️</div>
+        <div class="card-title">Print Blackout</div>
+        <div class="card-desc">CSS @media print hides all content. Print screen / OS screenshot shows only a warning message.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <div class="card-title">EME / HDCP (Native)</div>
+        <div class="card-desc">Widevine L1 + HDCP 2.2 prevents capture at hardware level on Chromecast, Android TV, Smart TVs.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐞</div>
+        <div class="card-title">DevTools Block</div>
+        <div class="card-desc">F12 / Ctrl+Shift+I blocked. DevTools window size detection pauses video and logs the event.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 10 -->
+  <div class="section" id="s10">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <div>
+        <div class="section-title">Rate Limiting & IP Blocking</div>
+        <div class="section-subtitle">Protect against scraping, brute force, and automated attacks</div>
+      </div>
+    </div>
+
+    <table class="sec-table">
+      <thead><tr><th>Endpoint</th><th>Limit</th><th>Window</th><th>Action on Exceed</th></tr></thead>
+      <tbody>
+        <tr><td>/auth/session</td><td>10 requests</td><td>15 min per IP</td><td>Block IP 1h</td></tr>
+        <tr><td>/stream/signed-url</td><td>20 requests</td><td>15 min per user</td><td>429 response</td></tr>
+        <tr><td>/stream/aes-key/*</td><td>500 requests</td><td>1 hour per user</td><td>Log + block</td></tr>
+        <tr><td>/stream/segment/*</td><td>600 segments</td><td>1 min per user</td><td>Log + block</td></tr>
+        <tr><td>Global API</td><td>200 requests</td><td>15 min per IP</td><td>429 response</td></tr>
+      </tbody>
+    </table>
+
+    <div class="code-block">
+      <span class="code-label">IP auto-blocking on security violations</span>
+      <code><span class="cm">// After 5 security violations, auto-suspend account</span>
+<span class="kw">const</span> offenses = (cache.get(`offenses:${uid}`) || <span class="num">0</span>) + <span class="num">1</span>;
+<span class="kw">if</span> (offenses >= <span class="num">5</span>) {
+  <span class="kw">await</span> admin.auth().updateUser(uid, { disabled: <span class="kw">true</span> });
+  logEvent(<span class="str">'account_suspended'</span>, { uid, reason: <span class="str">'piracy_attempt'</span> });
+}</code>
+    </div>
+  </div>
+
+  <!-- SECTION 11 -->
+  <div class="section" id="s11">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <div>
+        <div class="section-title">Concurrent Stream Limiting</div>
+        <div class="section-subtitle">Per-plan stream limits prevent account sharing</div>
+      </div>
+    </div>
+
+    <table class="sec-table">
+      <thead><tr><th>Plan</th><th>Max Concurrent Streams</th><th>Max Quality</th><th>Downloads</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge badge-green">Free</span></td><td>0 (no streaming)</td><td>—</td><td>❌</td></tr>
+        <tr><td><span class="badge badge-blue">Basic</span></td><td>1 screen</td><td>720p</td><td>❌</td></tr>
+        <tr><td><span class="badge badge-gold">Standard</span></td><td>2 screens</td><td>1080p FHD</td><td>✅</td></tr>
+        <tr><td><span class="badge badge-red">Premium</span></td><td>4 screens</td><td>4K HDR</td><td>✅</td></tr>
+      </tbody>
+    </table>
+
+    <p>Active sessions are tracked in an in-memory Map on the backend server and in Firebase Realtime Database (with <code style="display:inline;background:none;color:var(--green);font-size:0.82rem">onDisconnect().remove()</code> to auto-cleanup on connection drop).</p>
+  </div>
+
+  <!-- SECTION 12 -->
+  <div class="section" id="s12">
+    <div class="section-header">
+      <div class="section-num">12</div>
+      <div>
+        <div class="section-title">Logging & Security Monitoring</div>
+        <div class="section-subtitle">Real-time piracy detection and alerting</div>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <div class="card-title">Playback Logs</div>
+        <div class="card-desc">Every stream start, pause, seek, and end is logged with user ID, IP, plan, quality, and timestamp.</div>
+      </div>
+      <div class="card accent">
+        <div class="card-icon">🚨</div>
+        <div class="card-title">Security Events</div>
+        <div class="card-desc">DevTools open, excessive seek, invalid token, blocked IP, DRM failure — all stored in Firebase.</div>
+      </div>
+      <div class="card blue">
+        <div class="card-icon">🔔</div>
+        <div class="card-title">Real-time Alerts</div>
+        <div class="card-desc">Firebase Cloud Functions trigger WhatsApp/email alerts when suspicious thresholds are crossed.</div>
+      </div>
+      <div class="card green">
+        <div class="card-icon">🗺️</div>
+        <div class="card-title">IP Geolocation</div>
+        <div class="card-desc">Unusual logins from new countries trigger 2FA verification before stream is allowed.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 13 -->
+  <div class="section" id="s13">
+    <div class="section-header">
+      <div class="section-num">13</div>
+      <div>
+        <div class="section-title">Frontend Player Security</div>
+        <div class="section-subtitle">Hardened HTML5 player using Shaka Player</div>
+      </div>
+    </div>
+
+    <table class="sec-table">
+      <thead><tr><th>Protection</th><th>Method</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>Right-click block</td><td>contextmenu event preventDefault</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>F12 / DevTools</td><td>keydown block + window size detection</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>Text selection</td><td>selectstart preventDefault</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>Print/screenshot</td><td>@media print { display:none }</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>Iframe embedding</td><td>X-Frame-Options + CSP frame-ancestors</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>Token injection</td><td>Shaka network filter adds X-KS-Token to all requests</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>Session expiry</td><td>JWT expiry countdown + UI warning at 5 min</td><td><span class="badge badge-green">✓ Active</span></td></tr>
+        <tr><td>Hardware DRM</td><td>Widevine L1 on supported devices</td><td><span class="badge badge-blue">Device-dependent</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 14 -->
+  <div class="section" id="s14">
+    <div class="section-header">
+      <div class="section-num">14</div>
+      <div>
+        <div class="section-title">Deployment & Infrastructure</div>
+        <div class="section-subtitle">Production-ready cloud stack</div>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card gold">
+        <div class="card-icon">☁️</div>
+        <div class="card-title">AWS CloudFront CDN</div>
+        <div class="card-desc">Signed URLs + signed cookies. Edge caching of encrypted segments. Origin Shield protects S3.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <div class="card-title">AWS S3 (Origin)</div>
+        <div class="card-desc">Private bucket. No public access. Only CloudFront OAC can read. Server-side encryption at rest.</div>
+      </div>
+      <div class="card blue">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">API — Node.js / PM2</div>
+        <div class="card-desc">Express server behind Nginx reverse proxy. PM2 cluster mode. Auto-restart on crash.</div>
+      </div>
+      <div class="card green">
+        <div class="card-icon">🔥</div>
+        <div class="card-title">Firebase</div>
+        <div class="card-desc">Auth, Realtime DB for sessions/logs. Cloud Functions for alerts. Firestore for movie metadata.</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎬</div>
+        <div class="card-title">FFmpeg Pipeline</div>
+        <div class="card-desc">AWS MediaConvert or self-hosted FFmpeg. Outputs multi-bitrate HLS to S3 on upload.</div>
+      </div>
+      <div class="card accent">
+        <div class="card-icon">🔑</div>
+        <div class="card-title">AWS KMS</div>
+        <div class="card-desc">Master encryption keys stored in KMS. AES keys derived on-demand. No key ever in plaintext storage.</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <span class="code-label">Nginx — Reverse Proxy Config (snippet)</span>
+      <code>server {
+    listen 443 ssl http2;
+    server_name api.ksmovies.com;
+    
+    ssl_certificate     /etc/ssl/ksmovies.crt;
+    ssl_certificate_key /etc/ssl/ksmovies.key;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+
+    <span class="cm"># Security headers</span>
+    add_header X-Frame-Options DENY;
+    add_header X-Content-Type-Options nosniff;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
+    add_header X-XSS-Protection "1; mode=block";
+    
+    <span class="cm"># Block common attack patterns</span>
+    location ~* (\.php|\.asp|\.env|\.git) { return 403; }
+
+    location / {
+        proxy_pass http://localhost:3001;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}</code>
+    </div>
+  </div>
+
+  <!-- SECTION 15 -->
+  <div class="section" id="s15">
+    <div class="section-header">
+      <div class="section-num">15</div>
+      <div>
+        <div class="section-title">Admin Security Controls</div>
+        <div class="section-subtitle">Real-time access management and piracy response</div>
+      </div>
+    </div>
+
+    <ul class="steps">
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-content">
+          <strong>Instant Access Revocation</strong>
+          <span>POST /admin/revoke-user disables the Firebase account AND kills all active streams in &lt; 1 second. No token cache refresh needed.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-content">
+          <strong>IP Blocking</strong>
+          <span>POST /admin/block-ip adds IP to in-memory blocklist (instant) and Firebase (persistent). Duration configurable (default 24h).</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-content">
+          <strong>Live Stream Monitor</strong>
+          <span>Admin panel shows real-time active sessions from Firebase Realtime DB listeners. See who is watching what, from where.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-content">
+          <strong>Security Event Dashboard</strong>
+          <span>All security_events from Firebase displayed in admin panel. Filter by type, user, IP, or time range.</span>
+        </div>
+      </li>
+      <li>
+        <div class="step-num">→</div>
+        <div class="step-content">
+          <strong>Content Access Control</strong>
+          <span>Per-movie accessLevel field controls which plan tier can watch. Change in Firebase → takes effect on next stream request.</span>
+        </div>
+      </li>
+    </ul>
+
+    <div class="callout success">
+      <span class="callout-icon">🏆</span>
+      <div>
+        <strong>Security Summary</strong>
+        This architecture implements defense-in-depth: even if one layer is bypassed, attackers face multiple additional barriers. DRM provides hardware-level protection on supported devices, AES-128 protects all HLS streams, signed URLs prevent hotlinking, JWT tokens expire every 4 hours, and ev

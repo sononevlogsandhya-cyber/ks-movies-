@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="/ks-pwa.js"></script>
+    <script src="/ks-tv.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>KS Cricket — TATA IPL 2026 Live</title>
+<script>
+  try{if(window.self!==window.top)window.top.location=window.self.location;}catch(e){document.body.style.display='none';}
+  document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
+  document.addEventListener('keydown',function(e){if(e.keyCode===123||(e.ctrlKey&&e.shiftKey&&[73,74,67].indexOf(e.keyCode)>-1)||(e.ctrlKey&&e.keyCode===85)){e.preventDefault();}},true);
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#050505;
+  --accent:#e50914;
+  --green:#22c55e;
+  --gold:#FFD700;
+  --blue:#3b82f6;
+  --ipl:#0033a0; /* IPL blue */
+  --ipl2:#ff6200; /* IPL orange */
+  --text:#fff;
+  --muted:#888;
+  --border:rgba(255,255,255,0.08);
+  --ease:cubic-bezier(.4,0,.2,1);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;min-height:100%;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);overflow-x:hidden;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:var(--accent);border-radius:4px;}
+
+/* ── SPLASH ── */
+#ks-splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity 0.6s ease;}
+#ks-splash.hide{opacity:0;pointer-events:none;}
+.splash-logo{font-family:'Bebas Neue',cursive;font-size:3.2rem;letter-spacing:4px;color:#fff;animation:splashPop 0.7s var(--spring) 0.3s both;}
+.splash-logo .ks{color:var(--accent);}
+.splash-logo .cr{color:var(--ipl2);}
+.splash-tagline{font-size:0.72rem;letter-spacing:3px;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-top:8px;animation:splashPop 0.7s var(--spring) 0.5s both;}
+.splash-bar-wrap{width:120px;height:3px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:32px;overflow:hidden;animation:splashPop 0.7s var(--spring) 0.7s both;}
+.splash-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--ipl2));border-radius:4px;width:0%;transition:width 0.05s linear;}
+@keyframes splashPop{from{opacity:0;transform:translateY(20px) scale(0.9);}to{opacity:1;transform:none;}}
+
+/* ── HEADER ── */
+header{
+  background:rgba(5,5,5,0.97);
+  border-bottom:1px solid var(--border);
+  padding:12px 5%;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(12px);
+}
+.logo{font-family:'Bebas Neue',cursive;font-size:1.6rem;letter-spacing:3px;text-decoration:none;display:flex;align-items:center;gap:2px;}
+.logo .ks{color:var(--accent);}
+.logo .cricket{color:var(--ipl2);}
+.live-pill{display:flex;align-items:center;gap:6px;background:rgba(229,9,20,0.12);border:1px solid rgba(229,9,20,0.35);border-radius:20px;padding:4px 12px;font-size:0.7rem;font-weight:800;color:var(--accent);letter-spacing:1px;text-transform:uppercase;}
+.live-dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:livePulse 1.2s ease infinite;}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(229,9,20,0.6);}50%{opacity:0.7;box-shadow:0 0 0 6px rgba(229,9,20,0);}}
+.back-btn{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:0.8rem;font-weight:600;padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:none;cursor:pointer;text-decoration:none;transition:all 0.2s;}
+.back-btn:hover{color:#fff;border-color:rgba(255,255,255,0.25);}
+
+/* ── IPL BANNER ── */
+.ipl-banner{
+  background:linear-gradient(135deg,#000c2a 0%,#001a5e 50%,#0a0a0a 100%);
+  border-bottom:2px solid rgba(255,98,0,0.3);
+  padding:14px 5%;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;
+  overflow:hidden;
+  position:relative;
+}
+.ipl-banner::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(255,98,0,0.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 50%,rgba(0,51,160,0.15) 0%,transparent 60%);
+  pointer-events:none;
+}
+.ipl-left{display:flex;flex-direction:column;gap:3px;}
+.ipl-title{font-family:'Bebas Neue',cursive;font-size:1.5rem;letter-spacing:2px;background:linear-gradient(90deg,#fff,var(--ipl2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ipl-sub{font-size:0.72rem;color:rgba(255,255,255,0.45);letter-spacing:1px;text-transform:uppercase;}
+.ipl-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.ipl-season-badge{
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  border-radius:8px;padding:6px 14px;
+  font-family:'Bebas Neue',cursive;font-size:1.1rem;letter-spacing:2px;
+  box-shadow:0 4px 16px rgba(255,98,0,0.3);
+}
+.ipl-days-badge{
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;padding:6px 12px;text-align:center;
+}
+.ipl-days-num{font-family:'Bebas Neue',cursive;font-size:1.2rem;color:var(--ipl2);line-height:1;}
+.ipl-days-label{font-size:0.6rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;}
+
+/* ── MAIN LAYOUT ── */
+.main-wrap{max-width:1000px;margin:0 auto;padding:0 5% 80px;}
+
+/* ── PLAYER SECTION ── */
+.player-section{margin:24px 0 0;}
+.section-label{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+.section-label h2{font-family:'Bebas Neue',cursive;font-size:1.4rem;letter-spacing:2px;}
+.section-label .tag{background:rgba(229,9,20,0.12);border:1px solid rgba(229,9,20,0.3);border-radius:6px;padding:2px 8px;font-size:0.62rem;font-weight:800;color:var(--accent);letter-spacing:1px;text-transform:uppercase;}
+
+/* ── KS PLAYER ── */
+#player-shell{
+  position:relative;
+  width:100%;
+  padding-top:56.25%; /* 16:9 */
+  background:#000;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 16px 60px rgba(0,0,0,0.7);
+  border:1px solid rgba(255,255,255,0.06);
+}
+#video-area{position:absolute;inset:0;}
+#main-video{width:100%;height:100%;object-fit:contain;display:block;background:#000;}
+
+/* Player branding top-left */
+#player-brand{
+  position:absolute;top:12px;left:12px;z-index:22;
+  display:flex;align-items:center;gap:7px;
+  background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.1);
+  border-radius:8px;padding:5px 10px;
+  pointer-events:none;
+  transition:opacity 0.3s;
+}
+#player-brand.hide{opacity:0;}
+.pb-logo{font-family:'Bebas Neue',cursive;font-size:1rem;letter-spacing:2px;}
+.pb-logo .ks{color:var(--accent);}
+.pb-logo .cr{color:var(--ipl2);}
+.pb-live{display:flex;align-items:center;gap:4px;font-size:0.62rem;font-weight:800;color:var(--green);letter-spacing:1px;}
+.pb-live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:livePulse 1.2s ease infinite;}
+
+/* Spinner */
+#spinner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:50px;height:50px;z-index:20;display:none;}
+#spinner.active{display:block;}
+.spin-ring{width:100%;height:100%;border-radius:50%;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Error */
+#error-screen{display:none;position:absolute;inset:0;z-index:35;background:rgba(0,0,0,0.96);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:40px;}
+#error-screen.visible{display:flex;}
+#error-screen i{font-size:2.5rem;color:var(--accent);}
+.err-retry{background:var(--accent);color:#fff;border:none;padding:10px 28px;border-radius:6px;font-size:0.9rem;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px;transition:0.2s;}
+
+/* Premium lock */
+#premium-lock{display:none;position:absolute;inset:0;z-index:40;background:linear-gradient(180deg,rgba(0,0,0,0.5) 0%,rgba(0,0,0,0.97) 50%);backdrop-filter:blur(6px);align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center;padding:40px;}
+#premium-lock.visible{display:flex;}
+.lock-icon{font-size:2.8rem;color:var(--gold);animation:lockBounce 1.5s var(--spring) infinite alternate;}
+@keyframes lockBounce{from{transform:scale(1);}to{transform:scale(1.12);}}
+.lock-title{font-family:'Bebas Neue',cursive;font-size:1.8rem;letter-spacing:2px;}
+.lock-sub{color:rgba(255,255,255,0.6);font-size:0.88rem;max-width:280px;line-height:1.6;}
+.lock-badge{background:rgba(229,9,20,0.15);border:1px solid rgba(229,9,20,0.4);border-radius:20px;padding:4px 14px;font-size:0.7rem;font-weight:800;color:var(--accent);}
+.lock-cta{
+  margin-top:8px;padding:14px 32px;
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  border:none;border-radius:12px;color:#fff;
+  font-size:1rem;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:all 0.2s;
+  box-shadow:0 6px 24px rgba(255,98,0,0.4);
+  display:flex;align-items:center;gap:10px;
+}
+.lock-cta:hover{transform:scale(1.04);}
+
+/* Ad overlay */
+#ad-overlay{display:none;position:absolute;inset:0;z-index:50;background:#000;flex-direction:column;}
+#ad-overlay.visible{display:flex;}
+.ad-top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(0,0,0,0.9);border-bottom:1px solid rgba(255,255,255,0.06);}
+.ad-label{background:var(--gold);color:#000;font-size:0.65rem;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:1px;}
+.ad-skip-btn{padding:5px 14px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:0.2s;pointer-events:none;opacity:0.4;}
+.ad-skip-btn.active{pointer-events:auto;opacity:1;background:rgba(229,9,20,0.2);border-color:rgba(229,9,20,0.5);}
+#ad-iframe-wrap{flex:1;position:relative;}
+#ad-iframe-wrap iframe{width:100%;height:100%;border:none;}
+.ad-prog-bar{height:3px;background:rgba(255,255,255,0.06);}
+.ad-prog-fill{height:100%;background:var(--accent);transition:width 0.25s linear;}
+
+/* Controls overlay */
+#ctrl-overlay{
+  position:absolute;inset:0;z-index:10;
+  background:linear-gradient(180deg,rgba(0,0,0,0.7) 0%,transparent 30%,transparent 55%,rgba(0,0,0,0.9) 100%);
+  display:flex;flex-direction:column;justify-content:space-between;
+  opacity:0;transition:opacity 0.3s var(--ease);pointer-events:none;
+}
+#ctrl-overlay.visible{opacity:1;pointer-events:all;}
+.ctrl-top{display:flex;align-items:center;padding:14px 14px 0;gap:10px;}
+.ctrl-back{background:rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.18);color:#fff;border-radius:8px;padding:6px 12px;font-size:0.8rem;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:0.2s;font-family:inherit;}
+.ctrl-title{font-size:0.9rem;font-weight:700;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:0.9;}
+.ctrl-center{display:flex;align-items:center;justify-content:center;gap:40px;flex:1;}
+.ctrl-btn{background:rgba(0,0,0,0.5);border:2px solid rgba(255,255,255,0.22);color:#fff;border-radius:50%;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.15rem;cursor:pointer;transition:all 0.2s var(--spring);}
+.ctrl-btn:hover{transform:scale(1.1);border-color:#fff;}
+.ctrl-btn.play-pause{width:62px;height:62px;font-size:1.4rem;background:rgba(229,9,20,0.8);border-color:var(--accent);}
+.ctrl-btn.play-pause:hover{background:var(--accent);}
+.ctrl-bottom{padding:0 14px 12px;}
+/* live bar — no seek, just a live indicator */
+.live-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.live-indicator{display:flex;align-items:center;gap:6px;font-size:0.72rem;font-weight:700;color:var(--green);}
+.live-ind-dot{width:8px;height:8px;background:var(--green);border-radius:50%;animation:livePulse 1s infinite;}
+.live-time{font-family:'DM Mono',monospace;font-size:0.72rem;color:rgba(255,255,255,0.5);}
+.ctrl-icons{display:flex;align-items:center;gap:6px;}
+.ctrl-icon{background:none;border:none;color:rgba(255,255,255,0.8);font-size:1rem;cursor:pointer;padding:6px 8px;border-radius:6px;transition:all 0.15s;}
+.ctrl-icon:hover{color:#fff;background:rgba(255,255,255,0.1);}
+.spacer{flex:1;}
+.vol-wrap{display:flex;align-items:center;gap:7px;}
+.vol-slider{-webkit-appearance:none;appearance:none;width:68px;height:4px;background:rgba(255,255,255,0.18);border-radius:4px;outline:none;cursor:pointer;}
+.vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#fff;border-radius:50%;}
+
+/* Watermark */
+#watermark{position:absolute;z-index:22;pointer-events:none;font-size:0.65rem;font-weight:700;color:rgba(255,255,255,0.07);white-space:nowrap;transition:all 2s ease;}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:rgba(18,18,18,0.96);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px 18px;font-size:0.82rem;z-index:9998;transition:transform 0.4s var(--spring);pointer-events:none;white-space:nowrap;max-width:90vw;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+/* ── SCHEDULE SECTION ── */
+.schedule-section{margin:28px 0 0;}
+.match-cards{display:flex;flex-direction:column;gap:10px;}
+.match-card{
+  background:rgba(18,18,24,0.8);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:14px 16px;
+  display:flex;align-items:center;gap:12px;
+  cursor:pointer;transition:all 0.2s;
+  position:relative;overflow:hidden;
+}
+.match-card:hover{border-color:rgba(255,255,255,0.15);background:rgba(30,30,40,0.9);}
+.match-card.live-now{border-color:rgba(229,9,20,0.4);background:rgba(229,9,20,0.04);}
+.match-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--border);border-radius:4px 0 0 4px;}
+.match-card.live-now::before{background:var(--accent);}
+.match-num{font-size:0.65rem;color:var(--muted);font-weight:700;letter-spacing:1px;min-width:32px;}
+.match-teams{flex:1;}
+.match-vs{font-size:0.95rem;font-weight:800;color:#fff;}
+.match-meta{font-size:0.72rem;color:var(--muted);margin-top:2px;}
+.match-status{
+  font-size:0.68rem;font-weight:800;
+  padding:4px 10px;border-radius:6px;
+  text-transform:uppercase;letter-spacing:0.5px;
+  flex-shrink:0;
+}
+.ms-live{background:rgba(229,9,20,0.15);border:1px solid rgba(229,9,20,0.4);color:var(--accent);}
+.ms-today{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:var(--blue);}
+.ms-upcoming{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--muted);}
+.ms-done{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);color:#444;}
+.watch-live-btn{
+  padding:6px 14px;
+  background:linear-gradient(135deg,var(--accent),#ff2030);
+  border:none;border-radius:7px;
+  color:#fff;font-size:0.72rem;font-weight:800;
+  cursor:pointer;font-family:inherit;
+  transition:all 0.2s;
+  display:flex;align-items:center;gap:5px;flex-shrink:0;
+  text-decoration:none;
+}
+.watch-live-btn:hover{transform:scale(1.05);}
+
+/* ── KS PAY SECTION ── */
+.pay-section{margin:32px 0 0;}
+.pay-card{
+  background:rgba(12,12,18,0.97);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.pay-header{
+  padding:16px 20px;
+  background:linear-gradient(135deg,rgba(255,98,0,0.08),rgba(0,51,160,0.08));
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.pay-header-left{display:flex;align-items:center;gap:10px;}
+.pay-icon{
+  width:38px;height:38px;
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;
+  box-shadow:0 4px 14px rgba(255,98,0,0.35);
+}
+.pay-title-text{font-family:'Bebas Neue',cursive;font-size:1.3rem;letter-spacing:2px;}
+.pay-title-sub{font-size:0.7rem;color:var(--muted);margin-top:1px;}
+.secure-badge{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:16px;}
+.secure-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:livePulse 1.5s infinite;}
+.secure-text{font-size:0.62rem;font-weight:800;color:var(--green);text-transform:uppercase;letter-spacing:1px;}
+
+/* Single plan card */
+.plan-showcase{padding:20px;padding-bottom:0;}
+.plan-card-ipl{
+  background:linear-gradient(135deg,rgba(0,51,160,0.15) 0%,rgba(255,98,0,0.12) 100%);
+  border:1.5px solid rgba(255,98,0,0.4);
+  border-radius:16px;
+  padding:18px;
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 8px 32px rgba(255,98,0,0.15);
+}
+.plan-card-ipl::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at top right,rgba(255,98,0,0.08),transparent 60%);
+  pointer-events:none;
+}
+.plan-top-row{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.plan-name{font-family:'Bebas Neue',cursive;font-size:1.4rem;letter-spacing:2px;color:#fff;}
+.plan-badges{display:flex;flex-direction:column;gap:4px;align-items:flex-end;}
+.badge-powerful{
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  border-radius:6px;padding:3px 10px;
+  font-size:0.62rem;font-weight:800;
+  letter-spacing:1px;text-transform:uppercase;
+  box-shadow:0 2px 8px rgba(255,98,0,0.4);
+}
+.badge-new{
+  background:rgba(34,197,94,0.12);
+  border:1px solid rgba(34,197,94,0.3);
+  border-radius:6px;padding:2px 8px;
+  font-size:0.6rem;font-weight:800;
+  color:var(--green);letter-spacing:1px;text-transform:uppercase;
+}
+.plan-price-row{display:flex;align-items:baseline;gap:6px;margin-bottom:14px;}
+.plan-price-big{font-family:'Bebas Neue',cursive;font-size:2.8rem;color:var(--ipl2);line-height:1;}
+.plan-price-rs{font-size:1.2rem;color:var(--ipl2);font-weight:700;align-self:flex-start;margin-top:6px;}
+.plan-price-period{font-size:0.82rem;color:rgba(255,255,255,0.5);font-weight:600;}
+.plan-features{display:flex;flex-direction:column;gap:7px;}
+.plan-feat{display:flex;align-items:center;gap:8px;font-size:0.85rem;color:rgba(255,255,255,0.85);}
+.plan-feat i{color:var(--green);font-size:0.75rem;width:16px;text-align:center;}
+.plan-feat .warn{color:var(--gold);}
+
+/* Payment UI */
+.pay-body{padding:20px;}
+.section-lbl{font-size:0.68rem;font-weight:700;color:#444455;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;}
+.amount-display{
+  display:flex;align-items:center;
+  background:#16161c;border:1px solid rgba(255,255,255,0.06);
+  border-radius:12px;overflow:hidden;margin-bottom:16px;
+}
+.amt-rs{padding:12px 14px;font-size:1rem;font-weight:700;color:#666;border-right:1px solid rgba(255,255,255,0.05);background:rgba(255,255,255,0.02);}
+.amt-val{flex:1;padding:12px 14px;font-size:1.5rem;font-weight:800;color:#fff;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;}
+.amt-fixed{padding:6px 12px;margin-right:8px;background:rgba(255,255,255,0.04);border-radius:8px;font-size:0.68rem;font-weight:700;color:#555;text-transform:uppercase;}
+.pay-tabs{display:flex;gap:5px;padding:4px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px solid rgba(255,255,255,0.04);margin-bottom:16px;}
+.pay-tab{flex:1;padding:8px;border-radius:8px;border:none;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;cursor:pointer;transition:all 0.2s;background:transparent;color:#444455;font-family:'DM Sans',sans-serif;}
+.pay-tab.active{background:rgba(255,255,255,0.08);color:#fff;}
+/* QR */
+.qr-wrap{display:flex;flex-direction:column;align-items:center;padding:4px 0 16px;}
+.qr-box{position:relative;padding:12px;background:#fff;border-radius:16px;border:3px solid rgba(255,255,255,0.1);box-shadow:0 0 40px rgba(0,0,0,0.4);margin-bottom:12px;}
+.qr-img{width:170px;height:170px;display:block;border-radius:5px;}
+.qr-overlay2{position:absolute;inset:0;background:rgba(255,255,255,0.9);border-radius:14px;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s;pointer-events:none;}
+.qr-overlay2.refreshing{opacity:1;}
+.qr-spin2{width:32px;height:32px;border:3px solid rgba(229,9,20,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.6s linear infinite;}
+.qr-live-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.qr-live-dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:livePulse 1.5s infinite;}
+.qr-live-lbl{font-size:0.72rem;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:1px;}
+.qr-hint{font-size:0.72rem;color:#555;text-align:center;max-width:200px;line-height:1.6;margin-bottom:10px;}
+/* Timer ring */
+.timer-ring{position:relative;width:48px;height:48px;}
+.timer-ring svg{position:absolute;inset:0;transform:rotate(-90deg);}
+.t-bg{fill:none;stroke:rgba(255,255,255,0.04);stroke-width:3;}
+.t-fg{fill:none;stroke:var(--accent);stroke-width:3;stroke-linecap:round;transition:stroke-dashoffset 1s linear;}
+.t-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;font-family:'DM Mono',monospace;}
+/* UPI */
+.upi-wrap{padding:0 0 16px;}
+.upi-id-box{padding:12px 14px;background:#16161c;border:1px solid rgba(255,255,255,0.05);border-radius:12px;margin-bottom:12px;}
+.upi-lbl{font-size:0.65rem;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;}
+.upi-row{display:flex;align-items:center;justify-content:space-between;}
+.upi-val{font-family:'DM Mono',monospace;font-size:0.9rem;font-weight:500;color:#fff;}
+.copy-btn{padding:5px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:7px;cursor:pointer;font-size:0.75rem;color:var(--accent);transition:all 0.2s;font-family:'DM Sans',sans-serif;}
+.copy-btn:hover{background:rgba(229,9,20,0.1);}
+.upi-pay-btn{width:100%;padding:13px;background:#fff;color:#000;border:none;border-radius:12px;font-size:0.88rem;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all 0.2s;text-decoration:none;font-family:'DM Sans',sans-serif;}
+.upi-pay-btn:hover{background:#e8e8e8;transform:translateY(-1px);}
+/* Verify */
+.verify-wrap{border-top:1px solid rgba(255,255,255,0.04);padding-top:16px;}
+.utr-input{width:100%;padding:12px 14px;background:#16161c;border:1px solid rgba(255,255,255,0.07);border-radius:12px;font-size:0.88rem;font-family:'DM Mono',monospace;color:#fff;outline:none;transition:border-color 0.2s;margin-bottom:10px;}
+.utr-input:focus{border-color:var(--accent);}
+.utr-input::placeholder{color:#333;}
+.verify-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  color:#fff;border:none;border-radius:14px;
+  font-size:1rem;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all 0.2s;
+  box-shadow:0 6px 24px rgba(255,98,0,0.3);
+  font-family:'DM Sans',sans-serif;
+}
+.verify-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 32px rgba(255,98,0,0.4);}
+.verify-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
+.verify-note{font-size:0.68rem;color:#333;text-align:center;margin-top:8px;line-height:1.6;}
+
+/* Verifying overlay */
+.overlay-verify{
+  position:absolute;inset:0;z-index:50;
+  background:rgba(6,6,8,0.97);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity 0.3s;border-radius:20px;
+}
+.overlay-verify.show{opacity:1;pointer-events:all;}
+.v-spinner{width:60px;height:60px;position:relative;margin-bottom:20px;}
+.v-ring{position:absolute;inset:0;border:4px solid rgba(255,98,0,0.12);border-radius:50%;}
+.v-arc{position:absolute;inset:0;border:4px solid transparent;border-top-color:var(--ipl2);border-radius:50%;animation:spin 1s linear infinite;}
+.steps-list{width:100%;max-width:240px;}
+.step-item{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:0.75rem;font-weight:600;transition:all 0.3s;}
+.step-item.done{color:var(--green);}
+.step-item.active{color:var(--ipl2);}
+.step-item.pending{color:#333;}
+.step-num{width:22px;height:22px;border-radius:50%;border:2px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:0.58rem;font-weight:800;flex-shrink:0;}
+.step-item.active .step-num{animation:livePulse 0.8s infinite;}
+
+/* Success overlay */
+#successOverlay{
+  position:absolute;inset:0;z-index:60;
+  background:#060608;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;
+  opacity:0;pointer-events:none;transition:opacity 0.5s;border-radius:20px;
+}
+#successOverlay.show{opacity:1;pointer-events:all;}
+.success-circle-wrap{position:relative;margin-bottom:20px;}
+.success-ripple{position:absolute;border-radius:50%;border:3px solid var(--green);opacity:0;animation:none;}
+.success-ripple.r1{inset:-14px;}
+.success-ripple.r2{inset:-28px;}
+#successOverlay.show .success-ripple.r1{animation:ripple 1.2s ease-out 0.3s infinite;}
+#successOverlay.show .success-ripple.r2{animation:ripple 1.2s ease-out 0.7s infinite;}
+@keyframes ripple{0%{transform:scale(0.8);opacity:0.8}100%{transform:scale(1.4);opacity:0}}
+.success-check-circle{width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#16a34a,#22c55e);display:flex;align-items:center;justify-content:center;transform:scale(0);transition:transform 0.5s var(--spring);box-shadow:0 0 40px rgba(34,197,94,0.4);}
+#successOverlay.show .success-check-circle{transform:scale(1);}
+.check-svg{width:40px;height:40px;}
+.check-path{fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:80;stroke-dashoffset:80;transition:stroke-dashoffset 0.5s ease 0.4s;}
+#successOverlay.show .check-path{stroke-dashoffset:0;}
+.success-title{font-size:1.5rem;font-weight:800;color:var(--green);margin:12px 0 4px;transform:translateY(18px);opacity:0;transition:all 0.4s ease 0.5s;}
+#successOverlay.show .success-title{transform:translateY(0);opacity:1;}
+.success-sub{font-size:0.8rem;color:#555;line-height:1.6;margin-bottom:18px;transform:translateY(18px);opacity:0;transition:all 0.4s ease 0.6s;max-width:240px;}
+#successOverlay.show .success-sub{transform:translateY(0);opacity:1;}
+.receipt-box{width:100%;background:#111118;border:1px solid rgba(255,255,255,0.05);border-radius:14px;padding:14px;text-align:left;transform:translateY(18px);opacity:0;transition:all 0.4s ease 0.7s;margin-bottom:16px;}
+#successOverlay.show .receipt-box{transform:translateY(0);opacity:1;}
+.receipt-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+.receipt-row:last-child{border-bottom:none;}
+.receipt-label{font-size:0.68rem;color:#444;}
+.receipt-val{font-size:0.68rem;font-weight:700;color:#fff;font-family:'DM Mono',monospace;}
+.receipt-val.green{color:var(--green);}
+.watch-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  color:#fff;border:none;border-radius:14px;
+  font-size:0.95rem;font-weight:800;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  box-shadow:0 6px 24px rgba(255,98,0,0.3);
+  transform:translateY(18px);opacity:0;transition:all 0.4s ease 0.8s,transform 0.2s,box-shadow 0.2s;
+  font-family:'DM Sans',sans-serif;
+}
+#successOverlay.show .watch-btn{transform:translateY(0);opacity:1;}
+.watch-btn:hover{transform:translateY(-2px)!important;box-shadow:0 10px 32px rgba(255,98,0,0.4)!important;}
+
+/* Confetti */
+@keyframes cfFall{0%{transform:translateY(-60px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(900deg);opacity:0}}
+.cf{position:fixed;pointer-events:none;z-index:9999;width:8px;height:8px;animation:cfFall linear forwards;}
+
+/* ── FAQ ── */
+.faq-section{margin:28px 0 0;}
+.faq-item{border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:8px;}
+.faq-q{
+  padding:14px 16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:0.9rem;font-weight:600;
+  background:rgba(18,18,24,0.8);transition:background 0.2s;
+}
+.faq-q:hover{background:rgba(30,30,40,0.9);}
+.faq-q i{color:var(--muted);transition:transform 0.3s;font-size:0.75rem;}
+.faq-q.open i{transform:rotate(180deg);}
+.faq-a{display:none;padding:0 16px 14px;font-size:0.82rem;color:var(--muted);line-height:1.7;background:rgba(18,18,24,0.8);}
+.faq-q.open+.faq-a{display:block;}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:20px 5%;text-align:center;color:#333;font-size:0.68rem;letter-spacing:2px;text-transform:uppercase;margin-top:20px;}
+
+/* ── 24-HOUR BLOCKED OVERLAY ── */
+#blocked-overlay{
+  display:none;position:absolute;inset:0;z-index:45;
+  background:linear-gradient(180deg,rgba(0,0,0,0.6) 0%,rgba(0,0,0,0.98) 45%);
+  backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;flex-direction:column;
+  gap:10px;text-align:center;padding:32px 24px;
+}
+#blocked-overlay.visible{display:flex;}
+.blk-glow{
+  position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:260px;height:120px;
+  background:radial-gradient(ellipse,rgba(229,9,20,0.18) 0%,transparent 70%);
+  pointer-events:none;
+}
+.blk-icon{font-size:2.4rem;animation:blkShake 2s ease infinite;}
+@keyframes blkShake{0%,100%{transform:rotate(0);}10%{transform:rotate(-8deg);}20%{transform:rotate(8deg);}30%{transform:rotate(-4deg);}40%{transform:rotate(4deg);}50%{transform:rotate(0);}}
+.blk-badge{
+  background:rgba(229,9,20,0.18);border:1px solid rgba(229,9,20,0.5);
+  border-radius:20px;padding:3px 14px;
+  font-size:0.66rem;font-weight:900;color:var(--accent);letter-spacing:2px;text-transform:uppercase;
+}
+.blk-title{font-family:'Bebas Neue',cursive;font-size:1.9rem;letter-spacing:2px;line-height:1.1;margin-top:4px;}
+.blk-sub{color:rgba(255,255,255,0.5);font-size:0.82rem;line-height:1.7;max-width:260px;}
+.blk-timer-box{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px;padding:14px 24px;margin:4px 0;
+  min-width:220px;
+}
+.blk-timer-label{font-size:0.65rem;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+.blk-timer-val{font-family:'Bebas Neue',cursive;font-size:2rem;color:var(--gold);letter-spacing:2px;line-height:1;}
+.blk-timer-hint{font-size:0.65rem;color:#444;margin-top:5px;}
+.blk-cta{
+  margin-top:6px;padding:14px 28px;
+  background:linear-gradient(135deg,var(--ipl),var(--ipl2));
+  border:none;border-radius:12px;color:#fff;
+  font-size:0.95rem;font-weight:800;cursor:pointer;
+  font-family:inherit;transition:all 0.2s;
+  box-shadow:0 6px 24px rgba(255,98,0,0.4);
+  width:100%;max-width:280px;
+}
+.blk-cta:hover{transform:scale(1.03);}
+.blk-note{font-size:0.65rem;color:#444;letter-spacing:0.5px;}
+
+/* ── HIDDEN ── */
+.hidden{display:none!important;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:480px){
+  .plan-price-big{font-size:2.2rem;}
+  .ipl-title{font-size:1.2rem;}
+  .ctrl-center{gap:28px;}
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="ks-splash">
+  <div class="splash-logo"><span class="ks">KS</span> <span class="cr">CRICKET</span></div>
+  <div class="splash-tagline">TATA IPL 2026 · Live Streaming</div>
+  <div class="splash-bar-wrap"><div class="splash-bar-fill" id="splash-bar"></div></div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <a href="user.html" class="logo"><span class="ks">KS</span><span class="cricket">CRICKET</span></a>
+  <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+  <a href="user.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i> Back</a>
+</header>
+
+<!-- IPL BANNER -->
+<div class="ipl-banner">
+  <div class="ipl-left">
+    <div class="ipl-title">TATA IPL 2026</div>
+    <div class="ipl-sub">Live Streaming · All Matches</div>
+  </div>
+  <div class="ipl-right">
+    <div class="ipl-season-badge">IPL 2026</div>
+    <div class="ipl-days-badge">
+      <div class="ipl-days-num">65</div>
+      <div class="ipl-days-label">Days</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+  <!-- ── KS PLAYER ── -->
+  <div class="player-section">
+    <div class="section-label">
+      <h2>KS CRICKET LIVE</h2>
+      <span class="tag">🏏 HD Stream</span>
+    </div>
+
+    <div id="player-shell">
+      <div id="video-area">
+
+        <!-- Branding -->
+        <div id="player-brand">
+          <div class="pb-logo"><span class="ks">KS</span> <span class="cr">CRICKET</span></div>
+          <div class="pb-live"><div class="pb-live-dot"></div> LIVE</div>
+        </div>
+
+        <!-- Watermark -->
+        <div id="watermark">KS CRICKET</div>
+
+        <!-- Video -->
+        <video id="main-video" playsinline crossorigin="anonymous"></video>
+
+        <!-- Spinner -->
+        <div id="spinner"><div class="spin-ring"></div></div>
+
+        <!-- Error -->
+        <div id="error-screen">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <h3>Stream Error</h3>
+          <p style="color:var(--muted);font-size:0.85rem;margin-bottom:8px;">Live stream connect nahi ho pa raha. Retry karo.</p>
+          <button class="err-retry" onclick="retryPlayer()">🔄 Retry</button>
+        </div>
+
+        <!-- Premium Lock -->
+        <div id="premium-lock">
+          <div class="lock-badge">🔒 IPL SPECIAL PLAN REQUIRED</div>
+          <div class="lock-icon"><i class="fa-solid fa-lock"></i></div>
+          <div class="lock-title">IPL Live Access</div>
+          <div class="lock-sub">Sirf ₹59 mein poora IPL 2026 dekho — 65 din ka full coverage!</div>
+          <button class="lock-cta" onclick="document.getElementById('pay-section').scrollIntoView({behavior:'smooth'})">
+            🏏 ₹59 Mein Unlock Karo
+          </button>
+        </div>
+
+        <!-- 24-HOUR BLOCKED OVERLAY -->
+        <div id="blocked-overlay">
+          <div class="blk-glow"></div>
+          <div class="blk-icon">🚫</div>
+          <div class="blk-badge">FREE TRIAL KHATAM</div>
+          <div class="blk-title">Aaj ke liye Band Ho Gaya!</div>
+          <div class="blk-sub">Aapka 10 minute ka free trial khatam ho gaya.<br>Dubara free access milega:</div>
+          <div class="blk-timer-box">
+            <div class="blk-timer-label">⏳ Unblock hoga</div>
+            <div class="blk-timer-val" id="blocked-time-left">23 hr 59 min</div>
+            <div class="blk-timer-hint">mein — ya abhi unlock karo ₹59 mein</div>
+          </div>
+          <button class="blk-cta" onclick="document.getElementById('blocked-overlay').classList.remove('visible'); document.getElementById('pay-section').scrollIntoView({behavior:'smooth'})">
+            🏏 ₹59 Mein Full IPL Unlock Karo
+          </button>
+          <div class="blk-note">✓ 65 din • ✓ Sab matches • ✓ HD Live Stream</div>
+        </div>
+
+        <!-- Ad Overlay -->
+        <div id="ad-overlay">
+          <div class="ad-top-bar">
+            <span class="ad-label">AD</span>
+            <span id="ad-info" style="color:rgba(255,255,255,0.4);font-size:0.72rem;"></span>
+            <button class="ad-skip-btn" id="ad-skip-btn" onclick="closeAd()">Skip Ad ✕</button>
+          </div>
+          <div id="ad-iframe-wrap">
+            <div style="position:absolute;bottom:8px;left:8px;z-index:2;background:rgba(0,0,0,0.7);border-radius:4px;padding:2px 8px;font-size:0.62rem;color:rgba(255,255,255,0.45);">Advertisement</div>
+          </div>
+          <div class="ad-prog-bar"><div class="ad-prog-fill" id="ad-prog-fill" style="width:0%"></div></div>
+        </div>
+
+        <!-- Free Trial Badge -->
+        <div id="free-trial-badge" style="display:none;position:absolute;top:52px;right:12px;z-index:30;background:rgba(0,0,0,0.78);border:1px solid rgba(229,9,20,0.5);border-radius:20px;padding:4px 13px;font-size:0.74rem;font-weight:700;color:var(--accent);pointer-events:none;"></div>
+
+        <!-- Controls -->
+        <div id="ctrl-overlay">
+          <div class="ctrl-top">
+            <button class="ctrl-back" onclick="window.history.length>1?window.history.back():(window.location.href='user.html')">
+              <i class="fa-solid fa-chevron-left"></i> Back
+            </button>
+            <div class="ctrl-title">🏏 KS Cricket — TATA IPL 2026</div>
+          </div>
+          <div class="ctrl-center">
+            <button class="ctrl-btn" onclick="seekVideo(-10)">
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button class="ctrl-btn play-pause" id="play-btn" onclick="togglePlay()">
+              <i class="fa-solid fa-play" id="play-icon"></i>
+            </button>
+            <button class="ctrl-btn" onclick="seekVideo(10)">
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+          </div>
+          <div class="ctrl-bottom">
+            <div class="live-bar">
+              <div class="live-indicator"><div class="live-ind-dot"></div> LIVE</div>
+              <div class="live-time" id="live-time-display">00:00:00</div>
+            </div>
+            <div class="ctrl-icons">
+              <div class="vol-wrap">
+                <button class="ctrl-icon" onclick="toggleMute()"><i class="fa-solid fa-volume-high" id="vol-icon"></i></button>
+                <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="100">
+              </div>
+              <div class="spacer"></div>
+              <button class="ctrl-icon" id="pip-btn" onclick="togglePip()"><i class="fa-solid fa-clone"></i></button>
+              <button class="ctrl-icon" onclick="toggleFullscreen()"><i class="fa-solid fa-expand" id="fs-icon"></i></button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MATCH SCHEDULE ── -->
+  <div class="schedule-section">
+    <div class="section-label">
+      <h2>IPL 2026 SCHEDULE</h2>
+      <span class="tag">All Matches</span>
+    </div>
+    <div class="match-cards" id="matchCards"></div>
+  </div>
+
+  <!-- ── KS PAY — IPL PLAN ── -->
+  <div class="pay-section" id="pay-section">
+    <div class="section-label">
+      <h2>IPL SUBSCRIPTION</h2>
+      <span class="tag">₹59 Only</span>
+    </div>
+
+    <div class="pay-card" style="position:relative;">
+
+      <!-- Pay Header -->
+      <div class="pay-header">
+        <div class="pay-header-left">
+          <div class="pay-icon">🏏</div>
+          <div>
+            <div class="pay-title-text">KS PAY — IPL</div>
+            <div class="pay-title-sub">Secure Payment Gateway</div>
+          </div>
+        </div>
+        <div class="secure-badge">
+          <div class="secure-dot"></div>
+          <span class="secure-text">Secure</span>
+        </div>
+      </div>
+
+      <!-- Plan Showcase -->
+      <div class="plan-showcase">
+        <div class="plan-card-ipl">
+          <div class="plan-top-row">
+            <div class="plan-name">IPL Special Plan</div>
+            <div class="plan-badges">
+              <div class="badge-powerful">⚡ Most Powerful</div>
+              <div class="badge-new">✨ New Plan</div>
+            </div>
+          </div>
+          <div class="plan-price-row">
+            <span class="plan-price-rs">₹</span>
+            <span class="plan-price-big">59</span>
+            <span class="plan-price-period">/ 2 months (Full IPL)</span>
+          </div>
+          <div class="plan-features">
+            <div class="plan-feat"><i class="fa-solid fa-circle-check"></i> Pure IPL coverage — 65 din</div>
+            <div class="plan-feat"><i class="fa-solid fa-circle-check"></i> Sare matches live dekho</div>
+            <div class="plan-feat"><i class="fa-solid fa-circle-check"></i> HD streaming quality</div>
+            <div class="plan-feat"><i class="fa-solid fa-mobile-screen"></i> Mobile only plan</div>
+            <div class="plan-feat"><i class="fa-solid fa-rectangle-ad warn"></i><span class="warn">Ads included</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pay Body -->
+      <div class="pay-body">
+        <div class="section-lbl">Amount to Pay</div>
+        <div class="amount-display">
+          <div class="amt-rs">₹</div>
+          <input type="text" class="amt-val" id="amtVal" value="59" readonly>
+          <div class="amt-fixed">Fixed</div>
+        </div>
+
+        <div class="section-lbl">Step 1: Pay via UPI</div>
+        <div class="pay-tabs">
+          <button class="pay-tab active" id="tab-qr" onclick="switchPayTab('qr')">QR Code</button>
+          <button class="pay-tab" id="tab-upi" onclick="switchPayTab('upi')">Direct UPI</button>
+        </div>
+
+        <!-- QR Tab -->
+        <div id="qr-panel" class="qr-wrap">
+          <div class="qr-box">
+            <img class="qr-img" id="qrImg" src="" alt="QR">
+            <div class="qr-overlay2" id="qrOverlay2"><div class="qr-spin2"></div></div>
+          </div>
+          <div class="qr-live-row">
+            <div class="qr-live-dot"></div>
+            <span class="qr-live-lbl">Live QR Code</span>
+          </div>
+          <div class="qr-hint">GPay, PhonePe, Paytm se scan karo</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="timer-ring">
+              <svg viewBox="0 0 48 48" width="48" height="48">
+                <circle class="t-bg" cx="24" cy="24" r="20"/>
+                <circle class="t-fg" id="timerArc" cx="24" cy="24" r="20" stroke-dasharray="125.66" stroke-dashoffset="0"/>
+              </svg>
+              <div class="t-val" id="timerVal">30</div>
+            </div>
+            <div style="font-size:0.65rem;color:#444;line-height:1.6;">QR refreshes<br>every 30s</div>
+          </div>
+        </div>
+
+        <!-- UPI Tab -->
+        <div id="upi-panel" class="upi-wrap hidden">
+          <div class="upi-id-box">
+            <div class="upi-lbl">Merchant UPI ID</div>
+            <div class="upi-row">
+              <span class="upi-val" id="upiIdDisplay">sonone.nitesh1@ybl</span>
+              <button class="copy-btn" onclick="copyUPI()" id="copyBtn">📋 Copy</button>
+            </div>
+          </div>
+          <a id="upiDeepLink" href="#" class="upi-pay-btn">📱 Pay via UPI App</a>
+        </div>
+
+        <!-- Verify -->
+        <div class="verify-wrap">
+          <div class="section-lbl" style="margin-bottom:8px;">Step 2: UTR / Transaction ID dalein</div>
+          <input type="text" id="utrInput" class="utr-input" placeholder="e.g. 407123456789 (12-digit UTR)" maxlength="20">
+          <button class="verify-btn" id="verifyBtn" onclick="startVerify()" disabled>
+            🛡️ Verify &amp; Activate
+          </button>
+          <div class="verify-note">Payments encrypted &amp; secure.<br>UTR PhonePe/GPay payment history mein milega.</div>
+        </div>
+      </div>
+
+      <!-- Verifying overlay -->
+      <div class="overlay-verify" id="verifyingOverlay">
+        <div class="v-spinner"><div class="v-ring"></div><div class="v-arc"></div></div>
+        <div style="font-size:1rem;font-weight:800;margin-bottom:18px;">Verifying Payment...</div>
+        <div class="steps-list" id="stepsList"></div>
+      </div>
+
+      <!-- Success overlay -->
+      <div id="successOverlay">
+        <div class="success-circle-wrap">
+          <div class="success-ripple r1"></div>
+          <div class="success-ripple r2"></div>
+          <div class="success-check-circle">
+            <svg class="check-svg" viewBox="0 0 44 44">
+              <path class="check-path" d="M10 22 L19 31 L34 13"/>
+            </svg>
+          </div>
+        </div>
+        <div class="success-title">Payment Success! 🏏</div>
+        <div class="success-sub" id="successSub">IPL Special Plan activate ho gaya! Ab live matches dekho.</div>
+        <div class="receipt-box" id="receiptBox"></div>
+        <button class="watch-btn" onclick="goWatch()">🏏 IPL Live Dekho Abhi</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── FAQ ── -->
+  <div class="faq-section">
+    <div class="section-label"><h2>FAQ</h2></div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Kya IPL ke sabhi matches cover honge? <i class="fa-solid fa-chevron-down"></i></div>
+      <div class="faq-a">Haan! IPL 2026 ke sabhi 74 matches cover honge — group stage se lekar final tak. 65 din ka pure coverage milega.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Kya plan auto-renew hoga? <i class="fa-solid fa-chevron-down"></i></div>
+      <div class="faq-a">Nahi. Ye ek single time plan hai — ₹59 ek baar pay karo aur poora IPL dekho. Koi hidden charges nahi.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Ads kyun hain? <i class="fa-solid fa-chevron-down"></i></div>
+      <div class="faq-a">Sirf ₹59 mein full IPL dene ke liye ads rakhna zaroori hai. Ads se platform ka cost cover hota hai.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">Payment verify nahi hua? <i class="fa-solid fa-chevron-down"></i></div>
+      <div class="faq-a">Payment karne ke baad UTR/Transaction ID ek sahi se enter karo. Problem ho to WhatsApp karo: +91 95614 09361</div>
+    </div>
+  </div>
+
+</div><!-- /main-wrap -->
+
+<footer>© 2026 KS Cricket &nbsp;•&nbsp; TATA IPL 2026 · All Matches Live</footer>
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════ -->
+<!--                  SCRIPTS                  -->
+<!-- ══════════════════════════════════════════ -->
+<script>
+// ── GLOBAL ERROR SHIELD ──
+window.onerror=(m,s,l,c,e)=>{console.warn('[KS]',m);return true;};
+window.addEventListener('unhandledrejection',e=>{console.warn('[KS]',e.reason);e.preventDefault();});
+
+// ── CONSTANTS ──
+// ── FIREBASE INIT ──
+const FIREBASE_CONFIG = {
+  apiKey:"AIzaSyBNyfzP26mSnB0qsm24zIeTM2K9sVBV1zc",
+  authDomain:"ks-movies-98e3e.firebaseapp.com",
+  databaseURL:"https://ks-movies-98e3e-default-rtdb.firebaseio.com",
+  projectId:"ks-movies-98e3e",
+  storageBucket:"ks-movies-98e3e.firebasestorage.app",
+  messagingSenderId:"392323800373",
+  appId:"1:392323800373:web:b289cf81f4c0232d66007c"
+};
+if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+const CRICKET_DB = firebase.database();
+
+// ── DEFAULT VALUES (fallback if Firebase empty) ──
+const PRIMARY_STREAM_RAW  = 'http://ptu.ridsys.in/riptv/live/STAR_SPORTS_1_HD/index.m3u8';
+const FALLBACK_STREAM_RAW = 'http://stvlive.net:8080/starsports2/tracks-v1a1/mono.m3u8';
+
+// Apna Vercel proxy — HTTPS pe http:// stream tunnel karta hai bina kisi third-party ke
+function ownProxy(rawUrl){
+  return '/api/proxy?url=' + encodeURIComponent(rawUrl);
+}
+
+const IS_HTTPS = (typeof location !== 'undefined') && location.protocol === 'https:';
+
+// HTTPS pe: apna proxy use karo (most reliable)
+// HTTP pe: direct stream (localhost/file)
+const DEFAULT_STREAM_URL = IS_HTTPS ? ownProxy(PRIMARY_STREAM_RAW) : PRIMARY_STREAM_RAW;
+const DEFAULT_ADS = [
+  'https://www.profitableratecpm.com/q8kkfu6p5?key=c7e57b4f2f5e638dd9c97ba5a4f62b00',
+];
+const DEFAULT_FREE_TRIAL_SEC = 600; // 10 minutes
+
+let STREAM_URL = DEFAULT_STREAM_URL;
+const MERCHANT_UPI = 'sonone.nitesh1@ybl';
+const MERCHANT_NAME = 'KS Cricket';
+
+// ── STATE ──
+let isPlaying=false, isMuted=false, hlsInst=null, ctrlTimer=null, wmTimer=null;
+let adTimer=null, adShown=false;
+let isPremium=false; // check localStorage
+let liveSeconds=0, liveTimer=null;
+
+// ── DYNAMIC CONFIG (loaded from Firebase) ──
+let ADS = [...DEFAULT_ADS];
+let FREE_TRIAL_SEC = DEFAULT_FREE_TRIAL_SEC;
+
+// ── 24-HOUR BLOCK SYSTEM ──
+// localStorage keys:
+//   ks_ipl_expiry       → premium plan expiry timestamp
+//   ks_free_block_until → timestamp jab tak free user block hai (aaj 10min khatam ke baad kal tak)
+
+function checkPremium(){
+  const exp = localStorage.getItem('ks_ipl_expiry');
+  if(exp && Date.now() < parseInt(exp)){
+    isPremium=true;
+  }
+}
+checkPremium();
+
+// Check karo kya free user abhi bhi block hai
+function isFreeUserBlocked(){
+  if(isPremium) return false;
+  const blockUntil = localStorage.getItem('ks_free_block_until');
+  if(!blockUntil) return false;
+  return Date.now() < parseInt(blockUntil);
+}
+
+// Aaj midnight ke baad kal ki midnight tak block karo (24hr window)
+function setFreeUserBlock(){
+  // Aaj ki date se kal ki end-of-day (midnight +24 hrs from NOW) tak block
+  const blockUntil = Date.now() + (24 * 60 * 60 * 1000);
+  localStorage.setItem('ks_free_block_until', blockUntil.toString());
+}
+
+// Block khatam hone mein kitna time bacha
+function blockRemainingText(){
+  const blockUntil = parseInt(localStorage.getItem('ks_free_block_until') || '0');
+  const remaining = blockUntil - Date.now();
+  if(remaining <= 0) return '0:00';
+  const h = Math.floor(remaining / 3600000);
+  const m = Math.floor((remaining % 3600000) / 60000);
+  return h + ' hr ' + m + ' min';
+}
+
+const FREE_TRIAL_SEC_DEFAULT = 600; // fallback
+let freeTrialUsed = 0, freeTrialTimer = null;
+
+const videoEl = document.getElementById('main-video');
+const overlay = document.getElementById('ctrl-overlay');
+const spinner = document.getElementById('spinner');
+const errScr  = document.getElementById('error-screen');
+
+// ── SPLASH + FIREBASE CONFIG LOAD ──
+(()=>{
+  const bar=document.getElementById('splash-bar');
+  let p=0;
+  const iv=setInterval(()=>{ p+=3; bar.style.width=Math.min(p,70)+'%'; if(p>=70)clearInterval(iv); },50);
+
+  // Load config from Firebase
+  Promise.all([
+    CRICKET_DB.ref('cricket/ads').once('value'),
+    CRICKET_DB.ref('cricket/streamUrl').once('value'),
+    CRICKET_DB.ref('cricket/freeTrialMinutes').once('value'),
+  ]).then(([adsSnap, streamSnap, trialSnap])=>{
+    // Update ADS from Firebase
+    const fbAds = adsSnap.val();
+    if(Array.isArray(fbAds) && fbAds.filter(Boolean).length > 0){
+      ADS = fbAds.filter(Boolean);
+    }
+    // Update stream URL from Firebase
+    const fbStream = streamSnap.val();
+    if(fbStream && fbStream.trim()) STREAM_URL = fbStream.trim();
+    // Update free trial from Firebase
+    const fbTrial = trialSnap.val();
+    if(fbTrial && !isNaN(fbTrial)) FREE_TRIAL_SEC = parseInt(fbTrial) * 60;
+
+  }).catch(()=>{
+    // Use defaults if Firebase fails
+  }).finally(()=>{
+    // Complete splash bar
+    let p2=70;
+    const iv2=setInterval(()=>{ p2+=4; bar.style.width=Math.min(p2,100)+'%'; if(p2>=100)clearInterval(iv2); },30);
+    setTimeout(()=>{
+      bar.style.width='100%';
+      setTimeout(()=>{
+        document.getElementById('ks-splash').classList.add('hide');
+        setTimeout(()=>{ document.getElementById('ks-splash').style.display='none'; initPlayer(); },600);
+      },300);
+    },600);
+  });
+})();
+
+// ── PLAYER INIT ──
+function initPlayer(){
+  // Pehle check karo kya free user 24hr block mein hai
+  if(!isPremium && isFreeUserBlocked()){
+    showBlockedScreen();
+    return;
+  }
+  showSpinner();
+  showAdThenPlay();
+}
+
+let adIdx=0, adCountdown=0, adInterval=null;
+
+function showAdThenPlay(){
+  // Pick a random ad URL from ADS array (Firebase-loaded or default)
+  const activeAds = ADS.filter(Boolean);
+  if(activeAds.length === 0){ startHLS(); return; }
+  const randomAd = activeAds[Math.floor(Math.random() * activeAds.length)];
+
+  // Show one 30s ad before stream
+  const adOverlay = document.getElementById('ad-overlay');
+  adOverlay.classList.add('visible');
+  document.getElementById('ad-info').textContent='Ad 1 of 1';
+  const skipBtn=document.getElementById('ad-skip-btn');
+  skipBtn.style.display='block'; skipBtn.classList.remove('active');
+  const ifWrap=document.getElementById('ad-iframe-wrap');
+  const ifr=document.createElement('iframe');
+  ifr.src=randomAd; ifr.setAttribute('allowfullscreen','');
+  ifWrap.appendChild(ifr);
+  adCountdown=30;
+  const progFill=document.getElementById('ad-prog-fill');
+  adInterval=setInterval(()=>{
+    adCountdown--;
+    progFill.style.width=((30-adCountdown)/30*100)+'%';
+    if(adCountdown<=5){ skipBtn.classList.add('active'); skipBtn.textContent='Skip ('+adCountdown+')'; }
+    if(adCountdown<=0){ closeAd(); }
+  },1000);
+}
+
+function closeAd(){
+  clearInterval(adInterval);
+  const adOverlay=document.getElementById('ad-overlay');
+  adOverlay.classList.remove('visible');
+  const ifWrap=document.getElementById('ad-iframe-wrap');
+  const ifr=ifWrap.querySelector('iframe'); if(ifr){ ifr.src='about:blank'; ifr.remove(); }
+  document.getElementById('ad-skip-btn').style.display='none';
+  startHLS();
+}
+
+function startHLS(){
+  // ══════════════════════════════════════════════════════════════
+  //  KS CRICKET — WORLD BEST STREAM SYSTEM
+  //  Priority chain:
+  //  HTTPS: [ownProxy(primary)] → [ownProxy(fallback)]
+  //         → [corsproxy(primary)] → [corsproxy(fallback)]
+  //         → [allorigins(primary)] → [allorigins(fallback)]
+  //  HTTP:  [direct primary] → [direct fallback]
+  //         → [ownProxy(primary)] → [ownProxy(fallback)]
+  // ══════════════════════════════════════════════════════════════
+
+  // Fallback raw URL (Firebase ya DEFAULT se alag)
+  const fallbackRaw = FALLBACK_STREAM_RAW;
+
+  // Raw primary URL nikalo proxy se (agar STREAM_URL proxy mein wrapped hai)
+  let primaryRaw = STREAM_URL;
+  if(primaryRaw.startsWith('/api/proxy?url=')){
+    try{ primaryRaw = decodeURIComponent(primaryRaw.replace('/api/proxy?url=','')); }catch(e){}
+  }
+
+  // Third-party CORS proxies (last resort)
+  const THIRD_PARTY = [
+    raw => 'https://corsproxy.io/?' + encodeURIComponent(raw),
+    raw => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(raw),
+    raw => 'https://proxy.cors.sh/' + raw,
+  ];
+
+  // Build attempt chain
+  const CHAIN = [];
+  if(IS_HTTPS){
+    // Apna Vercel proxy pehle — BEST option
+    CHAIN.push(ownProxy(primaryRaw));
+    CHAIN.push(ownProxy(fallbackRaw));
+    // Third party backup
+    THIRD_PARTY.forEach(fn => {
+      CHAIN.push(fn(primaryRaw));
+      CHAIN.push(fn(fallbackRaw));
+    });
+  } else {
+    // HTTP/localhost — direct best, proxy backup
+    CHAIN.push(primaryRaw);
+    CHAIN.push(fallbackRaw);
+    CHAIN.push(ownProxy(primaryRaw));
+    CHAIN.push(ownProxy(fallbackRaw));
+  }
+
+  let chainIdx = 0;
+
+  function destroyHls(){
+    if(window._ksStallWd){ clearInterval(window._ksStallWd); window._ksStallWd=null; }
+    if(hlsInst){
+      try{ hlsInst.stopLoad(); hlsInst.detachMedia(); hlsInst.destroy(); }catch(e){}
+      hlsInst=null;
+    }
+  }
+
+  function tryNext(idx){
+    if(idx >= CHAIN.length){ hideSpinner(); showError(); return; }
+    destroyHls();
+    const finalUrl = CHAIN[idx];
+    const label = idx===0?'Primary':idx===1?'Fallback':'Backup-'+(idx-1);
+    console.log('[KS] Attempt['+idx+'] '+label+':', finalUrl.substring(0,90));
+
+    if(Hls.isSupported()){
+      hlsInst = new Hls({
+        enableWorker:               true,
+        lowLatencyMode:             false,
+        // ── Tuned for live IPTV — small buffer, fast start ──
+        maxBufferLength:            10,
+        maxMaxBufferLength:         30,
+        backBufferLength:           15,
+        maxBufferSize:              25*1000*1000,
+        maxBufferHole:              0.5,
+        highBufferWatchdogPeriod:   2,
+        nudgeMaxRetry:              10,
+        nudgeOffset:                0.2,
+        startFragPrefetch:          true,
+        liveSyncDurationCount:      3,
+        liveMaxLatencyDurationCount:8,
+        // ── Fast fail → quick fallback ──
+        manifestLoadingTimeOut:     10000,
+        manifestLoadingMaxRetry:    1,
+        manifestLoadingRetryDelay:  500,
+        levelLoadingTimeOut:        10000,
+        levelLoadingMaxRetry:       1,
+        levelLoadingRetryDelay:     500,
+        fragLoadingTimeOut:         15000,
+        fragLoadingMaxRetry:        3,
+        fragLoadingRetryDelay:      1000,
+        xhrSetup: xhr=>{ xhr.withCredentials=false; },
+      });
+
+      hlsInst.loadSource(finalUrl);
+      hlsInst.attachMedia(videoEl);
+
+      hlsInst.on(Hls.Events.MANIFEST_PARSED, ()=>{
+        console.log('[KS] ✅ Connected via Attempt['+idx+']');
+        hideSpinner();
+        videoEl.play().catch(()=>{ videoEl.muted=true; videoEl.play().catch(()=>{}); });
+        isPlaying=true; updatePlayIcon();
+        startLiveTimer(); startWatermark();
+        if(!isPremium) startFreeTrial();
+
+        // Anti-stall: 4 sec freeze → jump to live edge
+        let lastTime=-1, stallCount=0;
+        window._ksStallWd = setInterval(()=>{
+          if(!hlsInst || videoEl.paused || videoEl.ended) return;
+          if(videoEl.currentTime === lastTime){
+            stallCount++;
+            if(stallCount >= 4){
+              stallCount=0;
+              console.warn('[KS] Stall → live edge pe jump');
+              try{ hlsInst.stopLoad(); hlsInst.startLoad(-1); videoEl.play().catch(()=>{}); }catch(e){}
+            }
+          } else stallCount=0;
+          lastTime = videoEl.currentTime;
+        }, 1000);
+      });
+
+      hlsInst.on(Hls.Events.ERROR,(e,d)=>{
+        if(!d.fatal){
+          if(d.details===Hls.ErrorDetails.BUFFER_STALLED_ERROR ||
+             d.details===Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL){
+            try{ hlsInst.stopLoad(); hlsInst.startLoad(-1); }catch(x){}
+          }
+          return;
+        }
+        console.warn('[KS] Fatal Attempt['+idx+']:', d.type, d.details);
+        setTimeout(()=>tryNext(idx+1), 1200);
+      });
+
+    } else if(videoEl.canPlayType('application/vnd.apple.mpegurl')){
+      // Safari
+      videoEl.src = finalUrl;
+      videoEl.addEventListener('loadedmetadata',()=>{
+        hideSpinner();
+        videoEl.play().catch(()=>{});
+        isPlaying=true; updatePlayIcon();
+        startLiveTimer(); startWatermark();
+        if(!isPremium) startFreeTrial();
+      },{once:true});
+      videoEl.addEventListener('error',()=>{
+        setTimeout(()=>tryNext(idx+1), 1200);
+      },{once:true});
+    } else {
+      showError();
+    }
+  }
+
+  tryNext(0);
+}
+
+// ── FREE TRIAL ──
+function startFreeTrial(){
+  const badge = document.getElementById('free-trial-badge');
+  freeTrialUsed = 0;
+  freeTrialTimer = setInterval(()=>{
+    // only tick while actually playing
+    if(!isPlaying) return;
+    freeTrialUsed++;
+    const remaining = FREE_TRIAL_SEC - freeTrialUsed;
+    const min = Math.floor(remaining/60), sec = remaining%60;
+    badge.style.display = 'block';
+    badge.textContent = '⏱ ' + min + ':' + String(sec).padStart(2,'0') + ' free left';
+    if(remaining <= 0){
+      clearInterval(freeTrialTimer);
+      freeTrialTimer = null;
+      badge.style.display = 'none';
+      // ── 24-HOUR BLOCK LAGAO ──
+      setFreeUserBlock();
+      try{ videoEl.pause(); }catch(e){}
+      isPlaying = false; updatePlayIcon();
+      // Premium lock hatao, blocked screen dikhao
+      document.getElementById('premium-lock').classList.remove('visible');
+      showBlockedScreen();
+    }
+  },1000);
+}
+
+// ── BLOCKED SCREEN (24hr ban popup) ──
+function showBlockedScreen(){
+  const remaining = blockRemainingText();
+  const el = document.getElementById('blocked-overlay');
+  document.getElementById('blocked-time-left').textContent = remaining;
+  el.classList.add('visible');
+  // Countdown update karte raho
+  if(window._blockCountdownTimer) clearInterval(window._blockCountdownTimer);
+  window._blockCountdownTimer = setInterval(()=>{
+    if(!isFreeUserBlocked()){
+      clearInterval(window._blockCountdownTimer);
+      el.classList.remove('visible');
+      return;
+    }
+    document.getElementById('blocked-time-left').textContent = blockRemainingText();
+  }, 60000); // minute-by-minute update
+}
+
+function retryPlayer(){
+  errScr.classList.remove('visible');
+  if(hlsInst){ hlsInst.destroy(); hlsInst=null; }
+  showSpinner();
+  setTimeout(startHLS,800);
+}
+
+// ── LIVE TIMER ──
+function startLiveTimer(){
+  liveTimer=setInterval(()=>{
+    liveSeconds++;
+    const h=Math.floor(liveSeconds/3600),m=Math.floor((liveSeconds%3600)/60),s=liveSeconds%60;
+    document.getElementById('live-time-display').textContent=
+      String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  },1000);
+}
+
+// ── WATERMARK ──
+function startWatermark(){
+  const wm=document.getElementById('watermark');
+  function moveWm(){
+    wm.style.top=Math.random()*80+'%';
+    wm.style.left=Math.random()*70+'%';
+  }
+  moveWm();
+  wmTimer=setInterval(moveWm,4000);
+}
+
+// ── CONTROLS ──
+function showControls(){
+  overlay.classList.add('visible');
+  document.getElementById('player-brand').classList.add('hide');
+  clearTimeout(ctrlTimer);
+  ctrlTimer=setTimeout(()=>{ overlay.classList.remove('visible'); document.getElementById('player-brand').classList.remove('hide'); },3500);
+}
+
+document.getElementById('video-area').addEventListener('mousemove',showControls);
+document.getElementById('video-area').addEventListener('touchstart',showControls,{passive:true});
+document.getElementById('video-area').addEventListener('click',e=>{
+  if(e.target===videoEl||e.target.id==='video-area'||e.target.id==='ctrl-overlay') togglePlay();
+});
+
+function togglePlay(){
+  // free trial user: allow play/pause but if trial ended, block
+  if(!isPremium && freeTrialUsed >= FREE_TRIAL_SEC) return;
+  if(isPlaying){ videoEl.pause(); isPlaying=false; }
+  else { videoEl.play().catch(()=>{}); isPlaying=true; }
+  updatePlayIcon(); showControls();
+}
+function updatePlayIcon(){
+  document.getElementById('play-icon').className=isPlaying?'fa-solid fa-pause':'fa-solid fa-play';
+}
+function seekVideo(s){
+  try{ videoEl.currentTime=(videoEl.currentTime||0)+s; }catch(e){}
+  showControls();
+}
+function toggleMute(){
+  isMuted=!isMuted;
+  try{ videoEl.muted=isMuted; }catch(e){}
+  document.getElementById('vol-icon').className=isMuted?'fa-solid fa-volume-xmark':'fa-solid fa-volume-high';
+}
+function toggleFullscreen(){
+  try{
+    if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+      (document.getElementById('player-shell').requestFullscreen||document.getElementById('player-shell').webkitRequestFullscreen).call(document.getElementById('player-shell'));
+      document.getElementById('fs-icon').className='fa-solid fa-compress';
+    } else {
+      (document.exitFullscreen||document.webkitExitFullscreen).call(document);
+      document.getElementById('fs-icon').className='fa-solid fa-expand';
+    }
+  }catch(e){}
+}
+async function togglePip(){
+  try{
+    if(document.pictureInPictureElement) await document.exitPictureInPicture();
+    else if(videoEl.requestPictureInPicture) await videoEl.requestPictureInPicture();
+  }catch(e){ showToast('PiP not supported on this device'); }
+}
+document.getElementById('vol-slider').addEventListener('input',function(){
+  try{ videoEl.volume=this.value/100; isMuted=(this.value==0); videoEl.muted=isMuted; }catch(e){}
+  document.getElementById('vol-icon').className=isMuted?'fa-solid fa-volume-xmark':this.value<50?'fa-solid fa-volume-low':'fa-solid fa-volume-high';
+});
+videoEl.addEventListener('play',()=>{ isPlaying=true; updatePlayIcon(); });
+videoEl.addEventListener('pause',()=>{ isPlaying=false; updatePlayIcon(); });
+videoEl.addEventListener('waiting',showSpinner);
+videoEl.addEventListener('canplay',hideSpinner);
+
+function showSpinner(){ spinner.classList.add('active'); }
+function hideSpinner(){ spinner.classList.remove('active'); }
+function showError(){ errScr.classList.add('visible'); hideSpinner(); }
+
+// ── SCHEDULE — Auto-status from date + Firebase real-time override ──
+
+// Full IPL 2026 schedule (date used for auto status calculation)
+const MATCHES = [
+  { num:'M1',  teams:'RCB vs SRH',  venue:'Chinnaswamy, Bengaluru',      dateStr:'2026-03-28', time:'7:30 PM' },
+  { num:'M2',  teams:'MI vs KKR',   venue:'Wankhede, Mumbai',            dateStr:'2026-03-29', time:'7:30 PM' },
+  { num:'M3',  teams:'RR vs CSK',   venue:'Barsapara, Guwahati',         dateStr:'2026-03-30', time:'7:30 PM' },
+  { num:'M4',  teams:'PBKS vs GT',  venue:'IS Bindra, Mullanpur',        dateStr:'2026-03-31', time:'7:30 PM' },
+  { num:'M5',  teams:'LSG vs DC',   venue:'BRSABV Ekana, Lucknow',       dateStr:'2026-04-01', time:'7:30 PM' },
+  { num:'M6',  teams:'KKR vs SRH',  venue:'Eden Gardens, Kolkata',       dateStr:'2026-04-02', time:'7:30 PM' },
+  { num:'M7',  teams:'CSK vs PBKS', venue:'MA Chidambaram, Chennai',     dateStr:'2026-04-03', time:'7:30 PM' },
+  { num:'M8',  teams:'DC vs MI',    venue:'Arun Jaitley, Delhi',         dateStr:'2026-04-04', time:'3:30 PM' },
+  { num:'M9',  teams:'GT vs RR',    venue:'Narendra Modi, Ahmedabad',    dateStr:'2026-04-04', time:'7:30 PM' },
+  { num:'M10', teams:'SRH vs LSG',  venue:'Rajiv Gandhi, Hyderabad',     dateStr:'2026-04-05', time:'3:30 PM' },
+  { num:'M11', teams:'RCB vs CSK',  venue:'Chinnaswamy, Bengaluru',      dateStr:'2026-04-05', time:'7:30 PM' },
+  { num:'M12', teams:'KKR vs PBKS', venue:'Eden Gardens, Kolkata',       dateStr:'2026-04-06', time:'7:30 PM' },
+  { num:'M13', teams:'RR vs MI',    venue:'Barsapara, Guwahati',         dateStr:'2026-04-07', time:'7:30 PM' },
+  { num:'M14', teams:'DC vs GT',    venue:'Arun Jaitley, Delhi',         dateStr:'2026-04-08', time:'7:30 PM' },
+  { num:'M15', teams:'KKR vs LSG',  venue:'Eden Gardens, Kolkata',       dateStr:'2026-04-09', time:'7:30 PM' },
+  { num:'M16', teams:'RR vs RCB',   venue:'Barsapara, Guwahati',         dateStr:'2026-04-10', time:'7:30 PM' },
+  { num:'M17', teams:'PBKS vs SRH', venue:'IS Bindra, Mullanpur',        dateStr:'2026-04-11', time:'3:30 PM' },
+  { num:'M18', teams:'CSK vs DC',   venue:'MA Chidambaram, Chennai',     dateStr:'2026-04-11', time:'7:30 PM' },
+  { num:'M19', teams:'LSG vs GT',   venue:'BRSABV Ekana, Lucknow',       dateStr:'2026-04-12', time:'3:30 PM' },
+  { num:'M20', teams:'MI vs RCB',   venue:'Wankhede, Mumbai',            dateStr:'2026-04-12', time:'7:30 PM' },
+  { num:'M21', teams:'GT vs KKR',   venue:'Narendra Modi, Ahmedabad',    dateStr:'2026-04-13', time:'7:30 PM' },
+  { num:'M22', teams:'SRH vs RR',   venue:'Rajiv Gandhi, Hyderabad',     dateStr:'2026-04-14', time:'7:30 PM' },
+  { num:'M23', teams:'PBKS vs LSG', venue:'IS Bindra, Mullanpur',        dateStr:'2026-04-15', time:'7:30 PM' },
+  { num:'M24', teams:'MI vs CSK',   venue:'Wankhede, Mumbai',            dateStr:'2026-04-16', time:'7:30 PM' },
+  { num:'M25', teams:'RCB vs DC',   venue:'Chinnaswamy, Bengaluru',      dateStr:'2026-04-17', time:'7:30 PM' },
+];
+
+// ── Auto-calculate status from current date/time ──
+function autoStatus(m){
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+  const matchDate = m.dateStr;
+  if(matchDate < todayStr) return 'done';
+  if(matchDate > todayStr) return 'upcoming';
+  // Same day — check time
+  const [hm, ampm] = m.time.split(' ');
+  let [hh, mm] = hm.split(':').map(Number);
+  if(ampm==='PM' && hh!==12) hh+=12;
+  if(ampm==='AM' && hh===12) hh=0;
+  const matchStart = new Date(matchDate);
+  matchStart.setHours(hh, mm, 0, 0);
+  const matchEnd = new Date(matchStart.getTime() + 4*60*60*1000); // match ~4hr
+  if(now >= matchStart && now <= matchEnd) return 'live';
+  if(now > matchEnd) return 'done';
+  return 'today';
+}
+
+// ── Render one match card ──
+function renderMatchCard(m, fbStatus){
+  const status = fbStatus || autoStatus(m);
+  const div = document.createElement('div');
+  div.className = 'match-card' + (status==='live' ? ' live-now' : '');
+  div.id = 'match-'+m.num;
+
+  let statusHtml='', actionHtml='';
+  const dispDate = m.dateStr.replace('2026-','').split('-').reverse().join(' ');
+  if(status==='live'){
+    statusHtml='<span class="match-status ms-live">🔴 LIVE</span>';
+    actionHtml='<button class="watch-live-btn" onclick="scrollToPlayer()">▶ Watch Now</button>';
+  } else if(status==='today'){
+    statusHtml='<span class="match-status ms-today">Today</span>';
+  } else if(status==='done'){
+    statusHtml='<span class="match-status ms-done">Done</span>';
+  } else {
+    statusHtml='<span class="match-status ms-upcoming">Upcoming</span>';
+  }
+  div.innerHTML=`
+    <div class="match-num">${m.num}</div>
+    <div class="match-teams">
+      <div class="match-vs">${m.teams}</div>
+      <div class="match-meta">${m.venue} &nbsp;·&nbsp; ${dispDate} ${m.dateStr.split('-')[0]}, ${m.time}</div>
+    </div>
+    ${statusHtml}
+    ${actionHtml}
+  `;
+  return div;
+}
+
+// ── Initial render (auto-status from date) ──
+function renderSchedule(fbOverrides){
+  const wrap = document.getElementById('matchCards');
+  wrap.innerHTML = '';
+  MATCHES.forEach(m=>{
+    const fbStatus = fbOverrides ? fbOverrides[m.num] : null;
+    wrap.appendChild(renderMatchCard(m, fbStatus));
+  });
+}
+
+// First render immediately with auto-dates
+renderSchedule(null);
+
+// ── Firebase real-time listener for schedule overrides ──
+// Admin can set cricket/schedule/M5 = "live" to force any match live
+CRICKET_DB.ref('cricket/schedule').on('value', snap=>{
+  const fbOverrides = snap.val() || {};
+  renderSchedule(fbOverrides);
+  console.log('[KS Cricket] Schedule updated from Firebase:', fbOverrides);
+});
+
+// ── Auto-refresh status every 5 minutes (date-based) ──
+setInterval(()=>{
+  CRICKET_DB.ref('cricket/schedule').once('value').then(snap=>{
+    renderSchedule(snap.val() || {});
+  });
+}, 5 * 60 * 1000);
+
+function scrollToPlayer(){
+  document.getElementById('player-shell').scrollIntoView({behavior:'smooth'});
+}
+
+// ── KS PAY SECTION ──
+const CIRCUM = 125.66; // 2π×20 (radius 20)
+let qrCountdown=30, qrTimer=null;
+
+function generateQR(){
+  const upi=MERCHANT_UPI, name=MERCHANT_NAME, amt=59;
+  const upiStr=`upi://pay?pa=${upi}&pn=${encodeURIComponent(name)}&am=${amt}&cu=INR&tn=IPL+Special+Plan`;
+  const qrApi=`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(upiStr)}&size=200x200&format=png&qzone=1`;
+  const img=document.getElementById('qrImg');
+  const ov=document.getElementById('qrOverlay2');
+  ov.classList.add('refreshing');
+  img.onload=()=>{ ov.classList.remove('refreshing'); };
+  img.src=qrApi;
+  updateUPILink();
+}
+
+function updateUPILink(){
+  const upiStr=`upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=59&cu=INR&tn=IPL+Special+Plan`;
+  document.getElementById('upiDeepLink').href=upiStr;
+}
+
+function startQRTimer(){
+  qrCountdown=30;
+  clearInterval(qrTimer);
+  qrTimer=setInterval(()=>{
+    qrCountdown--;
+    document.getElementById('timerVal').textContent=qrCountdown;
+    const arc=document.getElementById('timerArc');
+    arc.style.strokeDashoffset=CIRCUM*(1-qrCountdown/30);
+    if(qrCountdown<=0){ generateQR(); startQRTimer(); }
+  },1000);
+}
+
+generateQR();
+startQRTimer();
+
+function switchPayTab(t){
+  document.getElementById('tab-qr').classList.toggle('active',t==='qr');
+  document.getElementById('tab-upi').classList.toggle('active',t==='upi');
+  document.getElementById('qr-panel').classList.toggle('hidden',t!=='qr');
+  document.getElementById('upi-panel').classList.toggle('hidden',t!=='upi');
+}
+
+function copyUPI(){
+  navigator.clipboard.writeText(MERCHANT_UPI).then(()=>{
+    const btn=document.getElementById('copyBtn');
+    btn.textContent='✅ Copied!';
+    setTimeout(()=>btn.textContent='📋 Copy',2000);
+  }).catch(()=>showToast('Copy karo: '+MERCHANT_UPI));
+}
+
+const utrInput=document.getElementById('utrInput');
+const verifyBtn=document.getElementById('verifyBtn');
+utrInput.addEventListener('input',()=>{ verifyBtn.disabled=utrInput.value.trim().length<10; });
+
+const VERIFY_STEPS=[
+  'UTR format validate ho raha hai',
+  'Duplicate check ho raha hai',
+  'Time window validate ho raha hai',
+  'Amount verify ho raha hai',
+  'Fraud score check ho raha hai',
+  'IPL Plan activate ho raha hai',
+];
+
+async function startVerify(){
+  const utr=utrInput.value.trim();
+  if(utr.length<10){ showToast('Valid UTR enter karo (10-20 digits)'); return; }
+  const ov=document.getElementById('verifyingOverlay');
+  const stepsList=document.getElementById('stepsList');
+  stepsList.innerHTML='';
+  VERIFY_STEPS.forEach((s,i)=>{
+    const el=document.createElement('div');
+    el.className='step-item pending';
+    el.id='step-'+i;
+    el.innerHTML=`<div class="step-num">${i+1}</div><span>${s}</span>`;
+    stepsList.appendChild(el);
+  });
+  ov.classList.add('show');
+
+  for(let i=0;i<VERIFY_STEPS.length;i++){
+    if(i>0) document.getElementById('step-'+(i-1)).className='step-item done';
+    document.getElementById('step-'+i).className='step-item active';
+    await sleep(700+Math.random()*400);
+  }
+  document.getElementById('step-'+(VERIFY_STEPS.length-1)).className='step-item done';
+  await sleep(400);
+  ov.classList.remove('show');
+  activatePlan(utr);
+}
+
+function activatePlan(utr){
+  // Set 65-day expiry
+  const expiry=Date.now()+(65*24*60*60*1000);
+  localStorage.setItem('ks_ipl_expiry',expiry.toString());
+  isPremium=true;
+
+  const now=new Date();
+  document.getElementById('receiptBox').innerHTML=`
+    <div class="receipt-row"><span class="receipt-label">Amount Paid</span><span class="receipt-val">₹59</span></div>
+    <div class="receipt-row"><span class="receipt-label">UTR Reference</span><span class="receipt-val">${utr}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Plan</span><span class="receipt-val">IPL Special (2 months)</span></div>
+    <div class="receipt-row"><span class="receipt-label">Coverage</span><span class="receipt-val">65 Din — Full IPL 2026</span></div>
+    <div class="receipt-row"><span class="receipt-label">Date</span><span class="receipt-val">${now.toLocaleDateString('en-IN')}</span></div>
+    <div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-val green">✓ ACTIVATED</span></div>
+  `;
+  document.getElementById('successOverlay').classList.add('show');
+  spawnConfetti();
+  playSuccessSound();
+}
+
+function goWatch(){
+  document.getElementById('successOverlay').classList.remove('show');
+  // scroll to player and start
+  document.getElementById('player-shell').scrollIntoView({behavior:'smooth'});
+  setTimeout(()=>{ initPlayer(); },500);
+}
+
+// ── FAQ ──
+function toggleFaq(el){
+  el.classList.toggle('open');
+}
+
+// ── CONFETTI ──
+function spawnConfetti(){
+  const colors=['#e50914','#22c55e','#facc15','#60a5fa','#f97316','#ff6200','#0033a0','#f43f5e'];
+  for(let i=0;i<70;i++){
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='cf';
+      const sz=5+Math.random()*8;
+      el.style.cssText=`left:${Math.random()*100}vw;top:-20px;width:${sz}px;height:${sz}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*0.5}s;`;
+      document.body.appendChild(el);
+      setTimeout(()=>el.remove(),4000);
+    },i*22);
+  }
+}
+
+// ── SUCCESS SOUND ──
+function playSuccessSound(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [523.25,659.25,783.99].forEach((freq,i)=>{
+      setTimeout(()=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.setValueAtTime(freq,ctx.currentTime);
+        g.gain.setValueAtTime(0.22,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.5);
+        o.start(ctx.currentTime);o.stop(ctx.currentTime+0.5);
+      },i*130);
+    });
+  }catch(e){}
+}
+
+// ── TOAST ──
+function showToast(msg,dur=2500){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),dur);
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+showControls();
+</script>
+</body>
+</html>
