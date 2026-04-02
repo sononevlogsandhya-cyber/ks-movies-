@@ -2640,42 +2640,151 @@ img { display: block; max-width: 100%; }
           </div>
         </div>
 
-        <!-- ── FORM 4: CHANNEL URL OVERRIDES ── -->
+        <!-- ── FORM 4: CHANNEL MANAGER (Add New + URL Override) ── -->
         <div class="ads-form-card" style="border-color:rgba(245,197,24,0.2);">
           <div class="ads-form-card-hdr" style="background:rgba(245,197,24,0.05);">
             <i class="fas fa-satellite" style="color:var(--gold);"></i>
-            <span class="ads-form-card-title">Channel Stream URL Overrides</span>
-            <span class="ads-form-card-sub" style="color:var(--gold);">Paid Channels Fix ⚡</span>
+            <span class="ads-form-card-title">Channel Manager</span>
+            <span class="ads-form-card-sub" style="color:var(--gold);">Add New + URL Fix ⚡</span>
           </div>
           <div class="ads-form-body">
-            <div class="ads-info-note" style="background:rgba(245,197,24,0.06);border-color:rgba(245,197,24,0.25);">
-              <i class="fas fa-triangle-exclamation" style="color:var(--gold);"></i>
-              <span><strong style="color:#fff;">Agar paid channel nahi dikh raha</strong> — uska working stream URL yahan daalo. Channel name + HLS URL (.m3u8) pair karo. Yeh M3U se aane wale dead URL ko replace kar dega.</span>
+
+            <!-- TAB SWITCHER -->
+            <div style="display:flex;gap:6px;margin-bottom:16px;">
+              <button id="ch-tab-add" onclick="switchChTab('add')"
+                style="flex:1;padding:9px 0;border-radius:9px;border:1px solid rgba(245,197,24,0.4);background:rgba(245,197,24,0.12);color:var(--gold);font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .2s;font-family:inherit;">
+                <i class="fas fa-plus-circle"></i> Naya Channel Add Karo
+              </button>
+              <button id="ch-tab-override" onclick="switchChTab('override')"
+                style="flex:1;padding:9px 0;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--text-3);font-size:0.8rem;font-weight:800;cursor:pointer;transition:all .2s;font-family:inherit;">
+                <i class="fas fa-wrench"></i> URL Override (Fix)
+              </button>
             </div>
 
-            <!-- Overrides list -->
-            <div id="ch-overrides-list" style="display:flex;flex-direction:column;gap:8px;">
-              <!-- JS se render hoga -->
-            </div>
-
-            <!-- Add new override -->
-            <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:8px;align-items:end;margin-top:4px;" id="new-override-row">
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Channel Name</label>
-                <input type="text" id="new-ch-name" placeholder="e.g. Star Plus" style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;">
+            <!-- ── TAB: ADD NEW CHANNEL ── -->
+            <div id="ch-panel-add">
+              <div class="ads-info-note" style="background:rgba(0,200,83,0.05);border-color:rgba(0,200,83,0.2);margin-bottom:14px;">
+                <i class="fas fa-circle-info" style="color:#00c853;flex-shrink:0;"></i>
+                <span style="font-size:0.78rem;">Yahan add kiya channel <strong style="color:#00c853;">live TV mein real-time appear</strong> hoga. M3U mein jo channels nahi hain unhe yahan add karo.</span>
               </div>
-              <div style="display:flex;flex-direction:column;gap:4px;">
-                <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Stream URL (.m3u8 or .mp4)</label>
-                <input type="url" id="new-ch-url" placeholder="https://stream.example.com/live.m3u8" style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;">
+
+              <!-- Add form -->
+              <div style="display:flex;flex-direction:column;gap:10px;" id="new-admin-ch-form">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Channel Name <span style="color:var(--accent)">*</span></label>
+                    <input type="text" id="ach-name" placeholder="e.g. Star Plus HD"
+                      style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;transition:.2s;"
+                      onfocus="this.style.borderColor='rgba(245,197,24,0.6)'" onblur="this.style.borderColor='var(--border2)'">
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Category</label>
+                    <select id="ach-group" style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;cursor:pointer;">
+                      <option value="Entertainment">Entertainment</option>
+                      <option value="News">News</option>
+                      <option value="Sports">Sports</option>
+                      <option value="Movies">Movies</option>
+                      <option value="Kids">Kids</option>
+                      <option value="Music">Music</option>
+                      <option value="Religious">Religious</option>
+                      <option value="Regional">Regional</option>
+                      <option value="Documentary">Documentary</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Stream URL (.m3u8 / .mp4 / .mpd) <span style="color:var(--accent)">*</span></label>
+                  <input type="url" id="ach-url" placeholder="https://stream.example.com/live.m3u8"
+                    style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;transition:.2s;"
+                    onfocus="this.style.borderColor='rgba(245,197,24,0.6)'" onblur="this.style.borderColor='var(--border2)'">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Logo URL <span style="color:var(--text-3);font-weight:400;">(optional)</span></label>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="url" id="ach-logo" placeholder="https://example.com/logo.png"
+                      style="flex:1;background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;transition:.2s;"
+                      oninput="previewAchLogo(this.value)"
+                      onfocus="this.style.borderColor='rgba(245,197,24,0.6)'" onblur="this.style.borderColor='var(--border2)'">
+                    <img id="ach-logo-preview" src="" style="width:36px;height:36px;border-radius:8px;object-fit:contain;background:var(--bg-surface);border:1px solid var(--border);display:none;">
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+                    <div id="ach-type-track" onclick="toggleAchType()"
+                      style="width:42px;height:24px;border-radius:12px;background:#333;border:1px solid var(--border2);position:relative;cursor:pointer;transition:all .25s;">
+                      <div id="ach-type-thumb" style="position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--text-3);transition:all .25s;"></div>
+                    </div>
+                    <span id="ach-type-label" style="font-size:0.78rem;font-weight:800;color:var(--text-3);">FREE</span>
+                    <input type="checkbox" id="ach-paid" style="display:none;">
+                  </label>
+                  <button onclick="addAdminChannel()"
+                    style="display:flex;align-items:center;gap:8px;padding:10px 22px;background:linear-gradient(135deg,#c9940a,var(--gold));color:#000;border:none;border-radius:9px;font-weight:800;font-size:0.85rem;cursor:pointer;transition:all .2s;font-family:inherit;"
+                    onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+                    <i class="fas fa-bolt"></i> Add → Live TV
+                  </button>
+                </div>
               </div>
-              <button onclick="addChannelOverride()" style="height:38px;padding:0 16px;background:var(--gold);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit;white-space:nowrap;margin-top:20px;">+ Add</button>
+
+              <!-- Added channels list -->
+              <div style="margin-top:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                  <span style="font-size:0.72rem;font-weight:700;color:var(--text-3);letter-spacing:.5px;text-transform:uppercase;">Admin-Added Channels</span>
+                  <span id="admin-ch-count-badge" style="background:rgba(0,200,83,0.15);border:1px solid rgba(0,200,83,0.3);color:#00c853;font-size:0.65rem;font-weight:800;padding:2px 8px;border-radius:20px;display:none;">0</span>
+                </div>
+                <div id="admin-ch-list" style="display:flex;flex-direction:column;gap:6px;">
+                  <div style="padding:14px;text-align:center;color:var(--text-3);font-size:0.8rem;border:1px dashed var(--border);border-radius:8px;">
+                    <i class="fas fa-tv" style="display:block;font-size:1.3rem;margin-bottom:6px;"></i>
+                    Koi admin channel nahi hai abhi. Upar form se add karo.
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <button class="ads-save-btn" id="ch-overrides-save-btn" onclick="saveChannelOverrides()" style="background:linear-gradient(135deg,#c9940a,var(--gold));color:#000;margin-top:4px;">
-              <i class="fas fa-floppy-disk"></i>
-              <span>Channel Overrides Save Karo</span>
-            </button>
-            <div id="ch-overrides-status" style="font-size:0.75rem;color:var(--text-3);text-align:center;min-height:18px;"></div>
+            <!-- ── TAB: URL OVERRIDE ── -->
+            <div id="ch-panel-override" style="display:none;">
+              <div class="ads-info-note" style="background:rgba(245,197,24,0.06);border-color:rgba(245,197,24,0.25);margin-bottom:14px;">
+                <i class="fas fa-triangle-exclamation" style="color:var(--gold);flex-shrink:0;"></i>
+                <span style="font-size:0.78rem;"><strong style="color:#fff;">M3U mein channel ka URL dead hai?</strong> — Channel name likhlo aur working URL daalo. Yeh M3U ka URL replace kar dega.</span>
+              </div>
+
+              <!-- Overrides list -->
+              <div id="ch-overrides-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+                <!-- JS se render hoga -->
+              </div>
+
+              <!-- Add override -->
+              <div style="display:grid;grid-template-columns:1fr 2fr auto;gap:8px;align-items:end;">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">Channel Name</label>
+                  <input type="text" id="new-ch-name" placeholder="e.g. Star Plus"
+                    style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;">
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                  <label style="font-size:0.7rem;font-weight:700;color:var(--text-2);">New Stream URL</label>
+                  <input type="url" id="new-ch-url" placeholder="https://stream.example.com/live.m3u8"
+                    style="background:var(--bg-card);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text-1);font-size:0.82rem;outline:none;font-family:inherit;">
+                </div>
+                <button onclick="addChannelOverride()" style="height:38px;padding:0 16px;background:var(--gold);color:#000;border:none;border-radius:8px;font-weight:800;font-size:0.8rem;cursor:pointer;font-family:inherit;white-space:nowrap;margin-top:20px;">+ Add</button>
+              </div>
+
+              <button class="ads-save-btn" id="ch-overrides-save-btn" onclick="saveChannelOverrides()" style="background:linear-gradient(135deg,#c9940a,var(--gold));color:#000;margin-top:12px;">
+                <i class="fas fa-floppy-disk"></i>
+                <span>URL Overrides Save Karo</span>
+              </button>
+              <div id="ch-overrides-status" style="font-size:0.75rem;color:var(--text-3);text-align:center;min-height:18px;"></div>
+            </div>
+
+            <!-- Channel List Page button -->
+            <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+              <button class="ch-list-tab-btn" onclick="openChannelListPage()">
+                <i class="fas fa-list-ul"></i>
+                <span>Sab Channels Dekho &amp; Free/Premium Set Karo</span>
+                <span class="ch-list-tab-badge" id="ch-list-count-badge">—</span>
+                <i class="fas fa-arrow-right" style="margin-left:auto;font-size:0.75rem;opacity:0.6;"></i>
+              </button>
+            </div>
+
           </div>
         </div>
 
@@ -4215,40 +4324,217 @@ function sv(id, val) {
                 </div>`).join('');
         }
 
+        // ══════════════════════════════════════════════════════
+        //  CHANNEL MANAGER — Tab Switcher
+        // ══════════════════════════════════════════════════════
+        function switchChTab(tab) {
+            const addPanel  = document.getElementById('ch-panel-add');
+            const ovPanel   = document.getElementById('ch-panel-override');
+            const addBtn    = document.getElementById('ch-tab-add');
+            const ovBtn     = document.getElementById('ch-tab-override');
+            if (tab === 'add') {
+                addPanel.style.display = '';
+                ovPanel.style.display  = 'none';
+                addBtn.style.background   = 'rgba(245,197,24,0.12)';
+                addBtn.style.borderColor  = 'rgba(245,197,24,0.4)';
+                addBtn.style.color        = 'var(--gold)';
+                ovBtn.style.background    = 'transparent';
+                ovBtn.style.borderColor   = 'var(--border)';
+                ovBtn.style.color         = 'var(--text-3)';
+            } else {
+                addPanel.style.display = 'none';
+                ovPanel.style.display  = '';
+                ovBtn.style.background    = 'rgba(245,197,24,0.12)';
+                ovBtn.style.borderColor   = 'rgba(245,197,24,0.4)';
+                ovBtn.style.color         = 'var(--gold)';
+                addBtn.style.background   = 'transparent';
+                addBtn.style.borderColor  = 'var(--border)';
+                addBtn.style.color        = 'var(--text-3)';
+            }
+        }
+
+        // ── ACH TYPE TOGGLE ──────────────────────────────────
+        function toggleAchType() {
+            const cb    = document.getElementById('ach-paid');
+            const track = document.getElementById('ach-type-track');
+            const thumb = document.getElementById('ach-type-thumb');
+            const label = document.getElementById('ach-type-label');
+            cb.checked = !cb.checked;
+            if (cb.checked) {
+                track.style.background   = 'rgba(245,197,24,0.3)';
+                track.style.borderColor  = 'rgba(245,197,24,0.6)';
+                thumb.style.transform    = 'translateX(18px)';
+                thumb.style.background   = 'var(--gold)';
+                label.textContent        = '👑 PREMIUM';
+                label.style.color        = 'var(--gold)';
+            } else {
+                track.style.background   = '#333';
+                track.style.borderColor  = 'var(--border2)';
+                thumb.style.transform    = '';
+                thumb.style.background   = 'var(--text-3)';
+                label.textContent        = 'FREE';
+                label.style.color        = 'var(--text-3)';
+            }
+        }
+
+        function previewAchLogo(url) {
+            const img = document.getElementById('ach-logo-preview');
+            if (url && (url.startsWith('http') || url.startsWith('//'))) {
+                img.src = url;
+                img.style.display = 'block';
+                img.onerror = () => { img.style.display='none'; };
+            } else {
+                img.style.display = 'none';
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  ADD NEW ADMIN CHANNEL → Firebase liveTV/adminChannels
+        // ══════════════════════════════════════════════════════
+        let adminChannelsData = {}; // { key: {name,url,logo,group,paid} }
+
+        async function addAdminChannel() {
+            const name  = (document.getElementById('ach-name').value  || '').trim();
+            const url   = (document.getElementById('ach-url').value   || '').trim();
+            const logo  = (document.getElementById('ach-logo').value  || '').trim();
+            const group = (document.getElementById('ach-group').value || 'General');
+            const paid  = document.getElementById('ach-paid').checked;
+
+            if (!name) { showToast('Channel name daalo!', 'error'); document.getElementById('ach-name').focus(); return; }
+            if (!url)  { showToast('Stream URL daalo!', 'error');  document.getElementById('ach-url').focus();  return; }
+
+            const key = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+            const chObj = { name, url, logo, group, paid, addedAt: Date.now() };
+
+            const btn = document.querySelector('[onclick="addAdminChannel()"]');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding…'; }
+
+            try {
+                await DB.ref('liveTV/adminChannels/' + key).set(chObj);
+                adminChannelsData[key] = chObj;
+                renderAdminChannelList();
+
+                // Clear form
+                document.getElementById('ach-name').value  = '';
+                document.getElementById('ach-url').value   = '';
+                document.getElementById('ach-logo').value  = '';
+                document.getElementById('ach-logo-preview').style.display = 'none';
+                if (document.getElementById('ach-paid').checked) toggleAchType();
+
+                showToast(`✅ "${name}" live TV mein real-time add ho gaya!`, 'success');
+
+                // Update channel list page if open
+                if (clChannelsLoaded) {
+                    const exists = clAllChannels.some(c => c.name.toLowerCase() === name.toLowerCase());
+                    if (!exists) {
+                        clAllChannels.push({ name, url, logo, group, paid, _adminAdded: true });
+                        const badge = document.getElementById('ch-list-count-badge');
+                        if (badge) badge.textContent = clAllChannels.length;
+                        updateCLStats();
+                        if (document.getElementById('channel-list-page').classList.contains('show')) renderChannelList();
+                    }
+                }
+            } catch(err) {
+                showToast('Error: ' + err.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bolt"></i> Add → Live TV'; }
+            }
+        }
+
+        function renderAdminChannelList() {
+            const list   = document.getElementById('admin-ch-list');
+            const badge  = document.getElementById('admin-ch-count-badge');
+            const entries = Object.entries(adminChannelsData);
+            if (badge) {
+                if (entries.length > 0) { badge.textContent = entries.length; badge.style.display = 'inline-flex'; }
+                else badge.style.display = 'none';
+            }
+            if (entries.length === 0) {
+                list.innerHTML = `<div style="padding:14px;text-align:center;color:var(--text-3);font-size:0.8rem;border:1px dashed var(--border);border-radius:8px;"><i class="fas fa-tv" style="display:block;font-size:1.3rem;margin-bottom:6px;"></i>Koi admin channel nahi hai abhi. Upar form se add karo.</div>`;
+                return;
+            }
+            list.innerHTML = entries.map(([key, ch]) => `
+                <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;padding:8px 12px;background:var(--bg-card);border:1px solid rgba(0,200,83,0.15);border-radius:8px;animation:fadeUp .2s ease;">
+                  <div style="width:30px;height:30px;border-radius:7px;background:var(--bg-surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                    ${ch.logo ? `<img src="${ch.logo}" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display='none';this.parentElement.textContent='📺'">` : '<span style="font-size:.75rem;">📺</span>'}
+                  </div>
+                  <div style="min-width:0;">
+                    <div style="font-size:0.82rem;font-weight:700;color:var(--text-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ch.name}</div>
+                    <div style="font-size:0.67rem;color:var(--text-3);display:flex;gap:6px;margin-top:1px;">
+                      <span>${ch.group}</span>
+                      <span style="color:${ch.paid ? 'var(--gold)' : '#00c853'};font-weight:800;">${ch.paid ? '👑 Premium' : '🟢 Free'}</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.62rem;color:var(--text-3);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${ch.url}">${ch.url}</div>
+                  <button onclick="removeAdminChannel('${key.replace(/'/g,"\'")}','${ch.name.replace(/'/g,"\'")}' )"
+                    style="width:28px;height:28px;border-radius:6px;background:rgba(255,23,68,0.1);border:1px solid rgba(255,23,68,0.25);color:#ff1744;cursor:pointer;font-size:0.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>`).join('');
+        }
+
+        async function removeAdminChannel(key, name) {
+            if (!confirm(`"${name}" ko live TV se hata doon?`)) return;
+            try {
+                await DB.ref('liveTV/adminChannels/' + key).remove();
+                delete adminChannelsData[key];
+                renderAdminChannelList();
+                // Remove from channel list page too
+                if (clChannelsLoaded) {
+                    clAllChannels = clAllChannels.filter(c => c.name.toLowerCase() !== name.toLowerCase());
+                    updateCLStats();
+                    if (document.getElementById('channel-list-page').classList.contains('show')) renderChannelList();
+                    const badge = document.getElementById('ch-list-count-badge');
+                    if (badge) badge.textContent = clAllChannels.length;
+                }
+                showToast(`"${name}" remove ho gaya`, 'info');
+            } catch(err) { showToast('Error: ' + err.message, 'error'); }
+        }
+
+        function loadAdminChannels() {
+            DB.ref('liveTV/adminChannels').once('value').then(snap => {
+                adminChannelsData = snap.val() || {};
+                renderAdminChannelList();
+            }).catch(() => {});
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  URL OVERRIDES (existing channel ka URL replace)
+        // ══════════════════════════════════════════════════════
         function addChannelOverride() {
             const nameEl = document.getElementById('new-ch-name');
-            const urlEl = document.getElementById('new-ch-url');
-            const name = nameEl.value.trim();
-            const url = urlEl.value.trim();
+            const urlEl  = document.getElementById('new-ch-url');
+            const name   = nameEl.value.trim();
+            const url    = urlEl.value.trim();
             if (!name) { showToast('Channel name daalo!', 'error'); nameEl.focus(); return; }
-            if (!url) { showToast('Stream URL daalo!', 'error'); urlEl.focus(); return; }
+            if (!url)  { showToast('Stream URL daalo!', 'error');  urlEl.focus();  return; }
             channelOverridesData[name.toLowerCase()] = url;
             nameEl.value = ''; urlEl.value = '';
             renderChannelOverrides();
-            showToast(`"${name}" override list mein add hua — Save button dabao!`, 'info');
+            showToast(`"${name}" override list mein add hua — Save dabao!`, 'info');
         }
 
         function removeChannelOverride(name) {
             delete channelOverridesData[name.toLowerCase()];
-            delete channelOverridesData[name]; // try both cases
+            delete channelOverridesData[name];
             renderChannelOverrides();
         }
 
         function saveChannelOverrides() {
-            const btn = document.getElementById('ch-overrides-save-btn');
+            const btn      = document.getElementById('ch-overrides-save-btn');
             const statusEl = document.getElementById('ch-overrides-status');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+            btn.disabled   = true;
+            btn.innerHTML  = '<i class="fas fa-spinner fa-spin"></i> Saving…';
             const count = Object.keys(channelOverridesData).length;
             DB.ref('liveTV/channelOverrides').set(count > 0 ? channelOverridesData : null)
                 .then(() => {
                     btn.innerHTML = '<i class="fas fa-check"></i> Saved!';
                     btn.style.background = 'linear-gradient(135deg,#00c853,#1b5e20)'; btn.style.color='#fff';
-                    statusEl.textContent = `✅ ${count} channel override${count!==1?'s':''} Firebase mein save ho gaye!`;
+                    statusEl.textContent = `✅ ${count} URL override${count!==1?'s':''} save ho gaye!`;
                     statusEl.style.color = 'var(--success)';
                     showToast(`${count} channel URL overrides save ho gaye! ⚡`, 'success');
                     setTimeout(() => {
-                        btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Channel Overrides Save Karo';
+                        btn.innerHTML = '<i class="fas fa-floppy-disk"></i> URL Overrides Save Karo';
                         btn.style.background='linear-gradient(135deg,#c9940a,var(--gold))'; btn.style.color='#000'; btn.disabled=false;
                         statusEl.textContent='';
                     }, 3000);
@@ -4256,13 +4542,19 @@ function sv(id, val) {
                 .catch(err => {
                     btn.innerHTML = '<i class="fas fa-xmark"></i> Error!';
                     showToast('Error: ' + err.message, 'error');
-                    setTimeout(() => { btn.innerHTML = '<i class="fas fa-floppy-disk"></i> Channel Overrides Save Karo'; btn.disabled=false; }, 2500);
+                    setTimeout(() => { btn.innerHTML = '<i class="fas fa-floppy-disk"></i> URL Overrides Save Karo'; btn.disabled=false; }, 2500);
                 });
+        }
+
+        // ── INIT ─────────────────────────────────────────────
+        function initLiveTVAdsExtended() {
+            loadAdminChannels();
         }
 
         // Call after Firebase is ready (appended to existing init chain)
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(initLiveTVAds, 1500);
+            setTimeout(initLiveTVAdsExtended, 2000);
         });
 </script>
 
@@ -5727,6 +6019,404 @@ async function deleteKSMovie(id) {
       updatePendingBadge();
     } catch(e){}
   })();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--   CHANNEL LIST PAGE — Full screen overlay inside admin      -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<style>
+/* ── CHANNEL LIST PAGE ── */
+#channel-list-page {
+  display:none; position:fixed; inset:0; z-index:700;
+  background:var(--bg-primary); overflow-y:auto;
+  animation:fadeUp .3s var(--ease);
+}
+#channel-list-page.show { display:block; }
+.chlist-header {
+  position:sticky; top:0; z-index:10; background:rgba(5,5,5,.97);
+  backdrop-filter:blur(20px); border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:14px; padding:0 22px; height:62px;
+}
+[data-theme="light"] .chlist-header { background:rgba(245,245,245,.97); }
+.chlist-back-btn {
+  display:flex; align-items:center; gap:8px; padding:8px 16px;
+  background:transparent; border:1px solid var(--border2); border-radius:10px;
+  color:var(--text-2); font-size:.85rem; font-weight:600; cursor:pointer; transition:.2s; font-family:inherit;
+}
+.chlist-back-btn:hover { border-color:var(--accent); color:var(--accent); }
+.chlist-title { font-family:'Playfair Display',serif; font-size:1.1rem; font-weight:900; display:flex; align-items:center; gap:10px; flex:1; }
+.chlist-title i { color:var(--gold); }
+.chlist-body { max-width:960px; margin:0 auto; padding:22px 22px 80px; }
+.chlist-stats-row { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:center; }
+.chlist-stat { display:flex; align-items:center; gap:8px; padding:9px 14px; border-radius:10px; font-size:.82rem; font-weight:700; border:1px solid; }
+.chlist-stat.total  { background:rgba(255,255,255,.04); border-color:var(--border); color:var(--text-2); }
+.chlist-stat.free-s { background:rgba(0,200,83,.07); border-color:rgba(0,200,83,.25); color:#00c853; }
+.chlist-stat.prem-s { background:rgba(245,197,24,.07); border-color:rgba(245,197,24,.25); color:var(--gold); }
+.chlist-controls { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; align-items:center; }
+.chlist-search-box {
+  flex:1; min-width:200px; display:flex; align-items:center; gap:9px;
+  background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:0 13px; height:40px; transition:.2s;
+}
+.chlist-search-box:focus-within { border-color:rgba(245,197,24,.5); }
+.chlist-search-box i { color:var(--text-3); font-size:.82rem; }
+.chlist-search-box input { flex:1; background:none; border:none; outline:none; color:var(--text-1); font-family:inherit; font-size:.88rem; }
+.chlist-search-box input::placeholder { color:var(--text-3); }
+.cl-filter-tabs { display:flex; gap:5px; }
+.cl-ftab { padding:7px 13px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-3); font-size:.75rem; font-weight:700; cursor:pointer; transition:.2s; font-family:inherit; white-space:nowrap; }
+.cl-ftab.active { background:rgba(245,197,24,.1); border-color:rgba(245,197,24,.4); color:var(--gold); }
+.chlist-bulk-row { display:flex; gap:8px; flex-wrap:wrap; }
+.cl-bulk-btn { padding:7px 13px; border-radius:8px; border:1px solid; background:transparent; font-size:.72rem; font-weight:800; cursor:pointer; transition:.2s; font-family:inherit; white-space:nowrap; }
+.cl-bulk-btn.free-btn  { border-color:rgba(0,200,83,.3);  color:#00c853; }
+.cl-bulk-btn.free-btn:hover  { background:rgba(0,200,83,.12); }
+.cl-bulk-btn.prem-btn  { border-color:rgba(245,197,24,.3); color:var(--gold); }
+.cl-bulk-btn.prem-btn:hover  { background:rgba(245,197,24,.12); }
+.chlist-info { background:rgba(245,197,24,.05); border:1px solid rgba(245,197,24,.2); border-radius:10px; padding:10px 14px; font-size:.76rem; color:var(--text-2); display:flex; align-items:flex-start; gap:8px; margin-bottom:12px; }
+.chlist-info i { color:var(--gold); margin-top:1px; flex-shrink:0; }
+.chlist-table { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.chlist-thead { display:grid; grid-template-columns:36px 1fr 110px 90px; gap:0; padding:9px 14px; background:var(--bg-surface); border-bottom:1px solid var(--border); font-size:.65rem; font-weight:800; letter-spacing:.8px; text-transform:uppercase; color:var(--text-3); }
+.chlist-row { display:grid; grid-template-columns:36px 1fr 110px 90px; gap:0; padding:9px 14px; border-bottom:1px solid var(--border); align-items:center; transition:background .12s; }
+.chlist-row:last-child { border-bottom:none; }
+.chlist-row:hover { background:rgba(255,255,255,.02); }
+.cl-row-num { font-size:.7rem; color:var(--text-3); font-weight:600; }
+.cl-row-info { display:flex; align-items:center; gap:9px; min-width:0; }
+.cl-logo { width:30px; height:30px; border-radius:7px; object-fit:contain; background:var(--bg-surface); border:1px solid var(--border); flex-shrink:0; }
+.cl-logo-fb { width:30px; height:30px; border-radius:7px; background:var(--bg-surface); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:.6rem; font-weight:800; color:var(--text-3); flex-shrink:0; }
+.cl-name { font-size:.82rem; font-weight:700; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.cl-grp  { font-size:.66rem; color:var(--text-3); margin-top:1px; }
+.cl-url  { font-size:.62rem; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding-right:6px; }
+.cl-url.ov { color:var(--gold); }
+.cl-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+.cl-toggle input { display:none; }
+.cl-track { width:38px; height:21px; border-radius:11px; background:var(--bg-surface2); border:1px solid var(--border2); position:relative; transition:all .22s var(--spring); flex-shrink:0; }
+.cl-track.on { background:rgba(245,197,24,.25); border-color:rgba(245,197,24,.6); }
+.cl-thumb { position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:var(--text-3); transition:all .22s var(--spring); }
+.cl-track.on .cl-thumb { transform:translateX(17px); background:var(--gold); }
+.cl-badge { font-size:.6rem; font-weight:800; padding:2px 6px; border-radius:4px; transition:.2s; letter-spacing:.3px; }
+.cl-badge.free { background:rgba(0,200,83,.12); color:#00c853; border:1px solid rgba(0,200,83,.3); }
+.cl-badge.prem { background:rgba(245,197,24,.12); color:var(--gold); border:1px solid rgba(245,197,24,.35); }
+.cl-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px; gap:8px; color:var(--text-3); font-size:.85rem; }
+.cl-empty i { font-size:2rem; margin-bottom:6px; }
+.cl-loading { display:flex; align-items:center; justify-content:center; gap:12px; padding:30px; color:var(--text-3); font-size:.85rem; }
+.chlist-save-bar { position:sticky; bottom:0; background:rgba(5,5,5,.97); backdrop-filter:blur(14px); border-top:1px solid var(--border); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:12px; z-index:5; transform:translateY(100%); transition:transform .3s var(--spring); }
+.chlist-save-bar.show { transform:translateY(0); }
+.cl-save-info { font-size:.8rem; color:var(--text-2); display:flex; align-items:center; gap:8px; }
+.cl-save-info strong { color:var(--gold); }
+.btn-save-chs { display:inline-flex; align-items:center; gap:8px; padding:10px 22px; background:linear-gradient(135deg,#c9940a,var(--gold)); color:#000; border:none; border-radius:10px; font-size:.88rem; font-weight:800; cursor:pointer; transition:.2s; font-family:inherit; box-shadow:0 4px 16px rgba(245,197,24,.3); }
+.btn-save-chs:hover { transform:translateY(-2px); }
+.btn-save-chs:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+.ch-list-tab-btn { display:inline-flex; align-items:center; gap:8px; padding:11px 20px; background:linear-gradient(135deg,rgba(245,197,24,.12),rgba(245,197,24,.06)); border:1px solid rgba(245,197,24,.35); border-radius:10px; color:var(--gold); font-size:.88rem; font-weight:800; cursor:pointer; transition:all .22s; width:100%; justify-content:center; font-family:inherit; }
+.ch-list-tab-btn:hover { background:linear-gradient(135deg,rgba(245,197,24,.2),rgba(245,197,24,.1)); transform:translateY(-1px); box-shadow:0 6px 20px rgba(245,197,24,.2); }
+.ch-list-tab-badge { background:rgba(245,197,24,.25); border:1px solid rgba(245,197,24,.4); border-radius:20px; padding:1px 8px; font-size:.65rem; font-weight:800; color:var(--gold); }
+@keyframes livePulse2 { 0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);} }
+</style>
+
+<div id="channel-list-page">
+  <div class="chlist-header">
+    <button class="chlist-back-btn" onclick="closeChannelListPage()">
+      <i class="fas fa-arrow-left"></i><span>Wapas Jao</span>
+    </button>
+    <div class="chlist-title">
+      <i class="fas fa-satellite-dish"></i>
+      <span>All Channels — Free / Premium Control</span>
+    </div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text-3);">
+      <span style="width:7px;height:7px;border-radius:50%;background:#00c853;display:inline-block;animation:livePulse2 2s infinite;"></span>
+      Real-time Firebase
+    </div>
+  </div>
+
+  <div class="chlist-body">
+
+    <!-- Stats -->
+    <div class="chlist-stats-row">
+      <div class="chlist-stat total"><i class="fas fa-tv"></i> Total: <strong id="cl-total">0</strong></div>
+      <div class="chlist-stat free-s"><i class="fas fa-unlock"></i> Free: <strong id="cl-free">0</strong></div>
+      <div class="chlist-stat prem-s"><i class="fas fa-crown"></i> Premium: <strong id="cl-prem">0</strong></div>
+      <div class="chlist-bulk-row" style="margin-left:auto;">
+        <button class="cl-bulk-btn free-btn" onclick="setBulkType(false)"><i class="fas fa-unlock"></i> Sab Free</button>
+        <button class="cl-bulk-btn prem-btn" onclick="setBulkType(true)"><i class="fas fa-crown"></i> Sab Premium</button>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="chlist-controls">
+      <div class="chlist-search-box">
+        <i class="fas fa-magnifying-glass"></i>
+        <input type="text" id="cl-q" placeholder="Channel ya category search karo…" oninput="clSearch(this.value)">
+      </div>
+      <div class="cl-filter-tabs">
+        <button class="cl-ftab active" onclick="clFilter('all',this)">All</button>
+        <button class="cl-ftab" onclick="clFilter('free',this)"><i class="fas fa-unlock" style="font-size:.68rem;"></i> Free</button>
+        <button class="cl-ftab" onclick="clFilter('prem',this)"><i class="fas fa-crown" style="font-size:.68rem;"></i> Premium</button>
+        <button class="cl-ftab" onclick="clFilter('admin',this)"><i class="fas fa-bolt" style="font-size:.68rem;"></i> Admin-Added</button>
+      </div>
+    </div>
+
+    <div class="chlist-info">
+      <i class="fas fa-circle-info"></i>
+      <span>Toggle se channel ko FREE ya PREMIUM karo. Neeche <strong style="color:var(--gold);">"Save → Firebase"</strong> dabao — live TV pe real-time update hoga bina refresh kiye.</span>
+    </div>
+
+    <!-- Table -->
+    <div class="chlist-table">
+      <div class="chlist-thead">
+        <div>#</div><div>Channel</div><div>URL</div><div>Type</div>
+      </div>
+      <div id="cl-body">
+        <div class="cl-loading"><i class="fas fa-spinner fa-spin" style="color:var(--gold);"></i><span>Channels load ho rahe hain…</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Sticky save bar -->
+  <div class="chlist-save-bar" id="cl-save-bar">
+    <div class="cl-save-info"><i class="fas fa-circle-exclamation" style="color:var(--gold);"></i> <strong id="cl-pending-n">0</strong> unsaved changes</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button onclick="clDiscardChanges()" style="padding:9px 14px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text-2);font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit;">Discard</button>
+      <button class="btn-save-chs" id="cl-save-btn" onclick="clSaveTypes()"><i class="fas fa-cloud-upload-alt"></i> Save → Firebase</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//   CHANNEL LIST PAGE — FULL JS
+// ═══════════════════════════════════════════════════════════
+let clAllChannels   = [];
+let clSavedTypes    = {};  // { name_lower: true } — from Firebase
+let clPendingTypes  = {};  // Unsaved toggles
+let clFilterMode    = 'all';
+let clSearchQ       = '';
+let clLoaded        = false;
+
+// ── OPEN ─────────────────────────────────────────────────
+async function openChannelListPage() {
+  document.getElementById('channel-list-page').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  if (!clLoaded) await clLoadData();
+}
+
+// ── CLOSE ────────────────────────────────────────────────
+function closeChannelListPage() {
+  document.getElementById('channel-list-page').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// ── LOAD DATA ────────────────────────────────────────────
+async function clLoadData() {
+  document.getElementById('cl-body').innerHTML =
+    '<div class="cl-loading"><i class="fas fa-spinner fa-spin" style="color:var(--gold);"></i><span>Loading channels from M3U + Firebase…</span></div>';
+  try {
+    // 1. Load saved types
+    const tSnap = await DB.ref('liveTV/channelTypes').once('value');
+    clSavedTypes = tSnap.val() || {};
+
+    // 2. Load admin-added channels
+    const aSnap = await DB.ref('liveTV/adminChannels').once('value');
+    const adminData = aSnap.val() || {};
+    const adminChs = Object.values(adminData).map(ch => ({
+      name:ch.name, url:ch.url, logo:ch.logo||'', group:ch.group||'General', paid:!!ch.paid, _adminAdded:true
+    })).filter(c=>c.name&&c.url);
+
+    // 3. Load M3U URL
+    const mSnap = await DB.ref('liveTV/m3uUrl').once('value');
+    const m3uUrl = mSnap.val() || 'https://iptv-org.github.io/iptv/countries/in.m3u';
+
+    // 4. Fetch M3U
+    let m3uChs = [];
+    try { m3uChs = await clFetchM3U(m3uUrl); } catch(e) {}
+
+    // 5. Merge — M3U + admin-added (dedup)
+    const seen = new Set(m3uChs.map(c=>c.name.toLowerCase().trim()));
+    const merged = [...m3uChs];
+    adminChs.forEach(c => { if (!seen.has(c.name.toLowerCase().trim())) merged.push(c); });
+
+    clAllChannels = merged;
+    clLoaded = true;
+
+    // Update badge
+    const badge = document.getElementById('ch-list-count-badge');
+    if (badge) badge.textContent = clAllChannels.length;
+
+    // Real-time: new admin channels → add to list instantly
+    DB.ref('liveTV/adminChannels').on('value', snap => {
+      if (!clLoaded) return;
+      const d = snap.val() || {};
+      const newAdm = Object.values(d).map(ch=>({
+        name:ch.name,url:ch.url,logo:ch.logo||'',group:ch.group||'General',paid:!!ch.paid,_adminAdded:true
+      })).filter(c=>c.name&&c.url);
+      const existing = new Set(clAllChannels.filter(c=>!c._adminAdded).map(c=>c.name.toLowerCase().trim()));
+      clAllChannels = clAllChannels.filter(c=>!c._adminAdded);
+      newAdm.forEach(c=>{ if(!existing.has(c.name.toLowerCase().trim())) clAllChannels.push(c); });
+      clUpdateStats(); clRender();
+      const b = document.getElementById('ch-list-count-badge');
+      if (b) b.textContent = clAllChannels.length;
+    });
+
+    clUpdateStats();
+    clRender();
+  } catch(err) {
+    document.getElementById('cl-body').innerHTML =
+      `<div class="cl-empty"><i class="fas fa-triangle-exclamation" style="color:var(--error);"></i><p>Error: ${err.message}</p></div>`;
+  }
+}
+
+// ── FETCH M3U ────────────────────────────────────────────
+async function clFetchM3U(url) {
+  const proxies = ['https://corsproxy.io/?','https://api.allorigins.win/raw?url=','https://thingproxy.freeboard.io/fetch/'];
+  for (const p of proxies) {
+    try {
+      const r = await fetch(p + encodeURIComponent(url), {signal:AbortSignal.timeout(9000)});
+      if (!r.ok) continue;
+      const text = await r.text();
+      const parsed = clParseM3U(text);
+      if (parsed.length > 0) return parsed;
+    } catch(e) { continue; }
+  }
+  return [];
+}
+
+function clParseM3U(text) {
+  const lines = text.split('\n');
+  const chs = []; let cur = null;
+  for (const line of lines) {
+    const l = line.trim();
+    if (l.startsWith('#EXTINF')) {
+      cur = {};
+      const nm = l.match(/tvg-name="([^"]*)"/); cur.name = nm?nm[1]:'';
+      const ci = l.lastIndexOf(','); if (!cur.name && ci>-1) cur.name = l.slice(ci+1).trim();
+      const lg = l.match(/tvg-logo="([^"]*)"/); cur.logo = lg?lg[1]:'';
+      const gm = l.match(/group-title="([^"]*)"/); cur.group = gm?gm[1].trim():'General';
+    } else if (cur && l && !l.startsWith('#')) {
+      cur.url = l;
+      if (cur.name) chs.push(cur);
+      cur = null;
+    }
+  }
+  return chs;
+}
+
+// ── RENDER ───────────────────────────────────────────────
+function clRender() {
+  const body = document.getElementById('cl-body');
+  let chs = clAllChannels;
+  if (clSearchQ) chs = chs.filter(c=>(c.name||'').toLowerCase().includes(clSearchQ)||(c.group||'').toLowerCase().includes(clSearchQ));
+  if (clFilterMode==='free')  chs = chs.filter(c=>!clIsPrem(c));
+  if (clFilterMode==='prem')  chs = chs.filter(c=>clIsPrem(c));
+  if (clFilterMode==='admin') chs = chs.filter(c=>c._adminAdded);
+
+  if (!chs.length) {
+    body.innerHTML = '<div class="cl-empty"><i class="fas fa-satellite-dish"></i><p>Koi channel nahi mila</p></div>'; return;
+  }
+  body.innerHTML = chs.map((ch,i)=>{
+    const key   = (ch.name||'').toLowerCase().trim();
+    const isPrem = clIsPrem(ch);
+    const urlTxt = (ch.url||'').substring(0,38)+((ch.url||'').length>38?'…':'');
+    const logo = ch.logo
+      ? `<img class="cl-logo" src="${ch.logo}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        +`<div class="cl-logo-fb" style="display:none">${clAbbr(ch.name)}</div>`
+      : `<div class="cl-logo-fb">${clAbbr(ch.name)}</div>`;
+    const adminBadge = ch._adminAdded ? '<span style="color:var(--gold);font-size:.58rem;font-weight:800;margin-left:3px;">⚡</span>':'';
+    return `
+    <div class="chlist-row" style="${clPendingTypes.hasOwnProperty(key)?'background:rgba(245,197,24,.03);':''}">
+      <div class="cl-row-num">${i+1}</div>
+      <div class="cl-row-info">${logo}<div><div class="cl-name">${clEsc(ch.name)}${adminBadge}</div><div class="cl-grp">${clEsc(ch.group||'General')}</div></div></div>
+      <div class="cl-url ${ch._overridden?'ov':''}" title="${clEsc(ch.url||'')}">${urlTxt}</div>
+      <div>
+        <label class="cl-toggle">
+          <input type="checkbox" ${isPrem?'checked':''} onchange="clToggle('${key.replace(/'/g,"\'")}',this.checked)">
+          <div class="cl-track ${isPrem?'on':''}"><div class="cl-thumb"></div></div>
+          <span class="cl-badge ${isPrem?'prem':'free'}">${isPrem?'👑':'FREE'}</span>
+        </label>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clIsPrem(ch) {
+  const k = (ch.name||'').toLowerCase().trim();
+  if (clPendingTypes.hasOwnProperty(k)) return clPendingTypes[k];
+  if (clSavedTypes.hasOwnProperty(k))   return clSavedTypes[k]===true;
+  return !!ch.paid;
+}
+function clAbbr(n){ return (n||'').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?'; }
+function clEsc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── TOGGLE ───────────────────────────────────────────────
+function clToggle(key, isPrem) {
+  clPendingTypes[key] = isPrem;
+  clUpdateStats(); clUpdateSaveBar();
+  if (clFilterMode!=='all') clRender();
+}
+
+// ── SEARCH & FILTER ──────────────────────────────────────
+function clSearch(q) { clSearchQ=q.toLowerCase().trim(); clRender(); }
+function clFilter(mode,btn) {
+  clFilterMode=mode;
+  document.querySelectorAll('.cl-ftab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); clRender();
+}
+
+// ── BULK ─────────────────────────────────────────────────
+function setBulkType(isPrem) {
+  const label = isPrem?'PREMIUM':'FREE';
+  if (!confirm(`Saare ${clAllChannels.length} channels ko ${label} kar doon?`)) return;
+  clAllChannels.forEach(ch=>{ clPendingTypes[ch.name.toLowerCase().trim()]=isPrem; });
+  clUpdateStats(); clUpdateSaveBar(); clRender();
+  showToast(`Saare channels ${label} mark ho gaye — Save karo!`,'info');
+}
+
+// ── STATS ────────────────────────────────────────────────
+function clUpdateStats() {
+  let f=0,p=0;
+  clAllChannels.forEach(c=>{ clIsPrem(c)?p++:f++; });
+  const t=clAllChannels.length;
+  const setEl=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  setEl('cl-total',t); setEl('cl-free',f); setEl('cl-prem',p);
+}
+
+// ── SAVE BAR ─────────────────────────────────────────────
+function clUpdateSaveBar() {
+  const bar=document.getElementById('cl-save-bar');
+  const n=document.getElementById('cl-pending-n');
+  const c=Object.keys(clPendingTypes).length;
+  if(c>0){ bar.classList.add('show'); if(n) n.textContent=c; }
+  else bar.classList.remove('show');
+}
+
+function clDiscardChanges() {
+  clPendingTypes={}; clUpdateStats(); clUpdateSaveBar(); clRender();
+  showToast('Changes discard ho gaye','info');
+}
+
+// ── SAVE TO FIREBASE ─────────────────────────────────────
+async function clSaveTypes() {
+  const btn=document.getElementById('cl-save-btn');
+  if (!Object.keys(clPendingTypes).length) { showToast('Koi change nahi hai','info'); return; }
+  btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Saving…';
+  try {
+    Object.assign(clSavedTypes, clPendingTypes);
+    // Only store premium=true entries, remove false entries
+    const toSave={};
+    Object.entries(clSavedTypes).forEach(([k,v])=>{ if(v) toSave[k]=true; });
+    await DB.ref('liveTV/channelTypes').set(Object.keys(toSave).length?toSave:null);
+    const saved=Object.keys(clPendingTypes).length;
+    clPendingTypes={};
+    clUpdateStats(); clUpdateSaveBar(); clRender();
+    btn.innerHTML='<i class="fas fa-check"></i> Saved!';
+    btn.style.background='linear-gradient(135deg,#00c853,#1b5e20)'; btn.style.color='#fff';
+    showToast(`✅ ${saved} channel types save! ${Object.keys(toSave).length} premium channels live.`,'success');
+    setTimeout(()=>{
+      btn.innerHTML='<i class="fas fa-cloud-upload-alt"></i> Save → Firebase';
+      btn.style.background=''; btn.style.color=''; btn.disabled=false;
+    },2500);
+  } catch(err) {
+    btn.innerHTML='<i class="fas fa-xmark"></i> Error!';
+    showToast('Error: '+err.message,'error');
+    setTimeout(()=>{ btn.innerHTML='<i class="fas fa-cloud-upload-alt"></i> Save → Firebase'; btn.disabled=false; },2500);
+  }
+}
 </script>
 </body>
 </html>
