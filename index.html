@@ -1,15 +1,29 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="/ks-pwa.js"></script>
-    <script src="/ks-tv.js"></script>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#e50914">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KS Movies">
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <title>KS Movies</title>
     <script>
         // Protection
         try{if(window.self!==window.top)window.top.location=window.self.location;}catch(e){document.body.style.display='none';}
         document.addEventListener('contextmenu',function(e){e.preventDefault();},true);
         document.addEventListener('keydown',function(e){if(e.keyCode===123||(e.ctrlKey&&e.shiftKey&&[73,74,67].indexOf(e.keyCode)>-1)||(e.ctrlKey&&e.keyCode===85)){e.preventDefault();}},true);
+    </script>
+    <script>
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function(){});
+            });
+        }
     </script>
     <script>
         // ── KS MOVIES ROUTING LOGIC ──
