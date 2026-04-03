@@ -78,7 +78,22 @@ module.exports = async function handler(req, res) {
 
   return new Promise(resolve => {
     const pr = lib.request(opts, sr => {
-      // Forward important headers
+      console.log('[PROXY]', t.hostname, sr.statusCode, sr.headers['location'] || '');
+
+      // Handle redirects manually (follow up to 5 hops)
+      if ([301,302,303,307,308].includes(sr.statusCode) && sr.headers['location']) {
+        sr.resume(); // drain
+        const redirectUrl = sr.headers['location'].startsWith('http')
+          ? sr.headers['location']
+          : t.protocol + '//' + t.hostname + sr.headers['location'];
+        console.log('[PROXY] Redirect →', redirectUrl);
+        // Rewrite response to point browser to proxied redirect
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Location', '/api/proxy?url=' + encodeURIComponent(redirectUrl));
+        res.status(302).end();
+        resolve();
+        return;
+      }
       if (sr.headers['content-type'])    res.setHeader('Content-Type', sr.headers['content-type']);
       if (sr.headers['content-length'])  res.setHeader('Content-Length', sr.headers['content-length']);
       if (sr.headers['content-range'])   res.setHeader('Content-Range', sr.headers['content-range']);
