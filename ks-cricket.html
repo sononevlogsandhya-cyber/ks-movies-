@@ -1672,6 +1672,7 @@ function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 showControls();
 </script>
 
+<script>
 // Android-specific: handle video errors gracefully
 document.addEventListener('DOMContentLoaded', function() {
     const videos = document.querySelectorAll('video');
@@ -1683,5 +1684,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, false);
     });
 });
+</script>
 </body>
 </html>
