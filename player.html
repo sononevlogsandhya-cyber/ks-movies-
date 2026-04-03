@@ -990,29 +990,41 @@ function beginWithIntro(movieUrl, title, ads, paid) {
 //   STEP 2 — LOAD MAIN MOVIE
 // ════════════════════════════════════════════════════════
 
-// CORS proxy list — tried in order when direct URL fails
+// CORS proxy list — tried in order when direct URL fails (MEDIA_ERR_SRC_NOT_SUPPORTED / blocked)
+// These proxies support Range requests (needed for video seeking)
 const CORS_PROXIES = [
-  u => u, // direct first
   u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   u => `https://proxy.cors.sh/${u}`,
-  u => `https://thingproxy.freeboard.io/fetch/${u}`,
+  u => `https://cors.eu.org/${u}`,
 ];
+// Domains known to block hotlinking — use proxy from the start
+const HOTLINK_BLOCKED_DOMAINS = ['mp4moviez', 'dl.php', 'streamtape', 'dood', 'mixdrop'];
 let _proxyAttempt = 0;
 let _currentRawUrl = '';
-let _proxyTestTimer = null;
+let _usingProxy = false;
 
 function loadMovie(url) {
   _currentRawUrl = url;
   _proxyAttempt  = 0;
-  _loadMovieUrl(url);
+  _usingProxy    = false;
+
+  // For known hotlink-blocked domains, go straight to proxy
+  const isBlocked = HOTLINK_BLOCKED_DOMAINS.some(d => url.includes(d));
+  if (isBlocked && CORS_PROXIES.length > 0) {
+    _usingProxy   = true;
+    const proxyUrl = CORS_PROXIES[_proxyAttempt](_currentRawUrl);
+    _proxyAttempt++;
+    showToast('🌐 Proxy se load ho raha hai…');
+    _loadMovieUrl(proxyUrl);
+  } else {
+    _loadMovieUrl(url);
+  }
 }
 
 function _loadMovieUrl(url) {
   errScr.classList.remove('visible');
   showSpinner();
   destroyHLS();
-  if (_proxyTestTimer) { clearTimeout(_proxyTestTimer); _proxyTestTimer = null; }
 
   // Start free trial tracking for paid movies
   if (isPaidMovie && !paymentUnlocked) {
@@ -1043,66 +1055,16 @@ function _loadMovieUrl(url) {
     videoEl.src = url;
     videoEl.addEventListener('loadedmetadata', () => smartPlay(videoEl), { once: true });
   } else {
-    // Try each proxy in sequence
-    _tryLoadWithProxy(_currentRawUrl, 0);
-    return;
+    videoEl.src = url;
+    videoEl.load();
+    videoEl.addEventListener('loadeddata', () => {
+      _proxyAttempt = 0; // success — reset
+      smartPlay(videoEl);
+    }, { once: true });
   }
 
   adFired[0] = true;
   placeAdMarkers();
-}
-
-function _tryLoadWithProxy(rawUrl, attempt) {
-  if (attempt >= CORS_PROXIES.length) {
-    showError('Video Error', 'Video URL kaam nahi kar raha. Admin panel mein naya working URL daalo.');
-    return;
-  }
-
-  const proxiedUrl = CORS_PROXIES[attempt](rawUrl);
-  if (attempt > 0) {
-    showToast(`🔄 Proxy ${attempt}/${CORS_PROXIES.length-1} try ho raha hai…`);
-  }
-
-  videoEl.src = proxiedUrl;
-  videoEl.load();
-
-  let resolved = false;
-
-  const onSuccess = () => {
-    if (resolved) return;
-    resolved = true;
-    clearTimeout(timer);
-    videoEl.removeEventListener('error', onFail);
-    _proxyAttempt = attempt;
-    smartPlay(videoEl);
-    adFired[0] = true;
-    placeAdMarkers();
-  };
-
-  const onFail = () => {
-    if (resolved) return;
-    resolved = true;
-    clearTimeout(timer);
-    videoEl.removeEventListener('loadeddata', onSuccess);
-    videoEl.removeEventListener('canplay', onSuccess);
-    // Try next proxy
-    _tryLoadWithProxy(rawUrl, attempt + 1);
-  };
-
-  // Timeout: if no response in 8s, try next proxy
-  const timer = setTimeout(() => {
-    if (!resolved) {
-      resolved = true;
-      videoEl.removeEventListener('loadeddata', onSuccess);
-      videoEl.removeEventListener('canplay', onSuccess);
-      videoEl.removeEventListener('error', onFail);
-      _tryLoadWithProxy(rawUrl, attempt + 1);
-    }
-  }, 8000);
-
-  videoEl.addEventListener('loadeddata', onSuccess, { once: true });
-  videoEl.addEventListener('canplay', onSuccess, { once: true });
-  videoEl.addEventListener('error', onFail, { once: true });
 }
 
 // ════════════════════════════════════════════════════════
@@ -1498,18 +1460,48 @@ videoEl.addEventListener('timeupdate',     ()=>{
 videoEl.addEventListener('progress',       updateBuffer);
 videoEl.addEventListener('ended',          checkEndAd);
 let _videoErrorRetry = 0;
-// Global error listener — only fires for non-proxy-chain errors (HLS, etc.)
 videoEl.addEventListener('error', () => {
   if (!videoEl.src || videoEl.src === window.location.href) return;
-  // If proxy chain is running (_currentRawUrl set), let it handle errors
-  if (_currentRawUrl) return;
   hideSpinner();
   const c = videoEl.error ? videoEl.error.code : 0;
+
+  // Retry once on network errors (code 2) before trying proxy
+  if (c === 2 && _videoErrorRetry < 2 && !_usingProxy) {
+    _videoErrorRetry++;
+    showToast(`🔄 Retry ho raha hai… (${_videoErrorRetry}/2)`);
+    showSpinner();
+    setTimeout(() => {
+      videoEl.load();
+      videoEl.play().catch(() => smartPlay(videoEl));
+    }, 1500);
+    return;
+  }
+
+  // Try CORS proxies for src-not-supported / network errors
+  if ((c === 2 || c === 4 || c === 0) && _proxyAttempt < CORS_PROXIES.length && _currentRawUrl) {
+    const proxyUrl = CORS_PROXIES[_proxyAttempt](_currentRawUrl);
+    _proxyAttempt++;
+    _videoErrorRetry = 0;
+    _usingProxy = true;
+    showToast(`🌐 Proxy ${_proxyAttempt}/${CORS_PROXIES.length} se try ho raha hai…`);
+    showSpinner();
+    setTimeout(() => {
+      destroyHLS();
+      videoEl.src = proxyUrl;
+      videoEl.load();
+      smartPlay(videoEl);
+    }, 1500);
+    return;
+  }
+
+  _videoErrorRetry = 0;
+  _proxyAttempt   = 0;
+  _usingProxy     = false;
   const m = {
     1: 'Playback rok diya gaya.',
     2: 'Network error — internet check karo.',
     3: 'Video decode nahi hua — format supported nahi.',
-    4: 'Video URL kaam nahi kar raha. Admin panel mein naya working URL daalo.'
+    4: 'Video URL kaam nahi kar raha. Admin panel mein naya URL daalo.'
   };
   showError('Video Error', m[c] || 'Unknown error. Retry karo.');
 });
@@ -1672,8 +1664,13 @@ function retryPlayback() {
   errScr.classList.remove('visible');
   _proxyAttempt    = 0;
   _videoErrorRetry = 0;
-  const url = (movieData && (movieData.playUrl || movieData.streamUrl || movieData.url)) || _currentRawUrl || '';
-  if (url) loadMovie(url);
+  _usingProxy      = false;
+  if (movieData) {
+    const url = movieData.playUrl || movieData.streamUrl || movieData.url || _currentRawUrl || '';
+    if (url) loadMovie(url);
+  } else if (_currentRawUrl) {
+    loadMovie(_currentRawUrl);
+  }
 }
 function showSpinner()  { spinner.classList.add('active'); }
 function hideSpinner()  { spinner.classList.remove('active'); }
