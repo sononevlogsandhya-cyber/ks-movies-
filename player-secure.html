@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/ks-pwa.js"></script>
-    <script src="/ks-tv.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050505">
+    <meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <meta name="referrer" content="strict-origin">
 <title>KS Movies — Secure Player</title>
 
@@ -22,6 +25,58 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
 <style>
+    /* ═══ ANDROID MOBILE OPTIMIZATIONS ═══ */
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        height: -webkit-fill-available;
+    }
+    body {
+        min-height: 100vh; min-height: 100dvh; height: 100dvh;
+        min-height: -webkit-fill-available;
+        min-height: 100dvh;
+    }
+    *, *::before, *::after {
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    button, a, [role="button"], label, .btn, [onclick] {
+        touch-action: manipulation;
+        cursor: pointer;
+    }
+    input, select, textarea {
+        touch-action: manipulation;
+        -webkit-appearance: none;
+        border-radius: 0;
+        font-size: 16px !important; /* Prevents iOS/Android zoom on focus */
+    }
+    /* Smooth scrolling containers */
+    .cats-wrap, .channel-list, .row-scroll, .swipe-row, [class*="scroll"] {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    /* Safe area for notched phones */
+    .actions, .nav-bottom, #bottom-nav, .fixed-bottom, footer {
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    header, #topnav, .admin-header, nav {
+        padding-top: env(safe-area-inset-top);
+    }
+    /* GPU compositing for animations */
+    .splash, #splash, #ks-splash, .modal, .overlay {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        will-change: opacity;
+    }
+    /* Disable hover states on touch devices */
+    @media (hover: none) and (pointer: coarse) {
+        button:hover, .btn:hover { transform: none !important; }
+        a:active, button:active, .btn:active, [onclick]:active {
+            opacity: 0.75 !important;
+            transition: opacity 0.1s !important;
+        }
+    }
+    /* ═══════════════════════════════════════ */
+
 :root {
   --bg: #050505;
   --accent: #e50914;
@@ -35,7 +90,7 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  width: 100%; height: 100%;
+  width: 100%; height: 100%; height: 100dvh;
   background: var(--bg); font-family: 'DM Sans', sans-serif;
   color: var(--text); overflow: hidden;
   user-select: none; -webkit-user-select: none;
@@ -55,7 +110,7 @@ html, body {
 
 /* ─── PLAYER SHELL ─── */
 #player-shell {
-  position: relative; width: 100vw; height: 100vh;
+  position: relative; width: 100vw; height: 100vh; height: 100dvh;
   display: flex; flex-direction: column; background: #000;
 }
 
@@ -283,8 +338,8 @@ video {
 .toast.show { transform: translateX(-50%) translateY(0); }
 
 /* Fullscreen */
-:fullscreen #player-shell { width: 100vw; height: 100vh; }
-:-webkit-full-screen #player-shell { width: 100vw; height: 100vh; }
+:fullscreen #player-shell { width: 100vw; height: 100vh; height: 100dvh; }
+:-webkit-full-screen #player-shell { width: 100vw; height: 100vh; height: 100dvh; }
 
 /* Prevent text selection during seek */
 .seeking * { pointer-events: none; }
@@ -297,6 +352,11 @@ video {
     visibility: visible; display: block; text-align: center; margin-top: 100px;
   }
 }
+
+/* Android Shaka Player fixes */
+video { -webkit-transform: translateZ(0); will-change: transform; }
+#player-shell { overscroll-behavior: none; }
+video::-webkit-media-controls { display: none !important; }
 </style>
 </head>
 <body>
@@ -320,7 +380,7 @@ video {
     </div>
 
     <!-- Main Video -->
-    <video id="main-video" playsinline crossorigin="anonymous"></video>
+    <video id="main-video" playsinline webkit-playsinline x5-playsinline playsinline crossorigin="anonymous"></video>
 
     <!-- Spinner -->
     <div id="spinner"><div class="spin-ring"></div></div>
