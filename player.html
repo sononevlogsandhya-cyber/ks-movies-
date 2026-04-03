@@ -465,7 +465,7 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
 <div id="video-area">
 
   <!-- Main movie -->
-  <video id="main-video" playsinline preload="auto"></video>
+  <video id="main-video" playsinline preload="auto" referrerpolicy="no-referrer"></video>
   <div id="spinner"><div class="spin-ring"></div></div>
   <div id="watermark">KS MOVIES</div>
 
@@ -989,7 +989,23 @@ function beginWithIntro(movieUrl, title, ads, paid) {
 // ════════════════════════════════════════════════════════
 //   STEP 2 — LOAD MAIN MOVIE
 // ════════════════════════════════════════════════════════
+
+// CORS proxy list — tried in order when direct URL fails (MEDIA_ERR_SRC_NOT_SUPPORTED / blocked)
+const CORS_PROXIES = [
+  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+  u => `https://cors-anywhere.herokuapp.com/${u}`,
+];
+let _proxyAttempt = 0;
+let _currentRawUrl = '';
+
 function loadMovie(url) {
+  _currentRawUrl = url;
+  _proxyAttempt  = 0;
+  _loadMovieUrl(url);
+}
+
+function _loadMovieUrl(url) {
   errScr.classList.remove('visible');
   showSpinner();
   destroyHLS();
@@ -1013,7 +1029,6 @@ function loadMovie(url) {
     hlsInst.on(Hls.Events.ERROR, (e, d) => {
       if (d.fatal) {
         if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          // Network error - retry once
           hlsInst.startLoad();
         } else {
           showError('Stream Error', 'Live stream load nahi hua. Internet check karo aur retry karo.');
@@ -1026,7 +1041,10 @@ function loadMovie(url) {
   } else {
     videoEl.src = url;
     videoEl.load();
-    videoEl.addEventListener('loadeddata', () => smartPlay(videoEl), { once: true });
+    videoEl.addEventListener('loadeddata', () => {
+      _proxyAttempt = 0; // success — reset
+      smartPlay(videoEl);
+    }, { once: true });
   }
 
   adFired[0] = true;
@@ -1427,25 +1445,29 @@ videoEl.addEventListener('progress',       updateBuffer);
 videoEl.addEventListener('ended',          checkEndAd);
 let _videoErrorRetry = 0;
 videoEl.addEventListener('error', () => {
-  if (!videoEl.src || videoEl.src === window.location.href) return; // empty src, ignore
+  if (!videoEl.src || videoEl.src === window.location.href) return;
   hideSpinner();
   const c = videoEl.error ? videoEl.error.code : 0;
-  // Error code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED — retry up to 2 times
-  if (c === 4 && _videoErrorRetry < 2) {
+
+  // Retry once on network/src errors
+  if ((c === 2 || c === 4) && _videoErrorRetry < 2) {
     _videoErrorRetry++;
+    showToast(`🔄 Retry ho raha hai… (${_videoErrorRetry}/2)`);
+    showSpinner();
     setTimeout(() => {
-      const currentSrc = videoEl.src;
       videoEl.load();
       videoEl.play().catch(() => smartPlay(videoEl));
     }, 1500);
     return;
   }
+
   _videoErrorRetry = 0;
+  _proxyAttempt   = 0;
   const m = {
     1: 'Playback rok diya gaya.',
-    2: 'Network error — internet connection check karo.',
+    2: 'Network error — internet check karo.',
     3: 'Video decode nahi hua — format supported nahi.',
-    4: 'Video URL kaam nahi kar raha. Admin se contact karo.'
+    4: 'Video URL kaam nahi kar raha. Admin panel mein naya URL daalo.'
   };
   showError('Video Error', m[c] || 'Unknown error. Retry karo.');
 });
@@ -1606,9 +1628,13 @@ function detectQuality(url) {
 function destroyHLS() { if(hlsInst){try{hlsInst.destroy();}catch(e){}hlsInst=null;} }
 function retryPlayback() {
   errScr.classList.remove('visible');
+  _proxyAttempt  = 0;
+  _videoErrorRetry = 0;
   if (movieData) {
-    const url=movieData.playUrl||movieData.streamUrl||'';
+    const url = movieData.playUrl || movieData.streamUrl || movieData.url || _currentRawUrl || '';
     if (url) loadMovie(url);
+  } else if (_currentRawUrl) {
+    loadMovie(_currentRawUrl);
   }
 }
 function showSpinner()  { spinner.classList.add('active'); }
