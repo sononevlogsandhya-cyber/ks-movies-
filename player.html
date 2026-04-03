@@ -1009,6 +1009,15 @@ function loadMovie(url) {
   showSpinner();
   destroyHLS();
 
+  // Cleanup any old blob
+  if (videoEl._blobUrl) { URL.revokeObjectURL(videoEl._blobUrl); videoEl._blobUrl = null; }
+
+  // Restore video element (hide iframe if was used)
+  videoEl.style.display = 'block';
+  const iframeEl = document.getElementById('iframe-player');
+  iframeEl.style.display = 'none'; iframeEl.src = '';
+  overlay.style.display = '';
+
   // Start free trial tracking for paid movies
   if (isPaidMovie && !paymentUnlocked) {
     freeTrialActive  = true;
@@ -1018,16 +1027,37 @@ function loadMovie(url) {
   }
 
   const isHLS = url.includes('.m3u8');
+  if (isHLS) { _loadMovieUrl(url); return; }
 
-  // ── HOTLINK DOMAIN → iframe fallback ──
-  if (!isHLS && isHotlinkDomain(url)) {
-    _useIframePlayer(url);
-    adFired[0] = true;
-    placeAdMarkers();
-    return;
-  }
+  // ── FETCH AS BLOB (no Referer sent) — works for hotlink-protected URLs ──
+  showToast('⏳ Video load ho rahi hai…', 4000);
+  fetch(url, {
+    method: 'GET',
+    mode: 'cors',
+    referrerPolicy: 'no-referrer',
+    headers: { 'Range': 'bytes=0-' }
+  })
+  .then(res => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.blob();
+  })
+  .then(blob => {
+    const blobUrl = URL.createObjectURL(blob);
+    videoEl._blobUrl = blobUrl;
+    videoEl.src = blobUrl;
+    videoEl.load();
+    videoEl.addEventListener('loadeddata', () => {
+      hideSpinner();
+      smartPlay(videoEl);
+    }, { once: true });
+  })
+  .catch(() => {
+    // fetch failed (CORS blocked) → try direct src with no-referrer
+    _loadMovieUrl(url);
+  });
 
-  _loadMovieUrl(url);
+  adFired[0] = true;
+  placeAdMarkers();
 }
 
 function _useIframePlayer(url) {
@@ -1475,24 +1505,16 @@ videoEl.addEventListener('ended',          checkEndAd);
 let _videoErrorRetry = 0;
 videoEl.addEventListener('error', () => {
   if (!videoEl.src || videoEl.src === window.location.href) return;
+  // Blob URLs failing = source itself is bad
   hideSpinner();
   const c = videoEl.error ? videoEl.error.code : 0;
-
-  // On any src/network error — try iframe fallback if not already tried
-  if ((c === 2 || c === 4) && _currentRawUrl && _proxyAttempt === 0) {
-    _proxyAttempt = 1; // mark as tried
-    showToast('🔄 Alternate player try ho raha hai…', 3000);
-    setTimeout(() => _useIframePlayer(_currentRawUrl), 500);
-    return;
-  }
-
   _videoErrorRetry = 0;
   _proxyAttempt   = 0;
   const m = {
     1: 'Playback rok diya gaya.',
     2: 'Network error — internet check karo.',
     3: 'Video decode nahi hua — format supported nahi.',
-    4: 'Video URL kaam nahi kar raha. Admin panel mein naya URL daalo.'
+    4: 'Video URL kaam nahi kar raha. Admin panel mein naya working URL daalo.'
   };
   showError('Video Error', m[c] || 'Unknown error. Retry karo.');
 });
