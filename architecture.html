@@ -1,12 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script src="/ks-pwa.js"></script>
-    <script src="/ks-tv.js"></script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050505">
+    <meta name="format-detection" content="telephone=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
 <title>KS Movies — Secure Streaming Architecture</title>
 <style>
+    /* ═══ ANDROID MOBILE OPTIMIZATIONS ═══ */
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        height: -webkit-fill-available;
+    }
+    body {
+        min-height: 100vh; min-height: 100dvh; height: 100dvh;
+        min-height: -webkit-fill-available;
+        min-height: 100dvh;
+    }
+    *, *::before, *::after {
+        -webkit-tap-highlight-color: transparent !important;
+    }
+    button, a, [role="button"], label, .btn, [onclick] {
+        touch-action: manipulation;
+        cursor: pointer;
+    }
+    input, select, textarea {
+        touch-action: manipulation;
+        -webkit-appearance: none;
+        border-radius: 0;
+        font-size: 16px !important; /* Prevents iOS/Android zoom on focus */
+    }
+    /* Smooth scrolling containers */
+    .cats-wrap, .channel-list, .row-scroll, .swipe-row, [class*="scroll"] {
+        -webkit-overflow-scrolling: touch;
+        scroll-behavior: smooth;
+    }
+    /* Safe area for notched phones */
+    .actions, .nav-bottom, #bottom-nav, .fixed-bottom, footer {
+        padding-bottom: max(16px, env(safe-area-inset-bottom));
+    }
+    header, #topnav, .admin-header, nav {
+        padding-top: env(safe-area-inset-top);
+    }
+    /* GPU compositing for animations */
+    .splash, #splash, #ks-splash, .modal, .overlay {
+        -webkit-transform: translateZ(0);
+        transform: translateZ(0);
+        will-change: opacity;
+    }
+    /* Disable hover states on touch devices */
+    @media (hover: none) and (pointer: coarse) {
+        button:hover, .btn:hover { transform: none !important; }
+        a:active, button:active, .btn:active, [onclick]:active {
+            opacity: 0.75 !important;
+            transition: opacity 0.1s !important;
+        }
+    }
+    /* ═══════════════════════════════════════ */
+
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
   :root {
@@ -306,6 +361,13 @@
     .code-block { background: #f9f9f9; border-left-color: #e50914; }
     code { color: #333; }
   }
+
+  /* Android Architecture doc fixes */
+  body { overscroll-behavior-x: none; }
+  .code-block { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  code { white-space: pre; overflow-x: auto; }
+  table { overflow-x: auto; display: block; -webkit-overflow-scrolling: touch; }
+  .toc-grid { grid-template-columns: 1fr; }
 </style>
 </head>
 <body>
