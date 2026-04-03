@@ -2,36 +2,38 @@ const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 
-// ── ALLOWED DOMAINS ── add karo jitne chahiye
-const ALLOWED_DOMAINS = [
-  // existing (live streams)
+// ── ALLOWED DOMAIN KEYWORDS ──
+// Hostname mein koi bhi keyword ho toh allow — wildcard matching
+const ALLOWED_KEYWORDS = [
+  // existing live streams
   'ptu.ridsys.in',
   'stvlive.net',
-  // mp4 movie sites
-  'mp4moviez.date',
-  'mp4moviez.in',
-  'mp4moviez.com',
-  'www.mp4moviez.date',
-  'moviesda.com',
-  'filmyzilla.com',
-  'bollyflix.com',
-  'vegamovies.nl',
-  'katmovie.com',
-  'khatrimaza.com',
-  'rdxhd.com',
-  'jalshamoviez.com',
-  'worldfree4u.com',
-  '9xmovies.com',
+  // movie sites — keyword match (covers all TLDs: .date .football .in .com etc)
+  'mp4moviez',
+  'moviesda',
+  'filmyzilla',
+  'bollyflix',
+  'vegamovies',
+  '9xmovies',
+  'katmovie',
+  'khatrimaza',
+  'rdxhd',
+  'jalshamoviez',
+  'worldfree4u',
+  'cinevood',
+  'hdmovies',
+  'movieverse',
+  'filmywap',
   // safe hosting
   'archive.org',
-  'ia800.us.archive.org',
-  'ia600.us.archive.org',
-  'drive.google.com',
   'googleusercontent.com',
+  'drive.google.com',
+  'googleapis.com',
 ];
 
-function isAllowed(h) {
-  return ALLOWED_DOMAINS.some(d => h === d || h.endsWith('.' + d));
+function isAllowed(hostname) {
+  const h = hostname.toLowerCase();
+  return ALLOWED_KEYWORDS.some(kw => h.includes(kw));
 }
 
 module.exports = async function handler(req, res) {
