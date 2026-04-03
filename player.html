@@ -466,6 +466,8 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
 
   <!-- Main movie -->
   <video id="main-video" playsinline preload="auto" referrerpolicy="no-referrer"></video>
+  <!-- iframe fallback for hotlink-protected URLs (mp4moviez etc) -->
+  <iframe id="iframe-player" style="display:none;position:absolute;inset:0;width:100%;height:100%;border:none;background:#000;" allowfullscreen referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"></iframe>
   <div id="spinner"><div class="spin-ring"></div></div>
   <div id="watermark">KS MOVIES</div>
 
@@ -990,22 +992,19 @@ function beginWithIntro(movieUrl, title, ads, paid) {
 //   STEP 2 — LOAD MAIN MOVIE
 // ════════════════════════════════════════════════════════
 
-// CORS proxy list — tried in order when direct URL fails (MEDIA_ERR_SRC_NOT_SUPPORTED / blocked)
-const CORS_PROXIES = [
-  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  u => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  u => `https://cors-anywhere.herokuapp.com/${u}`,
-];
-let _proxyAttempt = 0;
 let _currentRawUrl = '';
+let _proxyAttempt  = 0;
+
+// Domains that hotlink-block direct <video> requests → use iframe fallback
+const HOTLINK_DOMAINS = ['mp4moviez','moviesda','filmyzilla','bollyflix','vegamovies','9xmovies','katmovie','cinevood','rdxhd','khatrimaza','jalshamoviez','worldfree4u','1337x','yts'];
+
+function isHotlinkDomain(url) {
+  return HOTLINK_DOMAINS.some(d => url.includes(d));
+}
 
 function loadMovie(url) {
   _currentRawUrl = url;
   _proxyAttempt  = 0;
-  _loadMovieUrl(url);
-}
-
-function _loadMovieUrl(url) {
   errScr.classList.remove('visible');
   showSpinner();
   destroyHLS();
@@ -1019,20 +1018,50 @@ function _loadMovieUrl(url) {
   }
 
   const isHLS = url.includes('.m3u8');
+
+  // ── HOTLINK DOMAIN → iframe fallback ──
+  if (!isHLS && isHotlinkDomain(url)) {
+    _useIframePlayer(url);
+    adFired[0] = true;
+    placeAdMarkers();
+    return;
+  }
+
+  _loadMovieUrl(url);
+}
+
+function _useIframePlayer(url) {
+  // Hide <video>, show <iframe>
+  videoEl.style.display = 'none';
+  const iframeEl = document.getElementById('iframe-player');
+  iframeEl.style.display = 'block';
+  iframeEl.src = url;
+  hideSpinner();
+  // Disable ad markers & free trial for iframe mode (can't track time)
+  freeTrialActive = false;
+  freeTrialBar.classList.remove('show');
+  // Hide custom controls — iframe has its own
+  overlay.style.display = 'none';
+  showToast('🎬 Player load ho raha hai…', 3000);
+}
+
+function _loadMovieUrl(url) {
+  // Make sure video is visible, iframe hidden
+  videoEl.style.display = 'block';
+  const iframeEl = document.getElementById('iframe-player');
+  iframeEl.style.display = 'none';
+  iframeEl.src = '';
+
+  const isHLS = url.includes('.m3u8');
   if (isHLS && Hls.isSupported()) {
     hlsInst = new Hls({ enableWorker:true, lowLatencyMode:true, backBufferLength:30 });
     hlsInst.loadSource(url);
     hlsInst.attachMedia(videoEl);
-    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => {
-      smartPlay(videoEl);
-    });
+    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => { smartPlay(videoEl); });
     hlsInst.on(Hls.Events.ERROR, (e, d) => {
       if (d.fatal) {
-        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hlsInst.startLoad();
-        } else {
-          showError('Stream Error', 'Live stream load nahi hua. Internet check karo aur retry karo.');
-        }
+        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) { hlsInst.startLoad(); }
+        else { showError('Stream Error', 'Live stream load nahi hua. Internet check karo.'); }
       }
     });
   } else if (isHLS && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
@@ -1042,7 +1071,7 @@ function _loadMovieUrl(url) {
     videoEl.src = url;
     videoEl.load();
     videoEl.addEventListener('loadeddata', () => {
-      _proxyAttempt = 0; // success — reset
+      _proxyAttempt = 0;
       smartPlay(videoEl);
     }, { once: true });
   }
@@ -1449,15 +1478,11 @@ videoEl.addEventListener('error', () => {
   hideSpinner();
   const c = videoEl.error ? videoEl.error.code : 0;
 
-  // Retry once on network/src errors
-  if ((c === 2 || c === 4) && _videoErrorRetry < 2) {
-    _videoErrorRetry++;
-    showToast(`🔄 Retry ho raha hai… (${_videoErrorRetry}/2)`);
-    showSpinner();
-    setTimeout(() => {
-      videoEl.load();
-      videoEl.play().catch(() => smartPlay(videoEl));
-    }, 1500);
+  // On any src/network error — try iframe fallback if not already tried
+  if ((c === 2 || c === 4) && _currentRawUrl && _proxyAttempt === 0) {
+    _proxyAttempt = 1; // mark as tried
+    showToast('🔄 Alternate player try ho raha hai…', 3000);
+    setTimeout(() => _useIframePlayer(_currentRawUrl), 500);
     return;
   }
 
