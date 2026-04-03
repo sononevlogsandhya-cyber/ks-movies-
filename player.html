@@ -1,8 +1,6 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <script src="/ks-pwa.js"></script>
-    <script src="/ks-tv.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>KS Movies — Player</title>
@@ -518,6 +516,29 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
     </div>
   </div>
 
+
+  <!-- TAP TO PLAY OVERLAY (Autoplay blocked fix) -->
+  <div id="tap-to-play" style="display:none;position:absolute;inset:0;z-index:44;
+    background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+    <div style="width:80px;height:80px;background:var(--accent);border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 0 40px rgba(229,9,20,0.6);
+      animation:tapPulse 1.5s ease infinite;cursor:pointer;"
+      onclick="handleTapToPlay()">
+      <i class="fa-solid fa-play" style="font-size:2rem;color:#fff;margin-left:6px;"></i>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:1.1rem;font-weight:800;color:#fff;">Tap to Play</div>
+      <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:4px;">Player ready hai</div>
+    </div>
+  </div>
+  <style>
+  @keyframes tapPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(229,9,20,0.6), 0 0 40px rgba(229,9,20,0.4); }
+    50% { box-shadow: 0 0 0 20px rgba(229,9,20,0), 0 0 40px rgba(229,9,20,0.4); }
+  }
+  </style>
+
   <!-- ERROR -->
   <div id="error-screen">
     <i class="fa-solid fa-triangle-exclamation"></i>
@@ -986,12 +1007,26 @@ function loadMovie(url) {
     hlsInst = new Hls({ enableWorker:true, lowLatencyMode:true, backBufferLength:30 });
     hlsInst.loadSource(url);
     hlsInst.attachMedia(videoEl);
-    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(()=>{}));
-    hlsInst.on(Hls.Events.ERROR, (e,d) => { if (d.fatal) showError('Stream Error','HLS load nahi hua.'); });
+    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => {
+      smartPlay(videoEl);
+    });
+    hlsInst.on(Hls.Events.ERROR, (e, d) => {
+      if (d.fatal) {
+        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+          // Network error - retry once
+          hlsInst.startLoad();
+        } else {
+          showError('Stream Error', 'Live stream load nahi hua. Internet check karo aur retry karo.');
+        }
+      }
+    });
   } else if (isHLS && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    videoEl.src = url; videoEl.play().catch(()=>{});
+    videoEl.src = url;
+    videoEl.addEventListener('loadedmetadata', () => smartPlay(videoEl), { once: true });
   } else {
-    videoEl.src = url; videoEl.load(); videoEl.play().catch(()=>{});
+    videoEl.src = url;
+    videoEl.load();
+    videoEl.addEventListener('loadeddata', () => smartPlay(videoEl), { once: true });
   }
 
   adFired[0] = true;
@@ -1390,18 +1425,46 @@ videoEl.addEventListener('timeupdate',     ()=>{
 });
 videoEl.addEventListener('progress',       updateBuffer);
 videoEl.addEventListener('ended',          checkEndAd);
-videoEl.addEventListener('error', ()=>{
+let _videoErrorRetry = 0;
+videoEl.addEventListener('error', () => {
+  if (!videoEl.src || videoEl.src === window.location.href) return; // empty src, ignore
   hideSpinner();
-  const c=videoEl.error?videoEl.error.code:0;
-  const m={2:'Network error.',3:'Decode error.',4:'Source invalid / expired.'};
-  showError('Video Error',m[c]||'Unknown error. Retry karo.');
+  const c = videoEl.error ? videoEl.error.code : 0;
+  // Error code 4 = MEDIA_ERR_SRC_NOT_SUPPORTED — retry up to 2 times
+  if (c === 4 && _videoErrorRetry < 2) {
+    _videoErrorRetry++;
+    setTimeout(() => {
+      const currentSrc = videoEl.src;
+      videoEl.load();
+      videoEl.play().catch(() => smartPlay(videoEl));
+    }, 1500);
+    return;
+  }
+  _videoErrorRetry = 0;
+  const m = {
+    1: 'Playback rok diya gaya.',
+    2: 'Network error — internet connection check karo.',
+    3: 'Video decode nahi hua — format supported nahi.',
+    4: 'Video URL kaam nahi kar raha. Admin se contact karo.'
+  };
+  showError('Video Error', m[c] || 'Unknown error. Retry karo.');
 });
 
 // ════════════════════════════════════════════════════════
 //   PLAYBACK CONTROLS
 // ════════════════════════════════════════════════════════
 function togglePlay() {
-  if (videoEl.paused) videoEl.play().catch(()=>showToast('Autoplay blocked'));
+  if (videoEl.paused) {
+    videoEl.play().catch(() => {
+      // Try muted play, then unmute
+      videoEl.muted = true;
+      videoEl.play().then(() => {
+        setTimeout(() => { videoEl.muted = false; }, 300);
+      }).catch(() => {
+        showTapToPlayOverlay();
+      });
+    });
+  }
   else videoEl.pause();
 }
 function updatePlayIcon() {
@@ -1550,6 +1613,52 @@ function retryPlayback() {
 }
 function showSpinner()  { spinner.classList.add('active'); }
 function hideSpinner()  { spinner.classList.remove('active'); }
+
+// ════════════════════════════════════════════════════════
+//   SMART PLAY — handles Android autoplay policy
+// ════════════════════════════════════════════════════════
+function smartPlay(vid) {
+  hideTapToPlayOverlay();
+  const p = vid.play();
+  if (p && typeof p.then === 'function') {
+    p.catch(() => {
+      // Autoplay blocked — try muted first
+      vid.muted = true;
+      vid.play().then(() => {
+        // Successfully playing muted — show unmute hint
+        showToast('🔇 Muted — tap 🔊 to unmute');
+        // Auto unmute after 1s (user is present since page loaded)
+        setTimeout(() => {
+          vid.muted = false;
+          hideTapToPlayOverlay();
+        }, 1000);
+      }).catch(() => {
+        // Even muted failed — show tap overlay
+        showTapToPlayOverlay();
+      });
+    });
+  }
+}
+
+function showTapToPlayOverlay() {
+  const el = document.getElementById('tap-to-play');
+  if (el) el.style.display = 'flex';
+}
+
+function hideTapToPlayOverlay() {
+  const el = document.getElementById('tap-to-play');
+  if (el) el.style.display = 'none';
+}
+
+function handleTapToPlay() {
+  hideTapToPlayOverlay();
+  videoEl.muted = false;
+  videoEl.play().catch(() => {
+    videoEl.muted = true;
+    videoEl.play().catch(() => {});
+  });
+}
+
 function showError(t,m) {
   document.getElementById('err-title').textContent=t;
   document.getElementById('err-msg').textContent=m;
