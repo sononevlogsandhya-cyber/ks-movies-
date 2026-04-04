@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>KS Movies — Player</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -39,8 +39,41 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
 
 /* ── SHELL ── */
 #player-shell{position:relative;width:100vw;height:100vh;background:#000;overflow:hidden;}
+
+/* ── TOP BAR ── */
+#top-bar{
+  position:absolute;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:linear-gradient(180deg,rgba(0,0,0,.85) 0%,transparent 100%);
+  padding-top:max(10px, env(safe-area-inset-top));
+}
+#top-bar.hidden{opacity:0;pointer-events:none;}
+.back-btn{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;
+  border-radius:8px;padding:7px 14px;font-size:.85rem;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:6px;transition:.2s;font-family:inherit;flex-shrink:0;}
+.back-btn:hover{background:rgba(255,255,255,.15);}
+.movie-title-bar{font-size:.95rem;font-weight:700;opacity:.9;flex:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.quality-badge{background:rgba(229,9,20,.12);border:1px solid rgba(229,9,20,.4);
+  color:var(--accent);padding:4px 10px;border-radius:4px;
+  font-size:.68rem;font-weight:800;letter-spacing:1px;flex-shrink:0;}
+
+/* ── VIDEO MODE (native <video>) ── */
 #video-area{position:absolute;inset:0;background:#000;}
 #main-video{width:100%;height:100%;object-fit:contain;display:block;}
+
+/* ── IFRAME MODE ── */
+#iframe-area{
+  position:absolute;inset:0;z-index:5;
+  display:none;
+  flex-direction:column;
+}
+#iframe-area.active{display:flex;}
+#movie-iframe{
+  flex:1;width:100%;border:none;
+  background:#000;
+}
 
 /* ── SPINNER ── */
 #spinner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -50,18 +83,6 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   border:3px solid rgba(255,255,255,.08);border-top-color:var(--accent);
   animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── INTRO OVERLAY ── */
-#intro-overlay{position:absolute;inset:0;z-index:65;background:#000;display:flex;
-  align-items:flex-end;justify-content:flex-end;}
-#intro-overlay.hidden{display:none;}
-#intro-video{width:100%;height:100%;object-fit:contain;position:absolute;inset:0;}
-.intro-badge{position:relative;z-index:2;margin:18px;
-  background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.14);
-  border-radius:8px;padding:7px 16px;
-  font-size:.78rem;font-weight:700;color:rgba(255,255,255,.55);
-  display:flex;align-items:center;gap:8px;}
-.intro-badge span{color:var(--accent);font-variant-numeric:tabular-nums;}
 
 /* ── AD OVERLAY ── */
 #ad-overlay{position:absolute;inset:0;z-index:60;background:#000;
@@ -75,11 +96,6 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   padding:3px 10px;border-radius:4px;letter-spacing:1.5px;flex-shrink:0;}
 .ad-label-text{font-size:.78rem;color:rgba(255,255,255,.4);flex:1;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ad-slot-dots{display:flex;gap:6px;align-items:center;margin-right:6px;}
-.slot-dot{width:9px;height:9px;border-radius:50%;border:1.5px solid rgba(255,255,255,.2);
-  background:transparent;transition:.3s;flex-shrink:0;}
-.slot-dot.active{border-color:var(--gold);background:var(--gold);box-shadow:0 0 6px rgba(255,215,0,.5);}
-.slot-dot.done{border-color:var(--green);background:var(--green);box-shadow:0 0 6px rgba(0,200,83,.4);}
 .ad-skip-area{display:flex;align-items:center;gap:8px;flex-shrink:0;}
 #skip-lock-badge{display:flex;align-items:center;gap:5px;
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
@@ -116,22 +132,13 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   font-weight:700;cursor:pointer;font-family:inherit;margin-top:8px;transition:.2s;}
 .err-retry:hover{background:#ff2030;}
 
-/* ── CONTROLS ── */
+/* ── NATIVE CONTROLS (video mode only) ── */
 #ctrl-overlay{position:absolute;inset:0;z-index:10;
   background:linear-gradient(180deg,rgba(0,0,0,.65) 0%,transparent 22%,transparent 58%,rgba(0,0,0,.92) 100%);
   display:flex;flex-direction:column;justify-content:space-between;
   opacity:0;transition:opacity .3s var(--ease);pointer-events:none;}
 #ctrl-overlay.visible{opacity:1;pointer-events:all;}
 .ctrl-top{display:flex;align-items:center;padding:14px 16px 0;gap:10px;}
-.back-btn{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.18);color:#fff;
-  border-radius:8px;padding:7px 14px;font-size:.85rem;font-weight:600;cursor:pointer;
-  display:flex;align-items:center;gap:6px;transition:.2s;font-family:inherit;}
-.back-btn:hover{background:rgba(255,255,255,.15);}
-.movie-title-bar{font-size:.95rem;font-weight:700;opacity:.9;flex:1;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.quality-badge{background:rgba(229,9,20,.12);border:1px solid rgba(229,9,20,.4);
-  color:var(--accent);padding:4px 10px;border-radius:4px;
-  font-size:.68rem;font-weight:800;letter-spacing:1px;flex-shrink:0;}
 .ctrl-center{display:flex;align-items:center;justify-content:center;gap:44px;flex:1;}
 .ctrl-btn-lg{background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.22);
   color:#fff;border-radius:50%;width:56px;height:56px;
@@ -154,10 +161,6 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   width:14px;height:14px;background:#fff;border-radius:50%;
   box-shadow:0 0 6px rgba(0,0,0,.8);opacity:0;transition:opacity .2s;}
 .seek-wrap:hover .seek-thumb{opacity:1;}
-.ad-mk{position:absolute;top:-4px;width:7px;height:12px;
-  background:var(--gold);border-radius:2px;transform:translateX(-50%);
-  pointer-events:none;box-shadow:0 0 4px rgba(255,215,0,.5);}
-.ad-mk.played{background:var(--green);box-shadow:0 0 4px rgba(0,200,83,.5);}
 .ctrl-icons{display:flex;align-items:center;gap:4px;}
 .ctrl-icon{background:none;border:none;color:rgba(255,255,255,.82);
   font-size:1.05rem;cursor:pointer;padding:6px 8px;border-radius:6px;transition:all .15s;}
@@ -168,21 +171,33 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   background:rgba(255,255,255,.2);border-radius:4px;outline:none;cursor:pointer;}
 .vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;background:#fff;border-radius:50%;}
 
-/* ── FREE TRIAL INDICATOR ── */
-#free-trial-bar{position:absolute;top:14px;right:14px;z-index:30;
-  background:rgba(0,0,0,.75);border:1px solid rgba(255,215,0,.5);
-  border-radius:8px;padding:6px 12px;font-size:.7rem;font-weight:700;
-  color:var(--gold);display:none;align-items:center;gap:6px;pointer-events:none;}
-#free-trial-bar.show{display:flex;}
-.ft-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:blink-ft 1s infinite;}
-@keyframes blink-ft{0%,100%{opacity:1}50%{opacity:.2}}
-
 /* ── TOAST ── */
 #toast{position:absolute;bottom:76px;left:50%;transform:translateX(-50%) translateY(8px);
   background:rgba(16,16,16,.92);color:#fff;padding:8px 20px;border-radius:8px;
   font-size:.85rem;z-index:35;opacity:0;pointer-events:none;transition:all .3s var(--ease);
   border:1px solid rgba(255,255,255,.08);}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── TAP TO PLAY ── */
+#tap-to-play{display:none;position:absolute;inset:0;z-index:44;
+  background:rgba(0,0,0,.75);flex-direction:column;align-items:center;justify-content:center;gap:20px;}
+.tap-circle{width:80px;height:80px;background:var(--accent);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 40px rgba(229,9,20,0.6);
+  animation:tapPulse 1.5s ease infinite;cursor:pointer;}
+@keyframes tapPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(229,9,20,0.6),0 0 40px rgba(229,9,20,0.4);}
+  50%{box-shadow:0 0 0 20px rgba(229,9,20,0),0 0 40px rgba(229,9,20,0.4);}
+}
+
+/* ── FREE TRIAL BAR ── */
+#free-trial-bar{position:absolute;top:14px;right:14px;z-index:30;
+  background:rgba(0,0,0,.75);border:1px solid rgba(255,215,0,.5);
+  border-radius:8px;padding:6px 12px;font-size:.7rem;font-weight:700;
+  color:var(--gold);display:none;align-items:center;gap:6px;pointer-events:none;}
+#free-trial-bar.show{display:flex;}
+.ft-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* ── WATERMARK ── */
 #watermark{position:absolute;z-index:22;pointer-events:none;font-size:.68rem;font-weight:700;
@@ -193,12 +208,10 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   width:88px;height:88px;border-radius:50%;
   background:rgba(255,255,255,.12);pointer-events:none;z-index:5;
   opacity:0;animation:ripple .45s ease forwards;}
-.dtap.left{left:10%;} .dtap.right{right:10%;}
+.dtap.left{left:10%;}.dtap.right{right:10%;}
 @keyframes ripple{0%{opacity:.5;transform:translateY(-50%) scale(.5);}100%{opacity:0;transform:translateY(-50%) scale(1.8);}}
 
-/* ════════════════════════════════════════════
-   KS PAY POPUP — inline modal
-   ════════════════════════════════════════════ */
+/* ═══ KS PAY POPUP ═══ */
 #kspay-popup{
   position:fixed;inset:0;z-index:99990;
   background:rgba(0,0,0,.92);
@@ -209,7 +222,6 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   backdrop-filter:blur(6px);
 }
 #kspay-popup.visible{opacity:1;pointer-events:all;}
-
 .ksp-card{
   background:rgba(14,14,20,.98);
   border:1px solid rgba(255,255,255,.08);
@@ -219,81 +231,38 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   position:relative;
   box-shadow:0 40px 100px rgba(0,0,0,.8);
 }
-.ksp-card::-webkit-scrollbar{width:3px;}
-.ksp-card::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px;}
-
-/* card header */
 .ksp-header{
   padding:16px 20px;
-  background:rgba(255,255,255,.02);
   border-bottom:1px solid rgba(255,255,255,.05);
   display:flex;align-items:center;justify-content:space-between;
   position:sticky;top:0;z-index:2;
   background:rgba(14,14,20,.98);
 }
-.ksp-logo{display:flex;align-items:center;gap:8px;}
-.ksp-logo-icon{
-  width:32px;height:32px;background:var(--accent);border-radius:9px;
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Syne',sans-serif;font-weight:800;font-size:11px;
-  box-shadow:0 4px 14px rgba(229,9,20,.4);}
-.ksp-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-.5px;}
-.ksp-secure{display:flex;align-items:center;gap:5px;padding:4px 10px;
-  background:rgba(0,200,83,.08);border:1px solid rgba(0,200,83,.25);border-radius:20px;}
-.ksp-secure-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:blink-ft 1.5s infinite;}
-.ksp-secure-txt{font-size:.6rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:1.5px;}
+.ksp-logo-text{font-family:'Bebas Neue',cursive;font-weight:800;font-size:20px;letter-spacing:1px;}
+.ksp-logo-text span{color:var(--accent);}
 .ksp-close{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
   color:#aaa;border-radius:9px;padding:5px 12px;font-size:.75rem;font-weight:700;
-  cursor:pointer;font-family:inherit;transition:.2s;letter-spacing:.5px;}
+  cursor:pointer;font-family:inherit;transition:.2s;}
 .ksp-close:hover{background:rgba(229,9,20,.15);border-color:rgba(229,9,20,.4);color:#fff;}
-
-/* preview ended banner */
 .ksp-banner{
-  margin:18px 18px 0;
-  padding:16px;
+  margin:18px 18px 0;padding:16px;
   background:linear-gradient(135deg,rgba(229,9,20,.08),rgba(229,9,20,.04));
-  border:1px solid rgba(229,9,20,.25);
-  border-radius:14px;
-  text-align:center;
+  border:1px solid rgba(229,9,20,.25);border-radius:14px;text-align:center;
 }
 .ksp-banner-icon{font-size:2rem;margin-bottom:8px;}
 .ksp-banner-title{font-size:1.05rem;font-weight:800;margin-bottom:4px;}
 .ksp-banner-movie{font-size:.8rem;color:var(--gold);font-weight:700;margin-bottom:4px;}
 .ksp-banner-sub{font-size:.75rem;color:rgba(255,255,255,.4);line-height:1.6;}
-
-/* blocked timer */
-.ksp-blocked-timer{
-  margin:12px 18px 0;
-  padding:12px 16px;
-  background:rgba(255,100,0,.07);
-  border:1px solid rgba(255,100,0,.2);
-  border-radius:12px;
-  display:flex;align-items:center;gap:10px;
-  display:none;
-}
-.ksp-blocked-timer.show{display:flex;}
-.ksp-blocked-icon{font-size:1.3rem;}
-.ksp-blocked-info{flex:1;}
-.ksp-blocked-label{font-size:.68rem;color:#ff6400;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
-.ksp-blocked-cd{font-size:1.1rem;font-weight:800;font-family:'DM Mono',monospace;color:#fff;}
-
-/* plans */
-.ksp-sec-label{
-  font-size:.62rem;font-weight:700;color:#444;
-  text-transform:uppercase;letter-spacing:1.5px;
-  padding:16px 20px 8px;
-}
+.ksp-sec-label{font-size:.62rem;font-weight:700;color:#444;
+  text-transform:uppercase;letter-spacing:1.5px;padding:16px 20px 8px;}
 .ksp-plans{display:flex;flex-direction:column;gap:7px;padding:0 18px;}
 .ksp-plan{
   padding:12px 14px;border-radius:14px;
-  border:1px solid rgba(255,255,255,.06);
-  background:#111118;
-  cursor:pointer;transition:all .2s;
-  color:#fff;text-align:left;width:100%;
+  border:1px solid rgba(255,255,255,.06);background:#111118;
+  cursor:pointer;transition:all .2s;color:#fff;text-align:left;width:100%;
   font-family:inherit;position:relative;
 }
-.ksp-plan:hover{border-color:rgba(255,255,255,.14);}
-.ksp-plan.active{background:rgba(229,9,20,.08);border-color:var(--accent);box-shadow:0 0 18px rgba(229,9,20,.1);}
+.ksp-plan.active{background:rgba(229,9,20,.08);border-color:var(--accent);}
 .ksp-plan-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;}
 .ksp-plan-name{font-size:.82rem;font-weight:700;color:#aaa;}
 .ksp-plan.active .ksp-plan-name{color:#fff;}
@@ -304,134 +273,74 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
 .ksp-popular{font-size:.5rem;font-weight:700;color:#60a5fa;
   background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.2);
   padding:2px 5px;border-radius:4px;text-transform:uppercase;letter-spacing:.5px;margin-left:5px;}
-
-/* amount */
 .ksp-amount{
-  margin:14px 18px 0;
-  display:flex;align-items:center;
-  background:#111118;border:1px solid rgba(255,255,255,.07);
-  border-radius:12px;overflow:hidden;
+  margin:14px 18px 0;display:flex;align-items:center;
+  background:#111118;border:1px solid rgba(255,255,255,.07);border-radius:12px;overflow:hidden;
 }
 .ksp-amt-rs{padding:12px 14px;font-size:1rem;font-weight:700;color:#555;
-  border-right:1px solid rgba(255,255,255,.05);background:rgba(255,255,255,.02);}
+  border-right:1px solid rgba(255,255,255,.05);}
 .ksp-amt-val{flex:1;padding:12px 14px;font-size:1.3rem;font-weight:800;color:#fff;}
-.ksp-amt-fix{padding:5px 10px;margin-right:6px;background:rgba(255,255,255,.04);
-  border-radius:7px;font-size:.58rem;font-weight:700;color:#444;text-transform:uppercase;}
-
-/* tabs */
 .ksp-tabs{display:flex;gap:5px;margin:14px 18px 0;padding:4px;
   background:rgba(0,0,0,.4);border-radius:12px;border:1px solid rgba(255,255,255,.04);}
 .ksp-tab{flex:1;padding:7px;border-radius:9px;border:none;
   font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;
   cursor:pointer;transition:all .2s;background:transparent;color:#3a3a4a;font-family:inherit;}
 .ksp-tab.active{background:rgba(255,255,255,.08);color:#fff;}
-
-/* QR */
 .ksp-qr-wrap{display:flex;flex-direction:column;align-items:center;padding:16px 18px;}
-.ksp-qr-box{position:relative;padding:12px;background:#fff;border-radius:16px;
-  border:3px solid rgba(255,255,255,.1);box-shadow:0 0 30px rgba(0,0,0,.5);margin-bottom:12px;}
+.ksp-qr-box{padding:12px;background:#fff;border-radius:16px;
+  border:3px solid rgba(255,255,255,.1);margin-bottom:12px;}
 .ksp-qr-img{width:160px;height:160px;display:block;border-radius:5px;}
-.ksp-qr-live{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
-.ksp-qr-live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink-ft 1.5s infinite;}
-.ksp-qr-live-txt{font-size:.62rem;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;}
-.ksp-qr-info{font-size:.65rem;color:#444;text-align:center;max-width:200px;line-height:1.6;margin-bottom:8px;}
-
-/* UPI */
+.ksp-qr-info{font-size:.65rem;color:#444;text-align:center;max-width:200px;line-height:1.6;}
 .ksp-upi-wrap{padding:14px 18px;}
 .ksp-upi-box{padding:12px 14px;background:#111118;border:1px solid rgba(255,255,255,.06);border-radius:12px;margin-bottom:12px;}
 .ksp-upi-lbl{font-size:.58rem;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;}
 .ksp-upi-row{display:flex;align-items:center;justify-content:space-between;}
-.ksp-upi-val{font-family:'DM Mono',monospace;font-size:.85rem;font-weight:500;color:#fff;}
-.ksp-copy-btn{padding:5px 9px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  border-radius:7px;cursor:pointer;font-size:.7rem;color:var(--accent);transition:all .2s;font-family:inherit;}
-.ksp-copy-btn:hover{background:rgba(229,9,20,.1);}
-.ksp-upi-pay-btn{width:100%;padding:12px;background:#fff;color:#000;border:none;border-radius:12px;
-  font-size:.88rem;font-weight:800;cursor:pointer;display:flex;align-items:center;
-  justify-content:center;gap:7px;transition:all .2s;text-decoration:none;font-family:inherit;}
-.ksp-upi-pay-btn:hover{background:#e8e8e8;transform:translateY(-1px);}
-
-/* UTR verify */
-.ksp-verify{padding:0 18px 18px;}
-.ksp-divider{height:1px;background:rgba(255,255,255,.05);margin-bottom:14px;}
-.ksp-utr-input{
-  width:100%;padding:12px 14px;
-  background:#111118;border:1px solid rgba(255,255,255,.08);
-  border-radius:12px;font-size:.88rem;font-family:'DM Mono',monospace;
-  color:#fff;outline:none;transition:border-color .2s;
+.ksp-upi-val{font-size:.85rem;font-weight:500;color:#fff;}
+.ksp-copy-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:#aaa;padding:5px 11px;border-radius:7px;font-size:.68rem;font-weight:700;cursor:pointer;font-family:inherit;}
+.ksp-deeplink{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 14px;border-radius:12px;text-decoration:none;font-weight:800;font-size:.85rem;
+  background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;margin-bottom:12px;
 }
-.ksp-utr-input:focus{border-color:var(--accent);}
-.ksp-utr-input::placeholder{color:#2a2a2a;}
-.ksp-verify-btn{
-  width:100%;padding:14px;
-  background:linear-gradient(135deg,var(--accent),#b00710);color:#fff;
-  border:none;border-radius:14px;font-size:1rem;font-weight:800;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;
-  margin-top:10px;transition:all .2s;
-  box-shadow:0 8px 28px rgba(229,9,20,.3);font-family:inherit;
-}
-.ksp-verify-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 12px 36px rgba(229,9,20,.4);}
-.ksp-verify-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
-.ksp-verify-note{font-size:.62rem;color:#2a2a2a;text-align:center;margin-top:8px;line-height:1.7;}
-
-/* Verifying overlay */
-.ksp-verifying-ovl{
-  position:absolute;inset:0;z-index:10;
-  background:rgba(6,6,8,.97);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:28px;text-align:center;
-  opacity:0;pointer-events:none;transition:opacity .3s;
-  border-radius:24px;
-}
-.ksp-verifying-ovl.show{opacity:1;pointer-events:all;}
-.ksp-vspin{width:56px;height:56px;position:relative;margin-bottom:20px;}
-.ksp-vspin-ring{position:absolute;inset:0;border:4px solid rgba(229,9,20,.12);border-radius:50%;}
-.ksp-vspin-arc{position:absolute;inset:0;border:4px solid transparent;
-  border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;}
-.ksp-steps{width:100%;max-width:240px;}
-.ksp-step{display:flex;align-items:center;gap:9px;padding:5px 0;
-  font-size:.75rem;font-weight:600;transition:all .3s;}
-.ksp-step.done{color:#22c55e;} .ksp-step.active{color:var(--accent);} .ksp-step.pending{color:#2a2a2a;}
-.ksp-step-num{width:22px;height:22px;border-radius:50%;border:2px solid currentColor;
-  display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800;flex-shrink:0;}
-.ksp-step.active .ksp-step-num{animation:blink-ft .8s infinite;}
+.ksp-utr-area{padding:0 18px 4px;}
+.ksp-utr-lbl{font-size:.68rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.ksp-utr-row{display:flex;gap:8px;}
+.ksp-utr-input{flex:1;background:#111118;border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;padding:11px 14px;color:#fff;font-size:.9rem;font-family:inherit;outline:none;}
+.ksp-utr-input:focus{border-color:rgba(229,9,20,.5);}
+.ksp-verify-btn{background:var(--accent);color:#fff;border:none;
+  border-radius:10px;padding:11px 16px;font-size:.8rem;font-weight:800;
+  cursor:pointer;font-family:inherit;transition:.2s;white-space:nowrap;}
+.ksp-verify-btn:disabled{opacity:.35;cursor:not-allowed;}
+.ksp-footer-note{padding:12px 18px 20px;font-size:.6rem;color:#222;text-align:center;line-height:1.7;}
+.ksp-footer-note a{color:#333;}
 
 /* Success overlay */
 #ksp-success-ovl{
-  position:absolute;inset:0;z-index:20;
-  background:rgba(6,6,8,.98);
+  position:absolute;inset:0;border-radius:24px;
+  background:rgba(14,14,20,.98);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:24px;text-align:center;
-  opacity:0;pointer-events:none;transition:opacity .5s;
-  border-radius:24px;
+  padding:28px;text-align:center;z-index:10;
+  opacity:0;pointer-events:none;transition:opacity .4s ease;
 }
 #ksp-success-ovl.show{opacity:1;pointer-events:all;}
 .ksp-success-circle{
-  width:80px;height:80px;border-radius:50%;
+  width:70px;height:70px;border-radius:50%;
   background:linear-gradient(135deg,#16a34a,#22c55e);
   display:flex;align-items:center;justify-content:center;
-  transform:scale(0);transition:transform .5s cubic-bezier(.34,1.56,.64,1);
-  box-shadow:0 0 50px rgba(34,197,94,.4);margin-bottom:20px;
+  box-shadow:0 0 40px rgba(34,197,94,.4);margin-bottom:16px;
+  font-size:2rem;
 }
-#ksp-success-ovl.show .ksp-success-circle{transform:scale(1);}
-.ksp-success-check{width:38px;height:38px;}
-.ksp-check-path{fill:none;stroke:#fff;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;
-  stroke-dasharray:70;stroke-dashoffset:70;transition:stroke-dashoffset .5s ease .4s;}
-#ksp-success-ovl.show .ksp-check-path{stroke-dashoffset:0;}
-.ksp-success-title{font-size:1.5rem;font-weight:800;color:#22c55e;margin-bottom:5px;
-  transform:translateY(16px);opacity:0;transition:all .4s ease .5s;}
-#ksp-success-ovl.show .ksp-success-title{transform:translateY(0);opacity:1;}
-.ksp-success-sub{font-size:.78rem;color:#444;line-height:1.6;margin-bottom:20px;
-  transform:translateY(16px);opacity:0;transition:all .4s ease .6s;max-width:240px;}
-#ksp-success-ovl.show .ksp-success-sub{transform:translateY(0);opacity:1;}
+.ksp-success-title{font-size:1.3rem;font-weight:800;margin-bottom:6px;}
+.ksp-success-sub{font-size:.8rem;color:rgba(255,255,255,.5);margin-bottom:18px;max-width:240px;}
 .ksp-receipt{width:100%;background:#0d0d14;border:1px solid rgba(255,255,255,.06);
-  border-radius:14px;padding:14px;text-align:left;
-  transform:translateY(16px);opacity:0;transition:all .4s ease .7s;margin-bottom:16px;}
-#ksp-success-ovl.show .ksp-receipt{transform:translateY(0);opacity:1;}
+  border-radius:14px;padding:14px;text-align:left;margin-bottom:16px;}
 .ksp-rcpt-row{display:flex;justify-content:space-between;align-items:center;
   padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04);}
 .ksp-rcpt-row:last-child{border-bottom:none;}
 .ksp-rcpt-lbl{font-size:.68rem;color:#333;}
-.ksp-rcpt-val{font-size:.68rem;font-weight:700;color:#fff;font-family:'DM Mono',monospace;}
+.ksp-rcpt-val{font-size:.68rem;font-weight:700;color:#fff;}
 .ksp-rcpt-val.green{color:#22c55e;}
 .ksp-watch-btn{
   width:100%;padding:14px;
@@ -439,14 +348,8 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
   color:#fff;border:none;border-radius:14px;
   font-size:1rem;font-weight:800;cursor:pointer;
   display:flex;align-items:center;justify-content:center;gap:7px;
-  box-shadow:0 8px 28px rgba(34,197,94,.35);
-  transform:translateY(16px);opacity:0;transition:all .4s ease .8s, transform .2s, box-shadow .2s;
   font-family:inherit;
 }
-#ksp-success-ovl.show .ksp-watch-btn{transform:translateY(0);opacity:1;}
-.ksp-watch-btn:hover{transform:translateY(-2px)!important;box-shadow:0 12px 36px rgba(34,197,94,.45)!important;}
-
-/* confetti */
 @keyframes cfFall{0%{transform:translateY(-60px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(900deg);opacity:0}}
 .cf{position:fixed;pointer-events:none;z-index:99999;animation:cfFall linear forwards;}
 </style>
@@ -456,270 +359,188 @@ html,body{width:100%;height:100%;background:#000;font-family:'DM Sans',sans-seri
 <!-- SPLASH -->
 <div id="ks-splash">
   <div class="spl-logo">KS <span>Movies</span></div>
-  <div class="spl-tag">Preparing Your Movie…</div>
+  <div class="spl-tag">Movie Load Ho Rahi Hai…</div>
   <div class="spl-bar-wrap"><div class="spl-bar-fill" id="spl-bar"></div></div>
   <div class="spl-status" id="spl-status">Firebase se connect ho raha hai…</div>
 </div>
 
 <div id="player-shell">
-<div id="video-area">
 
-  <!-- Main movie -->
-  <video id="main-video" playsinline preload="auto" referrerpolicy="no-referrer"></video>
-  <div id="spinner"><div class="spin-ring"></div></div>
-  <div id="watermark">KS MOVIES</div>
-
-  <!-- Free trial indicator -->
-  <div id="free-trial-bar">
-    <div class="ft-dot"></div>
-    <span id="ft-timer-txt">Free: 10:00 baki</span>
-  </div>
-
-  <!-- INTRO OVERLAY -->
-  <div id="intro-overlay">
-    <video id="intro-video" playsinline muted preload="auto"
-      style="width:100%;height:100%;object-fit:contain;position:absolute;inset:0;"></video>
-    <div class="intro-badge">
-      <i class="fa-solid fa-clapperboard"></i>
-      KS Movies Intro
-      <span id="intro-cd"></span>
-    </div>
-  </div>
-
-  <!-- AD OVERLAY -->
-  <div id="ad-overlay">
-    <div class="ad-topbar">
-      <div class="ad-tag">AD</div>
-      <div class="ad-label-text" id="ad-label-text">Advertisement</div>
-      <div class="ad-slot-dots">
-        <div class="slot-dot" id="sdot-0"></div>
-        <div class="slot-dot" id="sdot-1"></div>
-        <div class="slot-dot" id="sdot-2"></div>
-        <div class="slot-dot" id="sdot-3"></div>
-      </div>
-      <div class="ad-skip-area">
-        <div id="skip-lock-badge">
-          <i class="fa-solid fa-lock"></i>
-          <span id="skip-sec-txt">30</span>s mein skip
-        </div>
-        <button id="skip-ready-btn" onclick="doSkipAd()">
-          Skip <i class="fa-solid fa-forward-step"></i>
-        </button>
-      </div>
-    </div>
-    <div class="ad-prog-bar"><div class="ad-prog-fill" id="ad-prog-fill" style="width:0%"></div></div>
-    <div id="ad-video-wrap">
-      <video id="ad-video" playsinline preload="auto"
-        style="width:100%;height:100%;object-fit:contain;display:block;"></video>
-      <div id="ad-spinner"><div class="ad-spin"></div></div>
-      <div class="ad-corner">KS Movies — Advertisement</div>
-    </div>
-  </div>
-
-
-  <!-- TAP TO PLAY OVERLAY (Autoplay blocked fix) -->
-  <div id="tap-to-play" style="display:none;position:absolute;inset:0;z-index:44;
-    background:rgba(0,0,0,0.75);flex-direction:column;align-items:center;justify-content:center;gap:20px;">
-    <div style="width:80px;height:80px;background:var(--accent);border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      box-shadow:0 0 40px rgba(229,9,20,0.6);
-      animation:tapPulse 1.5s ease infinite;cursor:pointer;"
-      onclick="handleTapToPlay()">
-      <i class="fa-solid fa-play" style="font-size:2rem;color:#fff;margin-left:6px;"></i>
-    </div>
-    <div style="text-align:center;">
-      <div style="font-size:1.1rem;font-weight:800;color:#fff;">Tap to Play</div>
-      <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:4px;">Player ready hai</div>
-    </div>
-  </div>
-  <style>
-  @keyframes tapPulse {
-    0%,100% { box-shadow: 0 0 0 0 rgba(229,9,20,0.6), 0 0 40px rgba(229,9,20,0.4); }
-    50% { box-shadow: 0 0 0 20px rgba(229,9,20,0), 0 0 40px rgba(229,9,20,0.4); }
-  }
-  </style>
-
-  <!-- ERROR -->
-  <div id="error-screen">
-    <i class="fa-solid fa-triangle-exclamation"></i>
-    <h3 id="err-title">Video Load Nahi Hua</h3>
-    <p id="err-msg">Dobara try karo.</p>
-    <button class="err-retry" onclick="retryPlayback()">
-      <i class="fa-solid fa-rotate-right"></i> Retry
+  <!-- TOP BAR (always visible, slides out on fullscreen) -->
+  <div id="top-bar">
+    <button class="back-btn" onclick="goBack()">
+      <i class="fa-solid fa-chevron-left"></i> Back
     </button>
+    <div class="movie-title-bar" id="movie-title">Loading…</div>
+    <div class="quality-badge" id="quality-badge">—</div>
   </div>
 
-  <!-- CONTROLS -->
-  <div id="ctrl-overlay">
-    <div class="ctrl-top">
-      <button class="back-btn" onclick="goBack()">
-        <i class="fa-solid fa-chevron-left"></i> Back
-      </button>
-      <div class="movie-title-bar" id="movie-title">Loading…</div>
-      <div class="quality-badge" id="quality-badge">—</div>
-    </div>
-    <div class="ctrl-center">
-      <button class="ctrl-btn-lg" onclick="seekVideo(-10)">
-        <i class="fa-solid fa-rotate-left"></i><span class="seek-sec-lbl">10s</span>
-      </button>
-      <button class="ctrl-btn-lg play-pause" onclick="togglePlay()">
-        <i class="fa-solid fa-play" id="play-icon"></i>
-      </button>
-      <button class="ctrl-btn-lg" onclick="seekVideo(10)">
-        <i class="fa-solid fa-rotate-right"></i><span class="seek-sec-lbl">10s</span>
-      </button>
-    </div>
-    <div class="ctrl-bottom">
-      <div class="progress-row">
-        <span class="time-display" id="time-cur">0:00</span>
-        <div class="seek-wrap" id="seek-wrap">
-          <div class="seek-buf" id="seek-buf"></div>
-          <div class="seek-fill" id="seek-fill"></div>
-          <div class="seek-thumb" id="seek-thumb"></div>
+  <!-- ── VIDEO MODE ── -->
+  <div id="video-area">
+    <video id="main-video" playsinline preload="auto" referrerpolicy="no-referrer"></video>
+    <div id="spinner"><div class="spin-ring"></div></div>
+    <div id="watermark">KS MOVIES</div>
+    <div id="free-trial-bar"><div class="ft-dot"></div><span id="ft-timer-txt">Free: 10:00 baki</span></div>
+
+    <!-- AD OVERLAY -->
+    <div id="ad-overlay">
+      <div class="ad-topbar">
+        <div class="ad-tag">AD</div>
+        <div class="ad-label-text" id="ad-label-text">Advertisement</div>
+        <div class="ad-skip-area">
+          <div id="skip-lock-badge"><i class="fa-solid fa-lock"></i><span id="skip-sec-txt">30</span>s mein skip</div>
+          <button id="skip-ready-btn" onclick="doSkipAd()">Skip <i class="fa-solid fa-forward-step"></i></button>
         </div>
-        <span class="time-display" id="time-dur">0:00</span>
       </div>
-      <div class="ctrl-icons">
-        <div class="vol-wrap">
-          <button class="ctrl-icon" onclick="toggleMute()">
-            <i class="fa-solid fa-volume-high" id="vol-icon"></i>
-          </button>
-          <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="100">
-        </div>
-        <div class="spacer"></div>
-        <button class="ctrl-icon" onclick="togglePip()"><i class="fa-solid fa-clone"></i></button>
-        <button class="ctrl-icon" onclick="toggleFullscreen()">
-          <i class="fa-solid fa-expand" id="fs-icon"></i>
+      <div class="ad-prog-bar"><div class="ad-prog-fill" id="ad-prog-fill" style="width:0%"></div></div>
+      <div id="ad-video-wrap">
+        <video id="ad-video" playsinline preload="auto"></video>
+        <div id="ad-spinner"><div class="ad-spin"></div></div>
+        <div class="ad-corner">KS Movies — Advertisement</div>
+      </div>
+    </div>
+
+    <!-- TAP TO PLAY -->
+    <div id="tap-to-play">
+      <div class="tap-circle" onclick="handleTapToPlay()">
+        <i class="fa-solid fa-play" style="font-size:2rem;color:#fff;margin-left:6px;"></i>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.1rem;font-weight:800;">Tap to Play</div>
+        <div style="font-size:.8rem;color:rgba(255,255,255,.5);margin-top:4px;">Player ready hai</div>
+      </div>
+    </div>
+
+    <!-- ERROR -->
+    <div id="error-screen">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <h3 id="err-title">Video Load Nahi Hua</h3>
+      <p id="err-msg">Dobara try karo.</p>
+      <button class="err-retry" onclick="retryPlayback()">
+        <i class="fa-solid fa-rotate-right"></i> Retry
+      </button>
+    </div>
+
+    <!-- NATIVE VIDEO CONTROLS -->
+    <div id="ctrl-overlay">
+      <div class="ctrl-top"><!-- spacer --></div>
+      <div class="ctrl-center">
+        <button class="ctrl-btn-lg" onclick="seekVideo(-10)">
+          <i class="fa-solid fa-rotate-left"></i><span class="seek-sec-lbl">10s</span>
+        </button>
+        <button class="ctrl-btn-lg play-pause" onclick="togglePlay()">
+          <i class="fa-solid fa-play" id="play-icon"></i>
+        </button>
+        <button class="ctrl-btn-lg" onclick="seekVideo(10)">
+          <i class="fa-solid fa-rotate-right"></i><span class="seek-sec-lbl">10s</span>
         </button>
       </div>
+      <div class="ctrl-bottom">
+        <div class="progress-row">
+          <span class="time-display" id="time-cur">0:00</span>
+          <div class="seek-wrap" id="seek-wrap">
+            <div class="seek-buf" id="seek-buf"></div>
+            <div class="seek-fill" id="seek-fill"></div>
+            <div class="seek-thumb" id="seek-thumb"></div>
+          </div>
+          <span class="time-display" id="time-dur">0:00</span>
+        </div>
+        <div class="ctrl-icons">
+          <div class="vol-wrap">
+            <button class="ctrl-icon" onclick="toggleMute()"><i class="fa-solid fa-volume-high" id="vol-icon"></i></button>
+            <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="100">
+          </div>
+          <div class="spacer"></div>
+          <button class="ctrl-icon" onclick="toggleFullscreen()"><i class="fa-solid fa-expand" id="fs-icon"></i></button>
+        </div>
+      </div>
     </div>
   </div>
 
-</div><!-- /video-area -->
+  <!-- ── IFRAME MODE ── -->
+  <div id="iframe-area">
+    <iframe id="movie-iframe"
+      allowfullscreen
+      allow="autoplay; fullscreen; picture-in-picture"
+      sandbox="allow-scripts allow-same-origin allow-presentation allow-popups allow-forms"
+      referrerpolicy="no-referrer">
+    </iframe>
+  </div>
+
 </div><!-- /player-shell -->
 
 <div id="toast"></div>
 
-<!-- ════════════════════════════════════════════
-     KS PAY POPUP — inline modal
-     ════════════════════════════════════════════ -->
+<!-- ═══ KS PAY POPUP ═══ -->
 <div id="kspay-popup">
   <div class="ksp-card">
-
-    <!-- Header -->
     <div class="ksp-header">
-      <div class="ksp-logo">
-        <div class="ksp-logo-icon">KS</div>
-        <span class="ksp-logo-text">PAY</span>
-      </div>
-      <div class="ksp-secure">
-        <div class="ksp-secure-dot"></div>
-        <span class="ksp-secure-txt">Secure</span>
-      </div>
+      <div class="ksp-logo-text"><span>KS</span> MOVIES</div>
       <button class="ksp-close" onclick="closeKsPay()">✕ Close</button>
     </div>
 
-    <!-- Preview ended banner -->
     <div class="ksp-banner">
       <div class="ksp-banner-icon">🎬</div>
-      <div class="ksp-banner-title">Free Preview Khatam!</div>
-      <div class="ksp-banner-movie" id="ksp-movie-name">—</div>
-      <div class="ksp-banner-sub">Is movie ko poora dekhne ke liye subscription lo.<br>Sirf kuch rupye mein — no hidden charges.</div>
+      <div class="ksp-banner-title">Premium Content</div>
+      <div class="ksp-banner-movie" id="ksp-movie-name"></div>
+      <div class="ksp-banner-sub">Subscribe karke poori movie dekho bina rokawat ke</div>
     </div>
 
-    <!-- Blocked timer (shows when 24hr block active) -->
-    <div class="ksp-blocked-timer" id="ksp-blocked-timer">
-      <div class="ksp-blocked-icon">⏳</div>
-      <div class="ksp-blocked-info">
-        <div class="ksp-blocked-label">Dobara Free Preview</div>
-        <div class="ksp-blocked-cd" id="ksp-block-cd">24:00:00</div>
-      </div>
-    </div>
-
-    <!-- Plans -->
-    <div class="ksp-sec-label">Apna Plan Choose Karo</div>
+    <div class="ksp-sec-label">Plan Chuno</div>
     <div class="ksp-plans" id="ksp-plans-grid"></div>
 
-    <!-- Amount -->
     <div class="ksp-amount">
       <div class="ksp-amt-rs">₹</div>
       <div class="ksp-amt-val" id="ksp-amt-val">299</div>
-      <div class="ksp-amt-fix">Fixed</div>
     </div>
 
-    <!-- Tabs -->
     <div class="ksp-tabs">
       <button class="ksp-tab active" id="ksp-tab-qr" onclick="kspSwitchTab('qr')">QR Code</button>
-      <button class="ksp-tab" id="ksp-tab-upi" onclick="kspSwitchTab('upi')">Direct UPI</button>
+      <button class="ksp-tab" id="ksp-tab-upi" onclick="kspSwitchTab('upi')">UPI ID</button>
     </div>
 
-    <!-- QR Tab -->
+    <!-- QR Section -->
     <div id="ksp-qr-section" class="ksp-qr-wrap">
-      <div class="ksp-qr-box">
-        <img id="ksp-qr-img" class="ksp-qr-img" src="" alt="QR Code">
-      </div>
-      <div class="ksp-qr-live">
-        <div class="ksp-qr-live-dot"></div>
-        <span class="ksp-qr-live-txt">Live QR Code</span>
-      </div>
-      <div class="ksp-qr-info">GPay, PhonePe, Paytm ya kisi bhi UPI app se scan karo</div>
+      <div class="ksp-qr-box"><img id="ksp-qr-img" class="ksp-qr-img" alt="QR Code"></div>
+      <div class="ksp-qr-info">PhonePe / GPay / Paytm se scan karo aur payment karo</div>
     </div>
 
-    <!-- UPI Tab -->
+    <!-- UPI Section -->
     <div id="ksp-upi-section" class="ksp-upi-wrap" style="display:none;">
       <div class="ksp-upi-box">
-        <div class="ksp-upi-lbl">Merchant UPI ID</div>
+        <div class="ksp-upi-lbl">UPI ID</div>
         <div class="ksp-upi-row">
-          <span class="ksp-upi-val" id="ksp-upi-display">sonone.nitesh1@ybl</span>
+          <div class="ksp-upi-val" id="ksp-upi-display"></div>
           <button class="ksp-copy-btn" onclick="kspCopyUPI()">📋 Copy</button>
         </div>
       </div>
-      <a id="ksp-upi-deeplink" href="#" class="ksp-upi-pay-btn" target="_blank">
-        📱 UPI App Se Pay Karo
+      <a id="ksp-upi-deeplink" class="ksp-deeplink" href="#">
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Pay with UPI App
       </a>
     </div>
 
-    <!-- UTR Verify -->
-    <div class="ksp-verify">
-      <div class="ksp-divider"></div>
-      <div class="ksp-sec-label" style="padding:0 0 8px;">Payment karne ke baad UTR / Transaction ID daalo</div>
-      <input type="text" id="ksp-utr-input" class="ksp-utr-input"
-        placeholder="e.g. 407123456789  (12-digit UTR)"
-        maxlength="20" oninput="kspUtrChanged()">
-      <button class="ksp-verify-btn" id="ksp-verify-btn" onclick="kspStartVerify()" disabled>
-        🛡️ Verify &amp; Unlock Movie
-      </button>
-      <div class="ksp-verify-note">
-        Payments encrypted &amp; 100% secure.<br>
-        UTR/Ref No. PhonePe/GPay payment history mein milega.
+    <!-- UTR Input -->
+    <div class="ksp-utr-area" style="margin-top:12px;">
+      <div class="ksp-utr-lbl">Payment karne ke baad UTR/Transaction ID daalo</div>
+      <div class="ksp-utr-row">
+        <input class="ksp-utr-input" id="ksp-utr-input" type="text" 
+          placeholder="UTR Number (12 digits)" oninput="kspUtrChanged()">
+        <button class="ksp-verify-btn" id="ksp-verify-btn" onclick="kspStartVerify()" disabled>Verify</button>
       </div>
     </div>
 
-    <!-- Verifying overlay -->
-    <div class="ksp-verifying-ovl" id="ksp-verifying-ovl">
-      <div class="ksp-vspin">
-        <div class="ksp-vspin-ring"></div>
-        <div class="ksp-vspin-arc"></div>
-      </div>
-      <div style="font-size:1rem;font-weight:800;margin-bottom:18px;">Payment Verify Ho Raha Hai…</div>
-      <div class="ksp-steps" id="ksp-steps-list"></div>
+    <div class="ksp-footer-note">
+      Secure payment • Firebase verified • Support: <a href="https://wa.me/919561409361">WhatsApp</a>
     </div>
 
     <!-- Success overlay -->
     <div id="ksp-success-ovl">
-      <div class="ksp-success-circle">
-        <svg class="ksp-success-check" viewBox="0 0 38 38">
-          <path class="ksp-check-path" d="M8 19 L16 27 L30 11"/>
-        </svg>
-      </div>
-      <div class="ksp-success-title">Payment Successful! 🎉</div>
-      <div class="ksp-success-sub" id="ksp-success-sub">Aapka subscription activate ho gaya.</div>
+      <div class="ksp-success-circle">✓</div>
+      <div class="ksp-success-title">Payment Ho Gayi! 🎉</div>
+      <div class="ksp-success-sub" id="ksp-success-sub">Subscription activate ho gaya.</div>
       <div class="ksp-receipt" id="ksp-receipt-box"></div>
-      <button class="ksp-watch-btn" onclick="kspUnlockAndWatch()">
-        🎬 Movie Dekho Abhi!
-      </button>
+      <button class="ksp-watch-btn" onclick="kspUnlockAndWatch()">🎬 Movie Dekho Abhi!</button>
     </div>
-
   </div>
 </div>
 
@@ -740,25 +561,23 @@ const firebaseConfig = {
 // ════════════════════════════════════════════════════════
 //   CONSTANTS
 // ════════════════════════════════════════════════════════
-const SKIP_LOCK     = 30;          // seconds before ad skip allowed
-const FREE_SECONDS  = 600;         // 10 minutes free for paid movies
-const BLOCK_MS      = 86400000;    // 24 hours in ms
-const MERCHANT_UPI  = 'sonone.nitesh1@ybl';
-const MERCHANT_NAME = 'KS Movies';
-const INTRO_MAX_SEC = 12;          // ← max seconds to wait for intro
-
-const AD_MAP = [
-  { pct:0,   slot:0, label:'Movie Se Pehle'     },
-  { pct:25,  slot:1, label:'25% Par'            },
-  { pct:50,  slot:2, label:'50% Par (Interval)' },
-  { pct:75,  slot:3, label:'75% Par'            },
-  { pct:100, slot:0, label:'Movie Khatam'       },
-];
+const SKIP_LOCK    = 30;
+const FREE_SECONDS = 600;
+const BLOCK_MS     = 86400000;
+const MERCHANT_UPI = 'sonone.nitesh1@ybl';
+const MERCHANT_NAME= 'KS Movies';
 
 const KSP_PLANS = [
   { id:'basic',    name:'Basic',    price:50,  desc:'720p HD • 1 Device' },
   { id:'standard', name:'Standard', price:299, desc:'1080p FHD • Sabse Popular', popular:true },
   { id:'premium',  name:'Premium',  price:500, desc:'4K Ultra HD • No Ads • 2 Devices' },
+];
+
+const AD_MAP = [
+  { pct:0,  slot:0, label:'Movie Se Pehle' },
+  { pct:25, slot:1, label:'25% Par' },
+  { pct:50, slot:2, label:'50% Par (Interval)' },
+  { pct:75, slot:3, label:'75% Par' },
 ];
 
 // ════════════════════════════════════════════════════════
@@ -773,63 +592,62 @@ let isMuted     = false;
 let isSeeking   = false;
 let ctrlTimeout;
 let wmTimer;
+let playerMode  = 'video'; // 'video' | 'iframe'
 
-// Ad state
 let adSlots     = ['','','',''];
-let adFired     = [false,false,false,false,false];
+let adFired     = [false,false,false,false];
 let adSkipSec   = 0;
 let adSkipTmr   = null;
-let adDoneCallback  = null;
-let activeTriggerIdx = -1;
+let adDoneCallback = null;
 
-// Paid movie / free trial state
-let isPaidMovie      = false;
-let freeTrialActive  = false;   // true once movie starts playing (paid movie)
-let freeTrialBlocked = false;   // true once 10min consumed
-let paymentUnlocked  = false;   // true after successful UTR verify
+let isPaidMovie     = false;
+let freeTrialActive = false;
+let freeTrialBlocked= false;
+let paymentUnlocked = false;
 
-// KS Pay state
 let kspSelectedPlan = KSP_PLANS.find(p=>p.popular);
 let kspCurrentTab   = 'qr';
 let kspQrTimer      = null;
-let kspBlockCdTimer = null;
+let _currentRawUrl  = '';
+let _videoErrorCount= 0;
 
 // ════════════════════════════════════════════════════════
-//   DOM
+//   DOM REFS
 // ════════════════════════════════════════════════════════
-const videoEl       = document.getElementById('main-video');
-const adVideoEl     = document.getElementById('ad-video');
-const introVid      = document.getElementById('intro-video');
-const overlay       = document.getElementById('ctrl-overlay');
-const playIcon      = document.getElementById('play-icon');
-const seekFill      = document.getElementById('seek-fill');
-const seekBuf       = document.getElementById('seek-buf');
-const seekThumb     = document.getElementById('seek-thumb');
-const seekWrap      = document.getElementById('seek-wrap');
-const timeCur       = document.getElementById('time-cur');
-const timeDur       = document.getElementById('time-dur');
-const volSlider     = document.getElementById('vol-slider');
-const errScr        = document.getElementById('error-screen');
-const spinner       = document.getElementById('spinner');
-const adOvl         = document.getElementById('ad-overlay');
-const adProgFill    = document.getElementById('ad-prog-fill');
-const skipLockBadge = document.getElementById('skip-lock-badge');
-const skipReadyBtn  = document.getElementById('skip-ready-btn');
-const skipSecTxt    = document.getElementById('skip-sec-txt');
-const adSpinner     = document.getElementById('ad-spinner');
-const introOvl      = document.getElementById('intro-overlay');
-const freeTrialBar  = document.getElementById('free-trial-bar');
-const ftTimerTxt    = document.getElementById('ft-timer-txt');
+const videoEl    = document.getElementById('main-video');
+const adVideoEl  = document.getElementById('ad-video');
+const overlay    = document.getElementById('ctrl-overlay');
+const playIcon   = document.getElementById('play-icon');
+const seekFill   = document.getElementById('seek-fill');
+const seekBuf    = document.getElementById('seek-buf');
+const seekThumb  = document.getElementById('seek-thumb');
+const seekWrap   = document.getElementById('seek-wrap');
+const timeCur    = document.getElementById('time-cur');
+const timeDur    = document.getElementById('time-dur');
+const volSlider  = document.getElementById('vol-slider');
+const errScr     = document.getElementById('error-screen');
+const spinner    = document.getElementById('spinner');
+const adOvl      = document.getElementById('ad-overlay');
+const adProgFill = document.getElementById('ad-prog-fill');
+const skipLock   = document.getElementById('skip-lock-badge');
+const skipBtn    = document.getElementById('skip-ready-btn');
+const skipSecTxt = document.getElementById('skip-sec-txt');
+const adSpinner  = document.getElementById('ad-spinner');
+const freeBar    = document.getElementById('free-trial-bar');
+const ftTxt      = document.getElementById('ft-timer-txt');
+const iframeArea = document.getElementById('iframe-area');
+const movieIframe= document.getElementById('movie-iframe');
+const videoArea  = document.getElementById('video-area');
 
 // ════════════════════════════════════════════════════════
-//   SPLASH BAR
+//   SPLASH
 // ════════════════════════════════════════════════════════
 let splPct = 0;
 const splBar    = document.getElementById('spl-bar');
 const splStatus = document.getElementById('spl-status');
 const splT = setInterval(() => {
   splPct = splPct < 80 ? splPct + Math.random()*5 : splPct + .3;
-  if (splPct >= 100) { splPct=100; clearInterval(splT); }
+  if (splPct>=100){splPct=100;clearInterval(splT);}
   splBar.style.width = splPct+'%';
 }, 80);
 function hideSplash() {
@@ -842,46 +660,67 @@ function hideSplash() {
 }
 
 // ════════════════════════════════════════════════════════
-//   24-HOUR BLOCK HELPERS  (localStorage)
+//   URL TYPE DETECTION
 // ════════════════════════════════════════════════════════
-function blockKey(id)  { return 'ks_paid_block_' + id; }
-function unlockKey(id) { return 'ks_paid_unlock_' + id; }
-
-function isMovieBlocked(id) {
-  if (!id) return false;
-  if (localStorage.getItem(unlockKey(id)) === '1') return false; // paid users never blocked
-  const t = parseInt(localStorage.getItem(blockKey(id))||'0');
-  return t > 0 && (Date.now()-t) < BLOCK_MS;
-}
-function blockRemaining(id) {
-  const t = parseInt(localStorage.getItem(blockKey(id))||'0');
-  return Math.max(0, BLOCK_MS - (Date.now()-t));
-}
-function applyBlock(id) {
-  if (!id) return;
-  if (localStorage.getItem(unlockKey(id)) === '1') return;
-  localStorage.setItem(blockKey(id), Date.now().toString());
-}
-function unlockForever(id) {
-  if (!id) return;
-  localStorage.setItem(unlockKey(id), '1');
-  localStorage.removeItem(blockKey(id));
+function detectUrlType(url) {
+  if (!url) return 'unknown';
+  if (url.includes('.m3u8')) return 'hls';
+  // Direct video files
+  if (/\.(mp4|webm|mkv|avi|mov|ogv)(\?|$)/i.test(url)) return 'direct_mp4';
+  // Common embed / player sites → use iframe
+  const embedHosts = [
+    'youtube.com','youtu.be',
+    'drive.google.com',
+    'vimeo.com',
+    'mp4moviez','mp4movies',
+    'dailymotion.com','dai.ly',
+    'streamtape','streamvid','filemoon','doodstream',
+    'ok.ru','mail.ru',
+    'vkspeed','vidhide','vidmoly',
+    'embedsb','sbembed','sbplay',
+    'mixdrop','uqload',
+    'vtbe','vtb.','vidguard',
+  ];
+  for (const h of embedHosts) {
+    if (url.includes(h)) return 'iframe_embed';
+  }
+  // If URL has no extension but looks like a web page → iframe
+  if (!url.match(/\.[a-z0-9]{2,5}(\?|$)/i) || url.endsWith('/')) return 'iframe_embed';
+  return 'direct_mp4'; // default try direct
 }
 
 // ════════════════════════════════════════════════════════
-//   FIREBASE INIT
+//   BLOCK HELPERS
+// ════════════════════════════════════════════════════════
+function blockKey(id){ return 'ks_paid_block_'+id; }
+function unlockKey(id){ return 'ks_paid_unlock_'+id; }
+function isMovieBlocked(id){
+  if(!id)return false;
+  if(localStorage.getItem(unlockKey(id))==='1')return false;
+  const t=parseInt(localStorage.getItem(blockKey(id))||'0');
+  return t>0&&(Date.now()-t)<BLOCK_MS;
+}
+function blockRemaining(id){
+  const t=parseInt(localStorage.getItem(blockKey(id))||'0');
+  return Math.max(0,BLOCK_MS-(Date.now()-t));
+}
+function applyBlock(id){ if(!id||localStorage.getItem(unlockKey(id))==='1')return; localStorage.setItem(blockKey(id),Date.now().toString()); }
+function unlockForever(id){ if(!id)return; localStorage.setItem(unlockKey(id),'1'); localStorage.removeItem(blockKey(id)); }
+
+// ════════════════════════════════════════════════════════
+//   FIREBASE INIT + LOAD
 // ════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
   firebase.initializeApp(firebaseConfig);
   DB = firebase.database(); AUTH = firebase.auth();
 
   const p = new URLSearchParams(window.location.search);
-  movieId          = p.get('id');
-  const directUrl  = p.get('url');
+  movieId = p.get('id');
+  const directUrl = p.get('url');
 
   if (directUrl) {
     hideSplash();
-    beginWithIntro(decodeURIComponent(directUrl), 'Movie', ['','','',''], false);
+    startMovie(decodeURIComponent(directUrl), 'Movie', [], false);
     return;
   }
   if (!movieId) {
@@ -893,284 +732,254 @@ window.addEventListener('DOMContentLoaded', () => {
   splStatus.textContent = 'Movie data fetch ho rahi hai…';
   DB.ref(`movies/${movieId}`).on('value', snap => {
     const d = snap.val();
-    if (!d) { hideSplash(); showError('Movie Nahi Mili',`ID "${movieId}" nahi mila.`); return; }
+    if (!d){ hideSplash(); showError('Movie Nahi Mili',`ID "${movieId}" nahi mila Database mein.`); return; }
 
     movieData = d;
-    const title = d.title   || 'KS Movies';
-    const url   = d.playUrl || d.streamUrl || d.url || '';
+    const title = d.title || 'KS Movies';
+    const url   = d.playUrl || d.streamUrl || d.embedUrl || d.iframeUrl || d.url || '';
     const ads   = Array.isArray(d.ads) ? d.ads : [];
-
-    // ── Paid movie detection ──
     isPaidMovie = !!(d.isPaid || d.paid || d.isPremium || d.premium);
 
     document.getElementById('movie-title').textContent  = title;
     document.getElementById('quality-badge').textContent = detectQuality(url);
     document.title = title + ' — KS Movies';
-
     adSlots = [ads[0]||'', ads[1]||'', ads[2]||'', ads[3]||''];
-
-    // Setup KS Pay banner movie name
     document.getElementById('ksp-movie-name').textContent = title;
 
     hideSplash();
 
-    // ── Check if already blocked ──
     if (isPaidMovie && movieId && isMovieBlocked(movieId)) {
-      // Show KS Pay popup immediately — don't play anything
-      showKsPayPopup(true /* blocked */);
-      return;
+      showKsPayPopup(true); return;
     }
-
-    if (!url) { showError('Play URL Nahi Hai','Admin panel mein Play URL set karo.'); return; }
+    if (!url){ showError('Play URL Nahi Hai','Admin panel mein Play URL / Embed URL set karo.'); return; }
     if (!videoEl.getAttribute('data-loaded')) {
       videoEl.setAttribute('data-loaded','1');
-      beginWithIntro(url, title, adSlots, isPaidMovie);
+      startMovie(url, title, adSlots, isPaidMovie);
     }
   });
 });
 
 // ════════════════════════════════════════════════════════
-//   STEP 1 — INTRO VIDEO  (FIXED — autoplay safe + timeout)
+//   START MOVIE  (with pre-roll ad)
 // ════════════════════════════════════════════════════════
-function beginWithIntro(movieUrl, title, ads, paid) {
-  introOvl.classList.remove('hidden');
-
-  // ── Set src dynamically so we control load timing ──
-  introVid.src = 'ks_movie_intro.mp4';
-  introVid.muted = true;      // MUST be muted for autoplay policy
-  introVid.currentTime = 0;
-
-  const cdEl = document.getElementById('intro-cd');
-  let cdVal  = 0;
-  let introDone = false;
-
-  // Safety timeout — if intro doesn't play/end within INTRO_MAX_SEC, skip it
-  const safetyTimeout = setTimeout(() => {
-    if (!introDone) { introDone = true; afterIntro(); }
-  }, INTRO_MAX_SEC * 1000);
-
-  const cdTmr = setInterval(() => {
-    cdVal = Math.max(0, cdVal - 1);
-    cdEl.textContent = cdVal > 0 ? cdVal+'s' : '';
-  }, 1000);
-
-  introVid.addEventListener('loadedmetadata', () => {
-    cdVal = Math.ceil(introVid.duration);
-    cdEl.textContent = cdVal+'s';
-  }, { once: true });
-
-  function afterIntro() {
-    if (introDone) return; // prevent double-fire
-    introDone = true;
-    clearTimeout(safetyTimeout);
-    clearInterval(cdTmr);
-    introOvl.classList.add('hidden');
-    introVid.pause();
-    introVid.src = '';        // free memory
-    playAd(0, () => loadMovie(movieUrl));
-  }
-
-  // All paths that end the intro
-  introVid.addEventListener('ended',  afterIntro, { once:true });
-  introVid.addEventListener('error',  afterIntro, { once:true });
-  introVid.addEventListener('abort',  afterIntro, { once:true });
-  introVid.addEventListener('stalled', () => {
-    // If video stalls and doesn't recover in 4s, skip
-    setTimeout(() => { if (!introDone && !introVid.played.length) afterIntro(); }, 4000);
-  }, { once:true });
-
-  // Attempt play — handle both promise rejection and no-promise browsers
-  const pp = introVid.play();
-  if (pp && typeof pp.then === 'function') {
-    pp.catch(() => { if (!introDone) afterIntro(); });
-  }
+function startMovie(url, title, ads, paid) {
+  playAd(0, () => loadMovie(url));
 }
 
 // ════════════════════════════════════════════════════════
-//   STEP 2 — LOAD MAIN MOVIE
+//   SMART LOAD — video or iframe
 // ════════════════════════════════════════════════════════
-
-// CORS proxy list — tried in order when direct URL fails (MEDIA_ERR_SRC_NOT_SUPPORTED / blocked)
-// These proxies support Range requests (needed for video seeking)
-const CORS_PROXIES = [
-  u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  u => `https://proxy.cors.sh/${u}`,
-  u => `https://cors.eu.org/${u}`,
-];
-// Domains known to block hotlinking — use proxy from the start
-const HOTLINK_BLOCKED_DOMAINS = ['mp4moviez', 'dl.php', 'streamtape', 'dood', 'mixdrop'];
-let _proxyAttempt = 0;
-let _currentRawUrl = '';
-let _usingProxy = false;
-
 function loadMovie(url) {
   _currentRawUrl = url;
-  _proxyAttempt  = 0;
-  _usingProxy    = false;
-
-  // For known hotlink-blocked domains, go straight to proxy
-  const isBlocked = HOTLINK_BLOCKED_DOMAINS.some(d => url.includes(d));
-  if (isBlocked && CORS_PROXIES.length > 0) {
-    _usingProxy   = true;
-    const proxyUrl = CORS_PROXIES[_proxyAttempt](_currentRawUrl);
-    _proxyAttempt++;
-    showToast('🌐 Proxy se load ho raha hai…');
-    _loadMovieUrl(proxyUrl);
-  } else {
-    _loadMovieUrl(url);
-  }
-}
-
-function _loadMovieUrl(url) {
+  _videoErrorCount = 0;
   errScr.classList.remove('visible');
-  showSpinner();
-  destroyHLS();
 
-  // Start free trial tracking for paid movies
+  const type = detectUrlType(url);
+
+  if (type === 'iframe_embed') {
+    switchToIframeMode(url);
+  } else if (type === 'hls') {
+    switchToVideoMode();
+    loadHLS(url);
+  } else {
+    // direct MP4 — try native first, fall to iframe on error
+    switchToVideoMode();
+    loadDirectMP4(url);
+  }
+
   if (isPaidMovie && !paymentUnlocked) {
-    freeTrialActive  = true;
-    freeTrialBlocked = false;
-    freeTrialBar.classList.add('show');
+    freeTrialActive = true;
+    freeBar.classList.add('show');
     updateFreeTrialBar(FREE_SECONDS);
   }
-
-  const isHLS = url.includes('.m3u8');
-  if (isHLS && Hls.isSupported()) {
-    hlsInst = new Hls({ enableWorker:true, lowLatencyMode:true, backBufferLength:30 });
-    hlsInst.loadSource(url);
-    hlsInst.attachMedia(videoEl);
-    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => {
-      smartPlay(videoEl);
-    });
-    hlsInst.on(Hls.Events.ERROR, (e, d) => {
-      if (d.fatal) {
-        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-          hlsInst.startLoad();
-        } else {
-          showError('Stream Error', 'Live stream load nahi hua. Internet check karo aur retry karo.');
-        }
-      }
-    });
-  } else if (isHLS && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    videoEl.src = url;
-    videoEl.addEventListener('loadedmetadata', () => smartPlay(videoEl), { once: true });
-  } else {
-    videoEl.src = url;
-    videoEl.load();
-    videoEl.addEventListener('loadeddata', () => {
-      _proxyAttempt = 0; // success — reset
-      smartPlay(videoEl);
-    }, { once: true });
-  }
-
   adFired[0] = true;
   placeAdMarkers();
 }
 
-// ════════════════════════════════════════════════════════
-//   FREE TRIAL — 10-min check
-// ════════════════════════════════════════════════════════
-function updateFreeTrialBar(secondsLeft) {
-  if (!isPaidMovie || paymentUnlocked) { freeTrialBar.classList.remove('show'); return; }
-  const m = Math.floor(secondsLeft/60);
-  const s = Math.floor(secondsLeft%60);
-  ftTimerTxt.textContent = `Free: ${m}:${String(s).padStart(2,'0')} baki`;
+function switchToVideoMode() {
+  playerMode = 'video';
+  videoArea.style.display = 'block';
+  iframeArea.classList.remove('active');
+  document.getElementById('ctrl-overlay').style.display = '';
 }
 
-function checkFreeTrialLimit() {
-  if (!isPaidMovie || !freeTrialActive || freeTrialBlocked || paymentUnlocked) return;
+function switchToIframeMode(url) {
+  playerMode = 'iframe';
+  videoArea.style.display = 'none';
+  iframeArea.classList.add('active');
+  document.getElementById('ctrl-overlay').style.display = 'none';
+  movieIframe.src = url;
+  showToast('🎬 Movie load ho rahi hai…', 2000);
+}
 
-  const elapsed = videoEl.currentTime;  // seconds into movie
-  const remaining = FREE_SECONDS - elapsed;
-
-  if (remaining <= 0) {
-    freeTrialBlocked = true;
-    freeTrialActive  = false;
-    freeTrialBar.classList.remove('show');
-    videoEl.pause();
-    applyBlock(movieId);      // set 24-hour block immediately
-    showKsPayPopup(false);    // show pay popup
+function loadHLS(url) {
+  destroyHLS();
+  showSpinner();
+  if (Hls.isSupported()) {
+    hlsInst = new Hls({ enableWorker:true, lowLatencyMode:true });
+    hlsInst.loadSource(url);
+    hlsInst.attachMedia(videoEl);
+    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => { hideSpinner(); smartPlay(videoEl); });
+    hlsInst.on(Hls.Events.ERROR, (e,d) => {
+      if (d.fatal) showError('Stream Error','HLS stream load nahi hua. Retry karo.');
+    });
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    videoEl.src = url;
+    videoEl.addEventListener('loadedmetadata', ()=>{hideSpinner();smartPlay(videoEl);},{once:true});
   } else {
-    updateFreeTrialBar(remaining);
+    showError('HLS Support Nahi','Yeh browser HLS streams support nahi karta.');
   }
 }
 
+function loadDirectMP4(url) {
+  destroyHLS();
+  showSpinner();
+  videoEl.src = url;
+  videoEl.load();
+
+  videoEl.addEventListener('loadeddata', () => {
+    hideSpinner();
+    smartPlay(videoEl);
+  }, { once:true });
+
+  videoEl.addEventListener('error', () => {
+    _videoErrorCount++;
+    if (_videoErrorCount <= 1) {
+      // First failure → try iframe mode as fallback
+      hideSpinner();
+      showToast('⚠️ Direct play failed — iframe mode try kar raha hai…', 3000);
+      setTimeout(() => switchToIframeMode(url), 1000);
+    } else {
+      hideSpinner();
+      showError('Video Load Error','Movie play nahi hui. Admin se link check karwao.');
+    }
+  }, { once:true });
+}
+
+function retryPlayback() {
+  errScr.classList.remove('visible');
+  _videoErrorCount = 0;
+  const url = (movieData && (movieData.playUrl||movieData.streamUrl||movieData.embedUrl||movieData.url)) || _currentRawUrl;
+  if (url) loadMovie(url);
+}
+
 // ════════════════════════════════════════════════════════
-//   KS PAY POPUP
+//   VIDEO EVENTS (only in video mode)
+// ════════════════════════════════════════════════════════
+videoEl.addEventListener('play',  () => { isPlaying=true;  playIcon.className='fa-solid fa-pause'; });
+videoEl.addEventListener('pause', () => { isPlaying=false; playIcon.className='fa-solid fa-play'; });
+videoEl.addEventListener('waiting',  () => showSpinner());
+videoEl.addEventListener('playing',  () => hideSpinner());
+videoEl.addEventListener('canplay',  () => hideSpinner());
+videoEl.addEventListener('timeupdate', () => {
+  if (!videoEl.duration||isSeeking) return;
+  const pct = videoEl.currentTime/videoEl.duration;
+  seekFill.style.width  = (pct*100)+'%';
+  seekThumb.style.left  = (pct*100)+'%';
+  timeCur.textContent   = formatTime(videoEl.currentTime);
+  timeDur.textContent   = formatTime(videoEl.duration);
+  // Ad triggers
+  AD_MAP.forEach((a,i) => {
+    if (i===0) return; // pre-roll already done
+    if (!adFired[i] && pct >= a.pct/100 && a.pct>0) {
+      adFired[i]=true; videoEl.pause();
+      playAd(i, () => { videoEl.play().catch(()=>{}); });
+    }
+  });
+  checkFreeTrialLimit();
+  // Buffered
+  if (videoEl.buffered.length) {
+    seekBuf.style.width = (videoEl.buffered.end(videoEl.buffered.length-1)/videoEl.duration*100)+'%';
+  }
+});
+
+// ════════════════════════════════════════════════════════
+//   FREE TRIAL
+// ════════════════════════════════════════════════════════
+function updateFreeTrialBar(sec) {
+  if (!isPaidMovie||paymentUnlocked){freeBar.classList.remove('show');return;}
+  const m=Math.floor(sec/60), s=Math.floor(sec%60);
+  ftTxt.textContent=`Free: ${m}:${String(s).padStart(2,'0')} baki`;
+}
+function checkFreeTrialLimit() {
+  if (!isPaidMovie||!freeTrialActive||freeTrialBlocked||paymentUnlocked) return;
+  const rem = FREE_SECONDS - videoEl.currentTime;
+  if (rem<=0) {
+    freeTrialBlocked=true; freeTrialActive=false;
+    freeBar.classList.remove('show');
+    videoEl.pause(); applyBlock(movieId); showKsPayPopup(false);
+  } else { updateFreeTrialBar(rem); }
+}
+
+// ════════════════════════════════════════════════════════
+//   AD ENGINE
+// ════════════════════════════════════════════════════════
+function playAd(idx, onDone) {
+  const entry = AD_MAP[idx];
+  const adUrl  = adSlots[entry.slot]||'';
+  if (!adUrl){ onDone(); return; }
+
+  adDoneCallback = onDone;
+  adSkipSec = 0;
+  adProgFill.style.width = '0%';
+  skipSecTxt.textContent = SKIP_LOCK;
+  skipLock.style.display = 'flex'; skipBtn.style.display = 'none';
+  document.getElementById('ad-label-text').textContent = `${entry.label}`;
+  adOvl.classList.add('visible');
+  adSpinner.classList.add('active');
+
+  adVideoEl.src = adUrl;
+  adVideoEl.load();
+  adVideoEl.play().catch(()=>{});
+
+  adVideoEl.addEventListener('canplay', ()=>adSpinner.classList.remove('active'), {once:true});
+  adVideoEl.addEventListener('error', ()=>finishAd(), {once:true});
+  adVideoEl.addEventListener('ended', ()=>finishAd(), {once:true});
+
+  clearInterval(adSkipTmr);
+  adSkipTmr = setInterval(() => {
+    adSkipSec++;
+    const pct = adVideoEl.duration ? (adVideoEl.currentTime/adVideoEl.duration*100) : 0;
+    adProgFill.style.width = pct+'%';
+    if (adSkipSec >= SKIP_LOCK) {
+      clearInterval(adSkipTmr);
+      skipLock.style.display = 'none';
+      skipBtn.style.display = 'flex';
+    } else {
+      skipSecTxt.textContent = SKIP_LOCK - adSkipSec;
+    }
+  }, 1000);
+}
+function finishAd() {
+  clearInterval(adSkipTmr);
+  adOvl.classList.remove('visible');
+  adVideoEl.pause(); adVideoEl.src='';
+  if (adDoneCallback){ const cb=adDoneCallback; adDoneCallback=null; cb(); }
+}
+function doSkipAd(){ finishAd(); }
+function placeAdMarkers() { /* optional: can add timeline markers */ }
+
+// ════════════════════════════════════════════════════════
+//   KS PAY
 // ════════════════════════════════════════════════════════
 function showKsPayPopup(isBlocked) {
-  const popup = document.getElementById('kspay-popup');
-  popup.classList.add('visible');
-  videoEl.pause();
-
-  // Reset states
-  document.getElementById('ksp-verifying-ovl').classList.remove('show');
+  document.getElementById('kspay-popup').classList.add('visible');
+  if(playerMode==='video') videoEl.pause();
   document.getElementById('ksp-success-ovl').classList.remove('show');
-  document.getElementById('ksp-utr-input').value = '';
-  document.getElementById('ksp-verify-btn').disabled = true;
-
-  // Render plans
-  kspRenderPlans();
-  kspUpdateQR();
-  kspUpdateDeepLink();
-
-  // Show/hide block countdown
-  const blockedTimer = document.getElementById('ksp-blocked-timer');
-  if (isBlocked && movieId && isMovieBlocked(movieId)) {
-    blockedTimer.classList.add('show');
-    kspStartBlockCountdown();
-  } else {
-    blockedTimer.classList.remove('show');
-    if (kspBlockCdTimer) clearInterval(kspBlockCdTimer);
-  }
-
-  // Start QR refresh timer
-  if (!kspQrTimer) {
-    kspQrTimer = setInterval(() => {
-      if (kspCurrentTab === 'qr') kspUpdateQR();
-    }, 30000);
-  }
+  document.getElementById('ksp-utr-input').value='';
+  document.getElementById('ksp-verify-btn').disabled=true;
+  kspRenderPlans(); kspUpdateQR(); kspUpdateDeepLink();
 }
-
 function closeKsPay() {
-  // Closing popup without paying → apply / refresh block
-  if (!paymentUnlocked && isPaidMovie) {
-    applyBlock(movieId);   // ensure block timestamp is fresh
-  }
+  if(!paymentUnlocked&&isPaidMovie) applyBlock(movieId);
   document.getElementById('kspay-popup').classList.remove('visible');
-  if (kspQrTimer) { clearInterval(kspQrTimer); kspQrTimer=null; }
-  if (kspBlockCdTimer) { clearInterval(kspBlockCdTimer); kspBlockCdTimer=null; }
+  if(kspQrTimer){clearInterval(kspQrTimer);kspQrTimer=null;}
 }
-
-function kspStartBlockCountdown() {
-  const el = document.getElementById('ksp-block-cd');
-  function tick() {
-    if (!movieId) return;
-    const rem = blockRemaining(movieId);
-    if (rem <= 0) {
-      el.textContent = 'Abhi free preview available hai!';
-      clearInterval(kspBlockCdTimer);
-      return;
-    }
-    const h = Math.floor(rem/3600000);
-    const m = Math.floor((rem%3600000)/60000);
-    const s = Math.floor((rem%60000)/1000);
-    el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  }
-  tick();
-  kspBlockCdTimer = setInterval(tick, 1000);
-}
-
-// ── KS Pay plans ──
 function kspRenderPlans() {
-  const grid = document.getElementById('ksp-plans-grid');
-  grid.innerHTML = KSP_PLANS.map(p => `
+  document.getElementById('ksp-plans-grid').innerHTML = KSP_PLANS.map(p=>`
     <button class="ksp-plan ${p.id===kspSelectedPlan.id?'active':''}" onclick="kspSelectPlan('${p.id}')">
       <div class="ksp-plan-row">
-        <div>
-          <span class="ksp-plan-name">${p.name}</span>
-          ${p.popular?'<span class="ksp-popular">Popular</span>':''}
-        </div>
+        <div><span class="ksp-plan-name">${p.name}</span>${p.popular?'<span class="ksp-popular">Popular</span>':''}</div>
         <span class="ksp-plan-price">₹${p.price}</span>
       </div>
       <div class="ksp-plan-desc">${p.desc}</div>
@@ -1179,566 +988,225 @@ function kspRenderPlans() {
   `).join('');
   document.getElementById('ksp-amt-val').textContent = kspSelectedPlan.price;
 }
-
 function kspSelectPlan(id) {
   kspSelectedPlan = KSP_PLANS.find(p=>p.id===id);
-  kspRenderPlans();
-  kspUpdateQR();
-  kspUpdateDeepLink();
+  kspRenderPlans(); kspUpdateQR(); kspUpdateDeepLink();
 }
-
-// ── KS Pay QR ──
 function kspGetQRUrl() {
-  const upiStr = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${kspSelectedPlan.price}&cu=INR&tn=KSMovies${kspSelectedPlan.name}`;
+  const upiStr=`upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${kspSelectedPlan.price}&cu=INR`;
   return `https://quickchart.io/qr?text=${encodeURIComponent(upiStr)}&size=200&margin=2&_=${Date.now()}`;
 }
-function kspUpdateQR() {
-  const img = document.getElementById('ksp-qr-img');
-  img.src = kspGetQRUrl();
-}
-
-// ── KS Pay UPI deep link ──
+function kspUpdateQR() { document.getElementById('ksp-qr-img').src=kspGetQRUrl(); }
 function kspUpdateDeepLink() {
-  const link = document.getElementById('ksp-upi-deeplink');
-  const upiUrl = `upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${kspSelectedPlan.price}&cu=INR`;
-  link.href = upiUrl;
-  document.getElementById('ksp-upi-display').textContent = MERCHANT_UPI;
+  const link=document.getElementById('ksp-upi-deeplink');
+  link.href=`upi://pay?pa=${MERCHANT_UPI}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${kspSelectedPlan.price}&cu=INR`;
+  document.getElementById('ksp-upi-display').textContent=MERCHANT_UPI;
 }
-
 function kspCopyUPI() {
   navigator.clipboard.writeText(MERCHANT_UPI).catch(()=>{});
-  const btn = document.querySelector('.ksp-copy-btn');
-  btn.textContent = '✓ Copied!'; btn.style.color='#22c55e';
+  const btn=document.querySelector('.ksp-copy-btn');
+  btn.textContent='✓ Copied!';btn.style.color='#22c55e';
   setTimeout(()=>{btn.textContent='📋 Copy';btn.style.color='';},2000);
 }
-
-// ── KS Pay tabs ──
 function kspSwitchTab(tab) {
-  kspCurrentTab = tab;
-  document.getElementById('ksp-qr-section').style.display  = tab==='qr'  ? 'flex' : 'none';
-  document.getElementById('ksp-upi-section').style.display = tab==='upi' ? 'block': 'none';
-  document.getElementById('ksp-tab-qr').classList.toggle('active',  tab==='qr');
-  document.getElementById('ksp-tab-upi').classList.toggle('active', tab==='upi');
+  kspCurrentTab=tab;
+  document.getElementById('ksp-qr-section').style.display  = tab==='qr'?'flex':'none';
+  document.getElementById('ksp-upi-section').style.display = tab==='upi'?'block':'none';
+  document.getElementById('ksp-tab-qr').classList.toggle('active',tab==='qr');
+  document.getElementById('ksp-tab-upi').classList.toggle('active',tab==='upi');
 }
-
-// ── KS Pay UTR ──
 function kspUtrChanged() {
-  const val = document.getElementById('ksp-utr-input').value.trim();
-  document.getElementById('ksp-verify-btn').disabled = val.length < 10;
+  document.getElementById('ksp-verify-btn').disabled = document.getElementById('ksp-utr-input').value.trim().length<10;
 }
-
-// ── KS Pay verify ──
-const KSP_VERIFY_STEPS = [
-  'UTR format validate kar raha hai',
-  'Duplicate check ho raha hai',
-  'Time window verify ho raha hai',
-  'Amount confirm ho raha hai',
-  'Fraud score check ho raha hai',
-  'Subscription activate ho raha hai',
-];
-
 async function kspStartVerify() {
-  const utr = document.getElementById('ksp-utr-input').value.trim();
-  if (utr.length < 10) return;
-
-  const vOvl = document.getElementById('ksp-verifying-ovl');
-  const stepsList = document.getElementById('ksp-steps-list');
-  stepsList.innerHTML = KSP_VERIFY_STEPS.map((s,i) =>
-    `<div class="ksp-step pending" id="ksp-st-${i}">
-      <div class="ksp-step-num">${i+1}</div><span>${s}</span>
-    </div>`
-  ).join('');
-  vOvl.classList.add('show');
-
-  for (let i=0; i<KSP_VERIFY_STEPS.length; i++) {
-    const el = document.getElementById('ksp-st-'+i);
-    el.className = 'ksp-step active';
-    await sleep(700 + Math.random()*600);
-    el.className = 'ksp-step done';
-    el.querySelector('.ksp-step-num').textContent = '✓';
-  }
-
-  await sleep(500);
-  vOvl.classList.remove('show');
+  const utr=document.getElementById('ksp-utr-input').value.trim();
+  if(utr.length<10)return;
+  document.getElementById('ksp-verify-btn').disabled=true;
+  document.getElementById('ksp-verify-btn').textContent='Verifying…';
+  await sleep(2500+Math.random()*1500);
   kspShowSuccess(utr);
 }
-
 function kspShowSuccess(utr) {
-  const sOvl = document.getElementById('ksp-success-ovl');
-  const now = new Date();
-
-  document.getElementById('ksp-receipt-box').innerHTML = `
-    <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">Amount Paid</span><span class="ksp-rcpt-val">₹${kspSelectedPlan.price}</span></div>
-    <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">UTR Reference</span><span class="ksp-rcpt-val">${utr}</span></div>
+  const now=new Date();
+  document.getElementById('ksp-receipt-box').innerHTML=`
+    <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">Amount</span><span class="ksp-rcpt-val">₹${kspSelectedPlan.price}</span></div>
+    <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">UTR</span><span class="ksp-rcpt-val">${utr}</span></div>
     <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">Plan</span><span class="ksp-rcpt-val">${kspSelectedPlan.name}</span></div>
-    <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">Date</span><span class="ksp-rcpt-val">${now.toLocaleDateString('en-IN')}</span></div>
     <div class="ksp-rcpt-row"><span class="ksp-rcpt-lbl">Status</span><span class="ksp-rcpt-val green">✓ APPROVED</span></div>
   `;
-  document.getElementById('ksp-success-sub').textContent =
-    `Aapka ${kspSelectedPlan.name} plan activate ho gaya. Ab movie bina rok-tok ke dekho!`;
-
-  sOvl.classList.add('show');
+  document.getElementById('ksp-success-sub').textContent=`${kspSelectedPlan.name} plan activate ho gaya!`;
+  document.getElementById('ksp-success-ovl').classList.add('show');
+  paymentUnlocked=true; if(movieId)unlockForever(movieId);
   kspSpawnConfetti();
-  kspPlaySuccessSound();
-
-  // Mark as permanently unlocked
-  paymentUnlocked = true;
-  if (movieId) unlockForever(movieId);
 }
-
 function kspUnlockAndWatch() {
   document.getElementById('kspay-popup').classList.remove('visible');
-  if (kspQrTimer)    { clearInterval(kspQrTimer);    kspQrTimer=null; }
-  if (kspBlockCdTimer){ clearInterval(kspBlockCdTimer); kspBlockCdTimer=null; }
-
-  freeTrialActive  = false;
-  freeTrialBlocked = false;
-  freeTrialBar.classList.remove('show');
-
-  // Resume movie from where user left off (or beginning if blocked)
-  if (movieData) {
-    const url = movieData.playUrl || movieData.streamUrl || movieData.url || '';
-    if (!videoEl.src || videoEl.error) {
-      loadMovie(url);
-    } else {
-      videoEl.play().catch(()=>{});
-    }
+  freeTrialActive=false; freeTrialBlocked=false; freeBar.classList.remove('show');
+  if(movieData){
+    const url=movieData.playUrl||movieData.streamUrl||movieData.embedUrl||movieData.url||'';
+    if(playerMode==='video') videoEl.play().catch(()=>{});
+    else if(!movieIframe.src||movieIframe.src==='about:blank') loadMovie(url);
   }
 }
-
-// ── Confetti ──
 function kspSpawnConfetti() {
-  const colors=['#e50914','#22c55e','#facc15','#60a5fa','#f97316','#a78bfa'];
-  for (let i=0;i<60;i++) {
+  const colors=['#e50914','#22c55e','#facc15','#60a5fa','#f97316'];
+  for(let i=0;i<50;i++){
     setTimeout(()=>{
-      const el=document.createElement('div'); el.className='cf';
+      const el=document.createElement('div');el.className='cf';
       const sz=5+Math.random()*7;
-      el.style.cssText=`left:${Math.random()*100}vw;top:-20px;width:${sz}px;height:${sz}px;
-        background:${colors[Math.floor(Math.random()*colors.length)]};
-        border-radius:${Math.random()>.5?'50%':'2px'};
-        animation-duration:${1.5+Math.random()*2}s;animation-delay:${Math.random()*.5}s;`;
-      document.body.appendChild(el);
-      setTimeout(()=>el.remove(),3500);
-    },i*25);
+      el.style.cssText=`left:${Math.random()*100}vw;top:-20px;width:${sz}px;height:${sz}px;background:${colors[Math.floor(Math.random()*colors.length)]};border-radius:50%;animation-duration:${1.5+Math.random()*2}s;`;
+      document.body.appendChild(el);setTimeout(()=>el.remove(),3500);
+    },i*30);
   }
 }
 
-// ── Success sound ──
-function kspPlaySuccessSound() {
-  try {
-    const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [523.25,659.25,783.99].forEach((freq,i)=>{
-      setTimeout(()=>{
-        const o=ctx.createOscillator(),g=ctx.createGain();
-        o.connect(g);g.connect(ctx.destination);
-        o.type='sine'; o.frequency.setValueAtTime(freq,ctx.currentTime);
-        g.gain.setValueAtTime(.22,ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.5);
-        o.start(ctx.currentTime); o.stop(ctx.currentTime+.5);
-      },i*140);
-    });
-  } catch(e){}
-}
-
 // ════════════════════════════════════════════════════════
-//   AD ENGINE
-// ════════════════════════════════════════════════════════
-function playAd(triggerIdx, onDone) {
-  const entry = AD_MAP[triggerIdx];
-  const adUrl = adSlots[entry.slot]||'';
-  if (!adUrl) { onDone(); return; }
-
-  activeTriggerIdx = triggerIdx;
-  adDoneCallback   = onDone;
-  adSkipSec        = 0;
-
-  adProgFill.style.width      = '0%';
-  skipSecTxt.textContent      = SKIP_LOCK;
-  skipLockBadge.style.display = 'flex';
-  skipReadyBtn.style.display  = 'none';
-  document.getElementById('ad-label-text').textContent = `Ad ${triggerIdx+1} of 5 — ${entry.label}`;
-
-  highlightDot(entry.slot,'active');
-  adOvl.classList.add('visible');
-  adSpinner.classList.add('active');
-
-  adVideoEl.src = adUrl;
-  adVideoEl.currentTime = 0;
-  adVideoEl.load();
-  adVideoEl.play().catch(()=>{});
-
-  adVideoEl.addEventListener('canplay', ()=>adSpinner.classList.remove('active'), {once:true});
-  adVideoEl.addEventListener('error',   ()=>finishAd(), {once:true});
-  adVideoEl.addEventListener('ended',   ()=>finishAd(), {once:true});
-
-  clearInterval(adSkipTmr);
-  adSkipTmr = setInterval(() => {
-    adSkipSec++;
-    const rem = Math.max(0, SKIP_LOCK-adSkipSec);
-    skipSecTxt.textContent = rem;
-    const adDur = (adVideoEl.duration&&isFinite(adVideoEl.duration)) ? adVideoEl.duration : 60;
-    adProgFill.style.width = Math.min(100,(adSkipSec/adDur)*100)+'%';
-    if (adSkipSec >= SKIP_LOCK) {
-      skipLockBadge.style.display='none';
-      skipReadyBtn.style.display='flex';
-    }
-  },1000);
-}
-
-function finishAd() {
-  clearInterval(adSkipTmr);
-  adOvl.classList.remove('visible');
-  adSpinner.classList.remove('active');
-  adVideoEl.src = '';
-  adProgFill.style.width = '0%';
-  const entry = AD_MAP[activeTriggerIdx];
-  highlightDot(entry.slot,'done');
-  const pct = entry.pct;
-  if (pct>0&&pct<100) {
-    seekWrap.querySelectorAll('.ad-mk').forEach(m=>{
-      if(parseInt(m.dataset.p)===pct) m.classList.add('played');
-    });
-  }
-  adFired[activeTriggerIdx]=true;
-  const cb=adDoneCallback; adDoneCallback=null; activeTriggerIdx=-1;
-  if (cb) cb();
-}
-
-function doSkipAd() {
-  if (adSkipSec<SKIP_LOCK) return;
-  adVideoEl.pause();
-  const wasMidMovie=[1,2,3].includes(activeTriggerIdx);
-  finishAd();
-  if (wasMidMovie) videoEl.play().catch(()=>{});
-}
-
-function highlightDot(slotIdx,state) {
-  const d=document.getElementById('sdot-'+slotIdx);
-  if(d) d.className='slot-dot '+state;
-}
-
-function placeAdMarkers() {
-  seekWrap.querySelectorAll('.ad-mk').forEach(m=>m.remove());
-  [25,50,75].forEach(pct=>{
-    const m=document.createElement('div');
-    m.className='ad-mk'; m.style.left=pct+'%'; m.dataset.p=pct;
-    seekWrap.appendChild(m);
-  });
-}
-
-function checkAdTriggers() {
-  const dur=videoEl.duration;
-  if (!dur||isNaN(dur)) return;
-  const pct=(videoEl.currentTime/dur)*100;
-  for (let i=1;i<=3;i++) {
-    if (!adFired[i]&&pct>=AD_MAP[i].pct) {
-      adFired[i]=true;
-      videoEl.pause();
-      playAd(i,()=>videoEl.play().catch(()=>{}));
-      return;
-    }
-  }
-}
-
-function checkEndAd() {
-  if (!adFired[4]) { adFired[4]=true; playAd(4,()=>{}); }
-}
-
-// ════════════════════════════════════════════════════════
-//   VIDEO EVENTS
-// ════════════════════════════════════════════════════════
-videoEl.addEventListener('playing',        ()=>{ isPlaying=true;  updatePlayIcon(); hideSpinner(); });
-videoEl.addEventListener('pause',          ()=>{ isPlaying=false; updatePlayIcon(); });
-videoEl.addEventListener('waiting',        showSpinner);
-videoEl.addEventListener('canplay',        hideSpinner);
-videoEl.addEventListener('loadedmetadata', ()=>{ timeDur.textContent=formatTime(videoEl.duration); placeAdMarkers(); });
-videoEl.addEventListener('timeupdate',     ()=>{
-  updateProgress();
-  checkAdTriggers();
-  checkFreeTrialLimit();   // ← 10-min free trial check
-});
-videoEl.addEventListener('progress',       updateBuffer);
-videoEl.addEventListener('ended',          checkEndAd);
-let _videoErrorRetry = 0;
-videoEl.addEventListener('error', () => {
-  if (!videoEl.src || videoEl.src === window.location.href) return;
-  hideSpinner();
-  const c = videoEl.error ? videoEl.error.code : 0;
-
-  // Retry once on network errors (code 2) before trying proxy
-  if (c === 2 && _videoErrorRetry < 2 && !_usingProxy) {
-    _videoErrorRetry++;
-    showToast(`🔄 Retry ho raha hai… (${_videoErrorRetry}/2)`);
-    showSpinner();
-    setTimeout(() => {
-      videoEl.load();
-      videoEl.play().catch(() => smartPlay(videoEl));
-    }, 1500);
-    return;
-  }
-
-  // Try CORS proxies for src-not-supported / network errors
-  if ((c === 2 || c === 4 || c === 0) && _proxyAttempt < CORS_PROXIES.length && _currentRawUrl) {
-    const proxyUrl = CORS_PROXIES[_proxyAttempt](_currentRawUrl);
-    _proxyAttempt++;
-    _videoErrorRetry = 0;
-    _usingProxy = true;
-    showToast(`🌐 Proxy ${_proxyAttempt}/${CORS_PROXIES.length} se try ho raha hai…`);
-    showSpinner();
-    setTimeout(() => {
-      destroyHLS();
-      videoEl.src = proxyUrl;
-      videoEl.load();
-      smartPlay(videoEl);
-    }, 1500);
-    return;
-  }
-
-  _videoErrorRetry = 0;
-  _proxyAttempt   = 0;
-  _usingProxy     = false;
-  const m = {
-    1: 'Playback rok diya gaya.',
-    2: 'Network error — internet check karo.',
-    3: 'Video decode nahi hua — format supported nahi.',
-    4: 'Video URL kaam nahi kar raha. Admin panel mein naya URL daalo.'
-  };
-  showError('Video Error', m[c] || 'Unknown error. Retry karo.');
-});
-
-// ════════════════════════════════════════════════════════
-//   PLAYBACK CONTROLS
+//   VIDEO CONTROLS
 // ════════════════════════════════════════════════════════
 function togglePlay() {
-  if (videoEl.paused) {
-    videoEl.play().catch(() => {
-      // Try muted play, then unmute
-      videoEl.muted = true;
-      videoEl.play().then(() => {
-        setTimeout(() => { videoEl.muted = false; }, 300);
-      }).catch(() => {
-        showTapToPlayOverlay();
-      });
-    });
-  }
+  if(playerMode!=='video')return;
+  if(videoEl.paused) videoEl.play().catch(()=>{});
   else videoEl.pause();
 }
-function updatePlayIcon() {
-  playIcon.className = isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
-}
 function seekVideo(sec) {
-  const t = Math.max(0, Math.min(videoEl.duration||0, videoEl.currentTime+sec));
-  // For paid movies, prevent seeking past FREE_SECONDS if not unlocked
-  if (isPaidMovie && !paymentUnlocked && t >= FREE_SECONDS) {
-    showToast('⛔ Free preview mein aage nahi ja sakte!');
-    return;
-  }
-  videoEl.currentTime = t;
-  showToast(sec>0?`⏩ +${sec}s`:`⏪ ${sec}s`);
+  if(playerMode!=='video')return;
+  videoEl.currentTime=Math.max(0,Math.min(videoEl.duration||0,videoEl.currentTime+sec));
 }
-function updateProgress() {
-  const d=videoEl.duration||0, c=videoEl.currentTime||0;
-  const p=d?(c/d*100):0;
-  seekFill.style.width=p+'%';
-  seekThumb.style.left=p+'%';
-  timeCur.textContent=formatTime(c);
-}
-function updateBuffer() {
-  if (!videoEl.buffered.length) return;
-  const d=videoEl.duration||0;
-  seekBuf.style.width=(d?videoEl.buffered.end(videoEl.buffered.length-1)/d*100:0)+'%';
-}
-
-// Seekbar drag
-function getSeekPct(e) { const r=seekWrap.getBoundingClientRect(); return Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); }
-function doSeek(p) {
-  if (!isFinite(videoEl.duration)) return;
-  const t = p * videoEl.duration;
-  // Block seeking past FREE_SECONDS for paid movies
-  if (isPaidMovie && !paymentUnlocked && t >= FREE_SECONDS) {
-    showToast('⛔ Free preview mein aage nahi ja sakte!');
-    return;
-  }
-  videoEl.currentTime = t;
-}
-seekWrap.addEventListener('mousedown',  e=>{ isSeeking=true; doSeek(getSeekPct(e)); });
-document.addEventListener('mousemove',  e=>{ if(isSeeking) doSeek(getSeekPct(e)); });
-document.addEventListener('mouseup',    ()=>{ isSeeking=false; });
-seekWrap.addEventListener('touchstart', e=>{ isSeeking=true; doSeek(getSeekPct(e.touches[0])); },{passive:true});
-document.addEventListener('touchmove',  e=>{ if(isSeeking) doSeek(getSeekPct(e.touches[0])); },{passive:true});
-document.addEventListener('touchend',   ()=>{ isSeeking=false; });
-
-// Volume
-volSlider.addEventListener('input',()=>{
-  const v=volSlider.value/100; isMuted=(v===0);
-  videoEl.volume=v; videoEl.muted=isMuted;
-  document.getElementById('vol-icon').className=
-    isMuted?'fa-solid fa-volume-xmark':v<.5?'fa-solid fa-volume-low':'fa-solid fa-volume-high';
-});
 function toggleMute() {
   isMuted=!isMuted; videoEl.muted=isMuted;
-  const icon=document.getElementById('vol-icon');
-  if (isMuted){icon.className='fa-solid fa-volume-xmark';volSlider.value=0;}
-  else {videoEl.volume=1;icon.className='fa-solid fa-volume-high';volSlider.value=100;}
+  document.getElementById('vol-icon').className=isMuted?'fa-solid fa-volume-xmark':'fa-solid fa-volume-high';
+  volSlider.value=isMuted?0:100;
 }
+volSlider.addEventListener('input',()=>{ videoEl.volume=volSlider.value/100; });
 
-// Controls visibility
+// Seek bar interaction
+let seekDragging=false;
+function seekTo(e) {
+  const rect=seekWrap.getBoundingClientRect();
+  const pct=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width));
+  if(videoEl.duration) videoEl.currentTime=pct*videoEl.duration;
+}
+seekWrap.addEventListener('mousedown',e=>{seekDragging=true;seekTo(e);});
+document.addEventListener('mousemove',e=>{if(seekDragging)seekTo(e);});
+document.addEventListener('mouseup',()=>seekDragging=false);
+seekWrap.addEventListener('touchstart',e=>{isSeeking=true;seekTo(e.touches[0]);},{passive:true});
+seekWrap.addEventListener('touchmove',e=>{seekTo(e.touches[0]);},{passive:true});
+seekWrap.addEventListener('touchend',()=>{isSeeking=false;});
+
+// Controls visibility (video mode only)
 function showControls() {
+  if(playerMode!=='video')return;
   overlay.classList.add('visible');
   clearTimeout(ctrlTimeout);
   ctrlTimeout=setTimeout(()=>overlay.classList.remove('visible'),3500);
 }
-document.getElementById('video-area').addEventListener('mousemove', showControls);
-document.getElementById('video-area').addEventListener('touchstart', showControls,{passive:true});
-document.getElementById('video-area').addEventListener('click', e=>{
-  if (e.target===videoEl||['ctrl-overlay','video-area'].includes(e.target.id)) togglePlay();
+videoArea.addEventListener('mousemove',showControls);
+videoArea.addEventListener('touchstart',showControls,{passive:true});
+videoArea.addEventListener('click',e=>{
+  if(playerMode!=='video')return;
+  if(e.target===videoEl||e.target.id==='video-area'||e.target.id==='ctrl-overlay') togglePlay();
 });
 
-// Double tap
+// Double tap seek
 let lastTap=0;
-document.getElementById('video-area').addEventListener('touchend', e=>{
+videoArea.addEventListener('touchend',e=>{
+  if(playerMode!=='video')return;
   const now=Date.now();
-  if (now-lastTap<300) {
+  if(now-lastTap<300){
     const x=e.changedTouches[0].clientX;
-    if (x<window.innerWidth/2){seekVideo(-10);addRipple('left');}
-    else {seekVideo(10);addRipple('right');}
-  } else { lastTap=now; }
+    x<window.innerWidth/2?seekVideo(-10):seekVideo(10);
+  } else lastTap=now;
 });
-function addRipple(side) {
-  const r=document.createElement('div'); r.className='dtap '+side;
-  document.getElementById('video-area').appendChild(r);
-  r.addEventListener('animationend',()=>r.remove());
-}
 
 // Keyboard
-document.addEventListener('keydown', e=>{
-  if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA'].includes(document.activeElement.tagName))return;
   switch(e.key){
-    case ' ':case 'k': e.preventDefault(); togglePlay(); break;
-    case 'ArrowRight': seekVideo(10); break;
-    case 'ArrowLeft':  seekVideo(-10); break;
-    case 'f': toggleFullscreen(); break;
-    case 'm': toggleMute(); break;
+    case ' ':case 'k':e.preventDefault();togglePlay();break;
+    case 'ArrowRight':seekVideo(10);break;
+    case 'ArrowLeft':seekVideo(-10);break;
+    case 'f':toggleFullscreen();break;
+    case 'm':toggleMute();break;
   }
 });
 
 // Fullscreen
 function toggleFullscreen() {
-  try {
-    if (!document.fullscreenElement&&!document.webkitFullscreenElement) {
-      (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen)
-        .call(document.documentElement);
+  try{
+    if(!document.fullscreenElement&&!document.webkitFullscreenElement){
+      (document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen).call(document.documentElement);
       document.getElementById('fs-icon').className='fa-solid fa-compress';
     } else {
       (document.exitFullscreen||document.webkitExitFullscreen).call(document);
       document.getElementById('fs-icon').className='fa-solid fa-expand';
     }
-  } catch(e){}
-}
-async function togglePip() {
-  try {
-    if (document.pictureInPictureElement) await document.exitPictureInPicture();
-    else if (videoEl.requestPictureInPicture) await videoEl.requestPictureInPicture();
-  } catch(e){showToast('PiP supported nahi');}
+  }catch(e){}
 }
 
-// Watermark
-const wm=document.getElementById('watermark');
-function moveWm(){wm.style.left=(Math.random()*80)+'%';wm.style.top=(Math.random()*80)+'%';}
-moveWm(); wmTimer=setInterval(moveWm,5000);
+// ════════════════════════════════════════════════════════
+//   AUTOPLAY HELPERS
+// ════════════════════════════════════════════════════════
+function smartPlay(vid) {
+  document.getElementById('tap-to-play').style.display='none';
+  const p=vid.play();
+  if(p&&typeof p.then==='function'){
+    p.catch(()=>{
+      vid.muted=true;
+      vid.play().then(()=>{
+        showToast('🔇 Muted — 🔊 icon tap karo');
+        setTimeout(()=>{vid.muted=false;},1200);
+      }).catch(()=>{
+        document.getElementById('tap-to-play').style.display='flex';
+      });
+    });
+  }
+}
+function handleTapToPlay() {
+  document.getElementById('tap-to-play').style.display='none';
+  videoEl.muted=false;
+  videoEl.play().catch(()=>{videoEl.muted=true;videoEl.play().catch(()=>{});});
+}
 
 // ════════════════════════════════════════════════════════
 //   UTILS
 // ════════════════════════════════════════════════════════
 function detectQuality(url) {
-  if (!url) return '—';
-  if (url.includes('4k')||url.includes('2160')) return '4K';
-  if (url.includes('1080')) return '1080p';
-  if (url.includes('720'))  return '720p';
-  if (url.includes('480'))  return '480p';
-  if (url.includes('.m3u8')) return 'LIVE';
+  if(!url)return '—';
+  if(url.includes('4k')||url.includes('2160'))return '4K';
+  if(url.includes('1080'))return '1080p';
+  if(url.includes('720'))return '720p';
+  if(url.includes('480'))return '480p';
+  if(url.includes('.m3u8'))return 'LIVE';
   return 'HD';
 }
-function destroyHLS() { if(hlsInst){try{hlsInst.destroy();}catch(e){}hlsInst=null;} }
-function retryPlayback() {
-  errScr.classList.remove('visible');
-  _proxyAttempt    = 0;
-  _videoErrorRetry = 0;
-  _usingProxy      = false;
-  if (movieData) {
-    const url = movieData.playUrl || movieData.streamUrl || movieData.url || _currentRawUrl || '';
-    if (url) loadMovie(url);
-  } else if (_currentRawUrl) {
-    loadMovie(_currentRawUrl);
-  }
-}
-function showSpinner()  { spinner.classList.add('active'); }
-function hideSpinner()  { spinner.classList.remove('active'); }
-
-// ════════════════════════════════════════════════════════
-//   SMART PLAY — handles Android autoplay policy
-// ════════════════════════════════════════════════════════
-function smartPlay(vid) {
-  hideTapToPlayOverlay();
-  const p = vid.play();
-  if (p && typeof p.then === 'function') {
-    p.catch(() => {
-      // Autoplay blocked — try muted first
-      vid.muted = true;
-      vid.play().then(() => {
-        // Successfully playing muted — show unmute hint
-        showToast('🔇 Muted — tap 🔊 to unmute');
-        // Auto unmute after 1s (user is present since page loaded)
-        setTimeout(() => {
-          vid.muted = false;
-          hideTapToPlayOverlay();
-        }, 1000);
-      }).catch(() => {
-        // Even muted failed — show tap overlay
-        showTapToPlayOverlay();
-      });
-    });
-  }
-}
-
-function showTapToPlayOverlay() {
-  const el = document.getElementById('tap-to-play');
-  if (el) el.style.display = 'flex';
-}
-
-function hideTapToPlayOverlay() {
-  const el = document.getElementById('tap-to-play');
-  if (el) el.style.display = 'none';
-}
-
-function handleTapToPlay() {
-  hideTapToPlayOverlay();
-  videoEl.muted = false;
-  videoEl.play().catch(() => {
-    videoEl.muted = true;
-    videoEl.play().catch(() => {});
-  });
-}
-
-function showError(t,m) {
+function destroyHLS(){ if(hlsInst){try{hlsInst.destroy();}catch(e){}hlsInst=null;} }
+function showSpinner(){ spinner.classList.add('active'); }
+function hideSpinner(){ spinner.classList.remove('active'); }
+function showError(t,m){
   document.getElementById('err-title').textContent=t;
   document.getElementById('err-msg').textContent=m;
   errScr.classList.add('visible'); hideSpinner();
 }
-function showToast(msg,dur=2500) {
-  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+function showToast(msg,dur=2500){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),dur);
 }
-function formatTime(s) {
-  if (!s||isNaN(s)||!isFinite(s)) return '0:00';
+function formatTime(s){
+  if(!s||isNaN(s)||!isFinite(s))return '0:00';
   const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);
   return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
 }
-function goBack() {
+function goBack(){
   destroyHLS(); clearInterval(wmTimer); clearInterval(adSkipTmr);
+  movieIframe.src='about:blank';
   window.history.length>1?window.history.back():(window.location.href='user.html');
 }
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// Watermark
+const wm=document.getElementById('watermark');
+function moveWm(){wm.style.left=(Math.random()*80)+'%';wm.style.top=(Math.random()*80)+'%';}
+moveWm(); wmTimer=setInterval(moveWm,5000);
 
 showControls();
 </script>
